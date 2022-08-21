@@ -8,6 +8,30 @@
     <packaging>pom</packaging>
 
     <name>Composum Dashboard</name>
+    <description>a framework for creating a custom project toolset that is placed on a dasboard page</description>
+    <url>https://github.com/ist-dresden/composum</url>
+
+    <licenses>
+        <license>
+            <name>MIT License</name>
+            <url>http://www.opensource.org/licenses/mit-license.php</url>
+        </license>
+    </licenses>
+
+    <developers>
+        <developer>
+            <name>Hans-Peter Störr</name>
+            <email>hp.stoerr@ist-software.com</email>
+            <organization>IST GmbH Dresden</organization>
+            <organizationUrl>http://www.ist-software.com</organizationUrl>
+        </developer>
+        <developer>
+            <name>Ralf Wunsch</name>
+            <email>r.wunsch@ist-software.com</email>
+            <organization>IST GmbH Dresden</organization>
+            <organizationUrl>http://www.ist-software.com</organizationUrl>
+        </developer>
+    </developers>
 
     <properties>
         <package.group>com.composum.dashboard</package.group>

@@ -12,6 +12,7 @@
     <packaging>content-package</packaging>
 
     <name>Composum Dashboard - Sling - OSGi Configuration</name>
+    <description>the Sling OSGi configuration package of the dashboard toolset framework</description>
 
     <build>
         <plugins>

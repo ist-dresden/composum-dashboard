@@ -12,6 +12,7 @@
     <packaging>bundle</packaging>
 
     <name>Composum Dashboard - Sling - Core</name>
+    <description>the Sling OSGi services bundle of the dashboard toolset framework</description>
 
     <build>
         <plugins>

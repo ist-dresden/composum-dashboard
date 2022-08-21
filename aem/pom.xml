@@ -12,6 +12,7 @@
     <packaging>pom</packaging>
 
     <name>Composum Dashboard - AEM - reactor</name>
+    <description>the AEM implementation of the dashboard toolset framework</description>
 
     <properties>
         <sling.pckgmgr.url>/crx/packmgr/service.jsp</sling.pckgmgr.url>

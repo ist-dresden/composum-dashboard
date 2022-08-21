@@ -12,6 +12,7 @@
     <packaging>content-package</packaging>
 
     <name>Composum Dashboard - AEM - OSGi Configuration</name>
+    <description>the AEM OSGi configuration package of the dashboard toolset framework</description>
 
     <build>
         <plugins>

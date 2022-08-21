@@ -12,6 +12,7 @@
     <packaging>pom</packaging>
 
     <name>Composum Dashboard - Sling - reactor</name>
+    <description>the Sling implementation base of the dashboard toolset framework</description>
 
     <properties>
         <sling.pckgmgr.url>/bin/cpm/package.service.html</sling.pckgmgr.url>

@@ -12,6 +12,7 @@
     <packaging>content-package</packaging>
 
     <name>Composum Dashboard - Sling - UI apps</name>
+    <description>the Sling application package of the dashboard toolset framework</description>
 
     <build>
         <plugins>

@@ -1,0 +1,4 @@
+{
+  "resourceType": "composum/dashboard/sling/components/widget",
+  "searchRoot": "/content"
+}

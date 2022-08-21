@@ -1,0 +1,21 @@
+<sly data-sly-use.model="com.composum.sling.dashboard.model.DashboardModel">
+    <div data-sly-test="${model.widgetResource}"
+         class="c-dashboard-s-components-page__widget-view">
+        <div class="c-dashboard-s-components-page__widget-view__close"
+             style="position: absolute; top: 9px; right: 15px; z-index: 2000;">
+            <a href="${model.dashboardPath}.close.html" class="btn btn-secondary">Close</a>
+        </div>
+        <sly data-sly-resource="${model.widgetResource @ selectors=model.getSelectors}"></sly>
+    </div>
+    <div data-sly-test="${!model.widgetResource}"
+         class="c-dashboard-s-components-page__widgets row">
+        <sly data-sly-list.widget="${model.widgetModels}">
+            <div data-sly-test="${widget.widget}"
+                 class="c-dashboard-s-components-page__widget col-lg-4 col-6">
+                <a href="${model.dashboardPath}.open.html/${widget.name}" style="text-decoration: none;">
+                    <sly data-sly-resource="${widget.widgetResource @ selectors='tile'}"></sly>
+                </a>
+            </div>
+        </sly>
+    </div>
+</sly>

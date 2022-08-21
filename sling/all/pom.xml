@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.composum.dashboard</groupId>
+        <artifactId>composum-dashboard-sling-parent</artifactId>
+        <version>0.1</version>
+    </parent>
+
+    <artifactId>composum-dashboard-sling</artifactId>
+    <packaging>content-package</packaging>
+
+    <name>Composum Dashboard - Sling - all</name>
+
+    <profiles>
+        <profile>
+            <id>installSlingPackage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.wcm.maven.plugins</groupId>
+                        <artifactId>wcmio-content-package-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>install-package</id>
+                                <phase>install</phase>
+                                <goals>
+                                    <goal>install</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>filevault-package-maven-plugin</artifactId>
+                <configuration>
+                    <packageType>container</packageType>
+                    <filters>
+                        <filter>
+                            <root>/apps/composum/dashboard</root>
+                            <includes>
+                                <include>/apps/composum/dashboard/install/composum-dashboard-sling-.*</include>
+                            </includes>
+                        </filter>
+                    </filters>
+                    <embeddeds>
+                        <embedded combine.self="override">
+                            <target>/apps/composum/dashboard/install</target>
+                            <filter>true</filter>
+                            <type>jar,content-package,zip</type>
+                            <scope>compile</scope>
+                            <excludeTransitive>true</excludeTransitive>
+                            <isAllVersionsFilter>true</isAllVersionsFilter>
+                        </embedded>
+                    </embeddeds>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.wcm.maven.plugins</groupId>
+                <artifactId>wcmio-content-package-maven-plugin</artifactId>
+            </plugin>
+
+        </plugins>
+    </build>
+    <dependencies>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>composum-dashboard-sling-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>composum-dashboard-sling-ui-apps</artifactId>
+            <version>${project.version}</version>
+            <type>content-package</type>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>composum-dashboard-sling-osgi-config</artifactId>
+            <version>${project.version}</version>
+            <type>content-package</type>
+        </dependency>
+
+    </dependencies>
+</project>

@@ -1,0 +1,25 @@
+{
+  "allowedPathPatterns": [
+    "^/$",
+    "^/content(/.*)?$",
+    "^/conf(/.*)?$",
+    "^/apps(/.*)?$",
+    "^/libs(/.*)?$",
+    "^/etc(/.*)?$",
+    "^/var(/.*)?$",
+    "^/tmp(/.*)?$",
+    "^/mnt(/.*)?$",
+    "^/oak:index(/.*)?$",
+    "^/jcr:system(/.*)?$"
+  ],
+  "disabledPathPatterns": [
+    ".*/rep:.*",
+    "^(/.*)?/api(/.*)?$"
+  ],
+  "sortableTypes": [
+    "nt:folder",
+    "sling:Folder",
+    "cq:Component"
+  ],
+  "loginUri": "/libs/granite/core/content/login.html"
+}

@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.composum.dashboard</groupId>
+        <artifactId>composum-dashboard-sling-parent</artifactId>
+        <version>0.1</version>
+    </parent>
+
+    <artifactId>composum-dashboard-sling-ui-apps</artifactId>
+    <packaging>content-package</packaging>
+
+    <name>Composum Dashboard - Sling - UI apps</name>
+
+    <build>
+        <plugins>
+
+            <plugin>
+                <groupId>org.apache.jackrabbit</groupId>
+                <artifactId>filevault-package-maven-plugin</artifactId>
+                <configuration>
+                    <packageType>application</packageType>
+                    <allowIndexDefinitions>true</allowIndexDefinitions>
+                    <filters>
+                        <filter>
+                            <root>/apps/composum/dashboard</root>
+                            <includes>
+                                <include>/apps/composum/dashboard/sling(/.*)?</include>
+                            </includes>
+                        </filter>
+                    </filters>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>io.wcm.maven.plugins</groupId>
+                <artifactId>wcmio-content-package-maven-plugin</artifactId>
+            </plugin>
+
+        </plugins>
+    </build>
+    <dependencies>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>composum-dashboard-sling-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+    </dependencies>
+</project>

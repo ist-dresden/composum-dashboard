@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>com.composum.dashboard</groupId>
+        <artifactId>composum-dashboard</artifactId>
+        <version>0.1</version>
+    </parent>
+
+    <artifactId>composum-dashboard-aem-parent</artifactId>
+    <packaging>pom</packaging>
+
+    <name>Composum Dashboard - AEM - reactor</name>
+
+    <properties>
+        <sling.pckgmgr.url>/crx/packmgr/service.jsp</sling.pckgmgr.url>
+        <sling.host>localhost</sling.host>
+        <sling.port>5503</sling.port>
+    </properties>
+
+    <modules>
+        <!--module>core</module>
+        <module>ui.apps</module-->
+        <module>config</module>
+        <module>all</module>
+    </modules>
+
+</project>

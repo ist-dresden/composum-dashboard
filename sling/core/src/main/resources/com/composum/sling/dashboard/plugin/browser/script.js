@@ -1,7 +1,6 @@
 class Tree {
 
-    constructor(element, selector) {
-        this.selector = selector;
+    constructor(element) {
         this.el = element;
         this.$el = $(element);
         const treeOptions = {
@@ -23,6 +22,7 @@ class Tree {
             },
             'types': {
                 'default': {'icon': 'fa fa-cube text-muted'},
+                'synthetic': {'icon': 'fa fa-circle-thin text-muted'},
                 'summary': {'icon': 'fa fa-hand-o-right text-info'},
                 'root': {'icon': 'fa fa-sitemap text-muted'},
                 'system': {'icon': 'fa fa-cogs text-muted'},
@@ -106,8 +106,8 @@ class Tree {
         this.$jstree
             .on('select_node.jstree', this.onNodeSelected.bind(this));
         $(document)
-            .on('path:select', this.doSelectPath.bind(this))
-            .on('page:changed', this.onPageChanged.bind(this));
+            .on('page:changed', this.onPageChanged.bind(this))
+            .on('path:select', this.doSelectPath.bind(this));
         const path = this.$el.data('path');
         if (path) {
             setTimeout(function () {
@@ -254,11 +254,22 @@ class Tree {
     }
 }
 
+class StatusLine {
+
+    constructor(element) {
+        this.$el = $(element);
+        $(document).on('path:selected', this.onPathSelected.bind(this));
+    }
+
+    onPathSelected(event, path) {
+        this.$el.attr('value', path);
+    }
+}
+
+
 class View {
 
-    constructor(element, selector) {
-        this.selector = selector;
-        this.el = element;
+    constructor(element) {
         this.$el = $(element);
         $(document).on('path:selected', this.onPathSelected.bind(this));
     }
@@ -268,24 +279,27 @@ class View {
     }
 
     onPathSelected(event, path) {
-        const view = this;
-        const activeTab = view.$el.find('.nav-tabs .nav-link.active').attr('id');
-        $.ajax({
-            type: 'GET',
-            url: view.dataUrl(path),
-            success: function (result, msg, xhr) {
-                view.$el.html(result);
-                const $tabToActivate = view.$el.find('.nav-tabs .nav-link[id="' + activeTab + '"]');
-                view.onLoaded();
-                if ($tabToActivate.length > 0) {
-                    $tabToActivate.tab('show');
-                } else {
-                    view.$el.find('.nav-tabs .nav-link').first().tab('show');
-                }
-            },
-            async: true,
-            cache: false
-        });
+        if (path !== this.currentPath) {
+            this.currentPath = path;
+            const view = this;
+            const activeTab = view.$el.find('.nav-tabs .nav-link.active').attr('id');
+            $.ajax({
+                type: 'GET',
+                url: view.dataUrl(path),
+                success: function (result, msg, xhr) {
+                    view.$el.html(result);
+                    const $tabToActivate = view.$el.find('.nav-tabs .nav-link[id="' + activeTab + '"]');
+                    view.onLoaded();
+                    if ($tabToActivate.length > 0) {
+                        $tabToActivate.tab('show');
+                    } else {
+                        view.$el.find('.nav-tabs .nav-link').first().tab('show');
+                    }
+                },
+                async: true,
+                cache: false
+            });
+        }
     }
 
     onLoaded($element) {
@@ -299,7 +313,7 @@ class View {
         }.bind(this));
         ($element || this.$el).find('.preview iframe').on('load.preview', function (event) {
             var url = event.currentTarget.contentDocument.URL;
-            // FIXME - immediate jump on redircts //$(document).trigger('page:changed', [url]);
+            //$(document).trigger('page:changed', [url]); // FIXME...
         }.bind(this));
     }
 }

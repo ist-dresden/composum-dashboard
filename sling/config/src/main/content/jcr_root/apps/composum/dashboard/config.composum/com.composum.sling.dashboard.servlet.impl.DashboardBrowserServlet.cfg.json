@@ -16,6 +16,8 @@
     ".*/rep:.*",
     "^(/.*)?/api(/.*)?$"
   ],
+  "syntheticPaths": [
+  ],
   "sortableTypes": [
     "nt:folder",
     "sling:Folder"

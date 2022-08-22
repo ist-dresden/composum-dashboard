@@ -20,16 +20,21 @@
 <body>
 <nav class="navbar navbar-dark bg-dark justify-content-between">
     <span class="navbar-brand"><a href="https://www.composum.com"><i class="logo"></i>Composum Browser</a></span>
-    <div class="navbar-nav">
-        <a class="nav-item nav-link" href="${loginUrl}">${currentUser}</a>
-    </div>
+    <ul class="navbar-nav browser__status-bar">
+        <li><input type="text" class="browser__status-line" value="${status-line}" readonly="readonly"/></li>
+    </ul>
+    <ul class="navbar-nav ml-auto">
+        <li class="nav-item">
+            <a class="nav-link" href="${loginUrl}">${currentUser}</a>
+        </li>
+    </ul>
 </nav>
 <div class="body-content">
     <div class="dashboard-browser">
         <div class="dashboard-browser__tree-panel">
             <div class="dashboard-browser__tree"
                  data-path="${target-path}"
-                 data-page-url="${browser-uri}page.html"
+                 data-page-url="${browser-path}.html"
                  data-tree-url="${browser-uri}tree.html">
             </div>
         </div>
@@ -58,13 +63,14 @@
 </script>
 <script>
     $(document).ready(function () {
-        const treeSelector = '.dashboard-browser__tree'
-        $(treeSelector).each(function () {
-            new Tree(this, treeSelector)
+        $('.dashboard-browser__tree').each(function () {
+            new Tree(this)
         });
-        const viewSelector = '.dashboard-browser__view'
-        $(viewSelector).each(function () {
-            new View(this, viewSelector)
+        $('.browser__status-line').each(function () {
+            new StatusLine(this)
+        });
+        $('.dashboard-browser__view').each(function () {
+            new View(this)
         });
     });
 </script>

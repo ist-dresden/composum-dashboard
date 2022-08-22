@@ -77,13 +77,15 @@ public class GenericDashboardPlugin implements DashboardPlugin {
 
         @Override
         public @NotNull String getWidgetPageUrl(@NotNull final SlingHttpServletRequest request) {
+            Resource widgetResource = getWidgetResource(request);
             String widgetPageUrl = properties.get("widgetPageUrl", String.class);
             if (StringUtils.isBlank(widgetPageUrl)) {
-                Resource widgetResource = getWidgetResource(request);
                 Resource widgetPage = widgetResource.getChild("page");
                 widgetPageUrl = widgetPage != null
                         ? widgetPage.getPath() + ".html"
                         : widgetResource.getPath() + ".page.html";
+            } else {
+                widgetPageUrl = widgetPageUrl.replaceAll("\\$?\\{path}", widgetResource.getPath());
             }
             return widgetPageUrl;
         }

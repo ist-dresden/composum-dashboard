@@ -1,10 +1,6 @@
 <sly data-sly-use.model="com.composum.sling.dashboard.model.DashboardModel">
     <div data-sly-test="${model.widgetResource}"
          class="c-dashboard-s-components-page__widget-view">
-        <div class="c-dashboard-s-components-page__widget-view__close"
-             style="position: absolute; top: 9px; right: 15px; z-index: 2000;">
-            <a href="${model.dashboardPath}.close.html" class="btn btn-secondary">Close</a>
-        </div>
         <sly data-sly-resource="${model.widgetResource @ selectors=model.getSelectors}"></sly>
     </div>
     <div data-sly-test="${!model.widgetResource}"

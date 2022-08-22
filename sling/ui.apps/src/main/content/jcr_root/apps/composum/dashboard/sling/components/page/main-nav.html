@@ -1,11 +1,17 @@
 <nav class="navbar navbar-expand navbar-dark bg-dark mb3"
      data-sly-use.model="com.composum.sling.dashboard.model.DashboardModel">
-    <span class="navbar-brand">${model.title}</span>
-    <ul class="navbar-nav ml-auto">
+    <span class="navbar-brand" style="min-width:15rem;">${model.title}</span>
+    <ul class="navbar-nav mr-auto">
         <sly data-sly-list.widget="${model.widgetModels}">
             <li data-sly-test="${widget.tool}" class="nav-item">
                 <a class="nav-link" href="${widget.widgetPageUrl}">${widget.navTitle}</a>
             </li>
         </sly>
+    </ul>
+    <ul class="navbar-nav ml-auto">
+        <li data-sly-test="${model.widgetResource}"
+            class="c-dashboard-s-components-page__widget-view__close">
+            <a href="${model.dashboardPath}.close.html" class="btn btn-secondary">Close</a>
+        </li>
     </ul>
 </nav>

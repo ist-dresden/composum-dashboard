@@ -3,12 +3,13 @@ body {
 }
 
 .navbar {
+    flex-wrap: nowrap;
     padding: 4px 10px;
     background-color: #1e1e1e !important;
 }
 
 .navbar-brand {
-    padding-left: 70px;
+    padding: 0 20px 0 70px;
     font-size: 1rem;
     line-height: 26px;
 }
@@ -33,6 +34,21 @@ body {
 .nav-link {
     padding: 0 10px;
     line-height: 36px;
+}
+
+.browser__status-bar {
+    flex-grow: 1;
+    margin: 0 20px 0 0;
+    overflow: auto;
+}
+
+.browser__status-line,
+.browser__status-line:focus {
+    width: 100%;
+    border: none;
+    background: #1e1e1e;
+    color: rgba(255, 255, 255, .5);
+    white-space: nowrap;
 }
 
 .dashboard-browser {

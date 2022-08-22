@@ -15,8 +15,10 @@ import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.ServletResolverConstants;
+import org.apache.sling.xss.XSSAPI;
 import org.apache.sling.xss.XSSFilter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -50,8 +52,6 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-import java.util.stream.StreamSupport;
 
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.RESOURCE_TYPE;
 
@@ -62,7 +62,6 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Browser",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tile",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/page",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tree",
@@ -75,6 +74,7 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardBrowser {
 
     public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/browser";
+    public static final String NT_UNSTRUCTURED = "nt:unstructured";
 
     @ObjectClassDefinition(name = "Composum Dashboard Browser")
     public @interface Config {
@@ -99,6 +99,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                 "^(/.*)?/api(/.*)?$"
         };
 
+        @AttributeDefinition(name = "Synthetic Paths")
+        String[] syntheticPaths();
+
         @AttributeDefinition(name = "Sortable Types")
         String[] sortableTypes() default {
                 "nt:folder", "sling:Folder"
@@ -110,7 +113,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     public static final String PAGE_TEMPLATE = "/com/composum/sling/dashboard/plugin/browser/page.html";
     protected static final String OPTION_TREE = "tree";
-    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_TREE, OPTION_PAGE);
+    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TREE);
 
     public static final String PT_NT_FILE = "nt:file";
     public static final String JCR_CONTENT = "jcr:content";
@@ -119,19 +122,21 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
 
     @Reference
+    protected XSSAPI xssapi;
+    @Reference
     protected XSSFilter xssFilter;
 
     @Reference
     protected DashboardManager dashboardManager;
 
-    protected List<String> treeRoots;
+    protected List<String> syntheticPaths;
     protected List<String> sortableTypes;
     protected String loginUri;
 
     @Activate
     @Modified
     protected void activate(Config config) {
-        treeRoots = new ArrayList<>();
+        syntheticPaths = Arrays.asList(Optional.ofNullable(config.syntheticPaths()).orElse(new String[0]));
         /* TODO - maybe later...
         for (String path : config.treeRoots()) {
             if (StringUtils.isNotBlank(path)) {
@@ -141,7 +146,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         */
         allowedPathPatterns = patternList(config.allowedPathPatterns());
         disabledPathPatterns = patternList(config.disabledPathPatterns());
-        sortableTypes = Arrays.asList(config.sortableTypes());
+        sortableTypes = Arrays.asList(Optional.ofNullable(config.sortableTypes()).orElse(new String[0]));
         loginUri = config.loginUri();
     }
 
@@ -163,15 +168,29 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     @Override
     public @Nullable Resource getRequestResource(@NotNull final SlingHttpServletRequest request) {
+        ResourceResolver resolver = request.getResourceResolver();
         Resource resource = request.getRequestPathInfo().getSuffixResource();
         if (resource == null) {
-            resource = request.getResourceResolver().getResource("/");
+            String path = request.getRequestPathInfo().getSuffix();
+            if (StringUtils.isNotBlank(path)) {
+                for (String synthPath : syntheticPaths) {
+                    if (path.equals(synthPath) || synthPath.startsWith(path + "/")) {
+                        final Resource synthetic = new SyntheticResource(resolver, path, null);
+                        if (isAllowedResource(synthetic)) {
+                            return synthetic;
+                        }
+                    }
+                }
+            } else {
+                resource = resolver.getResource("/");
+            }
         }
         return resource != null && isAllowedResource(resource) ? resource : null;
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
+    public void doGet(@NotNull final SlingHttpServletRequest request,
+                      @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         if ("html".equals(pathInfo.getExtension())) {
@@ -180,10 +199,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                     jsonTree(request, response);
                     break;
                 case OPTION_VIEW:
-                default:
                     htmlView(request, response);
                     break;
                 case OPTION_PAGE:
+                default:
                     browserPage(request, response);
                     break;
             }
@@ -197,13 +216,15 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             throws IOException {
         final ResourceResolver resolver = request.getResourceResolver();
         final Resource browser = getWidgetResource(request, RESOURCE_TYPE);
+        final String targtePath = Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse("");
         final ValueMap values = browser.getValueMap();
         final Map<String, Object> properties = new HashMap<>();
-        properties.put("target-path", Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse(""));
-        properties.put("browser-path", browser.getPath());
-        properties.put("browser-uri", getWidgetUri(request, RESOURCE_TYPE, HTML_MODES, null));
-        properties.put("loginUrl", loginUri);
-        properties.put("currentUser", resolver.getUserID());
+        properties.put("status-line", xssapi.encodeForHTML(targtePath));
+        properties.put("target-path", xssapi.encodeForHTMLAttr(targtePath));
+        properties.put("browser-path", xssapi.encodeForHTMLAttr(browser.getPath()));
+        properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, RESOURCE_TYPE, HTML_MODES, null)));
+        properties.put("loginUrl", xssapi.encodeForHTMLAttr(loginUri));
+        properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
         addCustomOption(browser, "style.css", properties);
         addCustomOption(browser, "script.js", properties);
         try (final InputStream pageContent = getClass().getClassLoader().getResourceAsStream(PAGE_TEMPLATE);
@@ -249,10 +270,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             for (final DashboardWidget view : browserViews) {
                 if (!ResourceUtil.isNonExistingResource(resource)) {
                     final String viewId = view.getName();
-                    writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(viewId)
-                            .append("-tab\" data-toggle=\"tab\" href=\"#").append(viewId)
-                            .append("\" role=\"tab\" aria-controls=\"").append(viewId)
-                            .append("\" aria-selected=\"false\">").append(view.getLabel())
+                    writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                            .append("-tab\" data-toggle=\"tab\" href=\"#").append(xssapi.encodeForHTMLAttr(viewId))
+                            .append("\" role=\"tab\" aria-controls=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                            .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(view.getLabel()))
                             .append("</a></li>\n");
                 }
             }
@@ -261,8 +282,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             for (final DashboardWidget view : browserViews) {
                 if (!ResourceUtil.isNonExistingResource(resource)) {
                     final String viewId = view.getName();
-                    writer.append("<div class=\"tab-pane\" id=\"").append(viewId)
-                            .append("\" role=\"tabpanel\" aria-labelledby=\"").append(viewId).append("-tab\">\n");
+                    writer.append("<div class=\"tab-pane\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                            .append("\" role=\"tabpanel\" aria-labelledby=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                            .append("-tab\">\n");
                     htmlView(request, response, view, request.getResource());
                     writer.append("</div>\n");
                 }
@@ -315,27 +337,57 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     public void writeJsonNode(@NotNull final JsonWriter writer, @NotNull final Resource resource)
             throws IOException {
+        final String primaryType = resource.getValueMap().get(JCR_PRIMARY_TYPE, NT_UNSTRUCTURED);
         writer.beginObject();
         writeNodeIdentifiers(writer, resource);
         writer.name("children").beginArray();
-        String primaryType = resource.getValueMap().get(JCR_PRIMARY_TYPE, "");
-        List<Resource> children = sortableTypes.contains(primaryType)
-                ? StreamSupport.stream(resource.getChildren().spliterator(), false)
-                .sorted(Comparator.comparing(Resource::getName)).collect(Collectors.toList())
-                : StreamSupport.stream(resource.getChildren().spliterator(), false)
-                .collect(Collectors.toList());
+        final List<Resource> children = getChildren(resource);
+        if (sortableTypes.contains(primaryType)) {
+            children.sort(Comparator.comparing(Resource::getName));
+        }
         for (Resource child : children) {
-            if (isAllowedResource(child)) {
-                writer.beginObject();
-                writeNodeIdentifiers(writer, child);
-                writer.name("state").beginObject();
-                writer.name("loaded").value(false);
-                writer.endObject();
-                writer.endObject();
-            }
+            writer.beginObject();
+            writeNodeIdentifiers(writer, child);
+            writer.name("state").beginObject();
+            writer.name("loaded").value(false);
+            writer.endObject();
+            writer.endObject();
         }
         writer.endArray();
         writer.endObject();
+    }
+
+    protected @NotNull List<Resource> getChildren(@NotNull final Resource resource) {
+        final List<Resource> children = new ArrayList<>();
+        for (Resource child : resource.getChildren()) {
+            if (isAllowedResource(child)) {
+                children.add(child);
+            }
+        }
+        addSyntheticResources(resource, children);
+        return children;
+    }
+
+    protected void addSyntheticResources(@NotNull final Resource resource, @NotNull final List<Resource> children) {
+        final ResourceResolver resolver = resource.getResourceResolver();
+        String base = resource.getPath();
+        if (!base.endsWith("/")) {
+            base += "/";
+        }
+        for (final String synthetic : syntheticPaths) {
+            if (synthetic.startsWith(base)) {
+                final String name = StringUtils.substringBefore(synthetic.substring(base.length()), "/");
+                if (StringUtils.isNotBlank(name)) {
+                    Resource child = resolver.getResource(resource, name);
+                    if (child == null) {
+                        child = new SyntheticResource(resolver, base + name, null);
+                        if (isAllowedResource(child)) {
+                            children.add(child);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     public void writeNodeIdentifiers(@NotNull final JsonWriter writer, @NotNull final Resource resource)
@@ -357,6 +409,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         String type = getTypeKey(resource);
         if (StringUtils.isNotBlank(type)) {
             writer.name("type").value(type);
+        } else if (ResourceUtil.isSyntheticResource(resource)) {
+            writer.name("type").value("synthetic");
         }
     }
 
@@ -373,7 +427,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     public String getPrimaryTypeKey(Resource resource) {
-        String type = resource.getValueMap().get(JCR_PRIMARY_TYPE, String.class);
+        String type = resource.getValueMap().get(JCR_PRIMARY_TYPE, NT_UNSTRUCTURED);
         if (StringUtils.isNotBlank(type)) {
             int namespace = type.lastIndexOf(':');
             if (namespace >= 0) {
@@ -385,7 +439,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     public static String getResourceTypeKey(Resource resource, String prefix) {
-        String primaryType = resource.getValueMap().get(JCR_PRIMARY_TYPE, String.class);
+        String primaryType = resource.getValueMap().get(JCR_PRIMARY_TYPE, NT_UNSTRUCTURED);
         String type = null;
         String resourceType = resource.getResourceType();
         if (StringUtils.isNotBlank(resourceType) && !resourceType.equals(primaryType)) {

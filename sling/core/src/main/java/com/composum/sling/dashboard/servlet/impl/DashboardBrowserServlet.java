@@ -74,7 +74,6 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardBrowser {
 
     public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/browser";
-    public static final String NT_UNSTRUCTURED = "nt:unstructured";
 
     @ObjectClassDefinition(name = "Composum Dashboard Browser")
     public @interface Config {
@@ -115,11 +114,12 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected static final String OPTION_TREE = "tree";
     protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TREE);
 
-    public static final String PT_NT_FILE = "nt:file";
     public static final String JCR_CONTENT = "jcr:content";
-    public static final String PT_NT_RESOURCE = "nt:resource";
     public static final String JCR_DATA = "jcr:data";
     public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
+    public static final String NT_UNSTRUCTURED = "nt:unstructured";
+    public static final String NT_RESOURCE = "nt:resource";
+    public static final String NT_FILE = "nt:file";
 
     @Reference
     protected XSSAPI xssapi;
@@ -242,9 +242,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     public void addCustomOption(@NotNull final Resource browser, @NotNull String name,
                                 @NotNull final Map<String, Object> properties) {
         Resource resource = browser.getChild("style.css");
-        if (resource != null && resource.isResourceType(PT_NT_FILE)) {
+        if (resource != null && resource.isResourceType(NT_FILE)) {
             final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && content.isResourceType(PT_NT_RESOURCE)) {
+            if (content != null && content.isResourceType(NT_RESOURCE)) {
                 final InputStream stream = content.getValueMap().get(JCR_DATA, InputStream.class);
                 if (stream != null) {
                     properties.put(name, new InputStreamReader(stream, StandardCharsets.UTF_8));

@@ -1,7 +1,7 @@
 <sly data-sly-use.model="com.composum.sling.dashboard.model.DashboardModel">
     <div data-sly-test="${model.widgetResource}"
          class="c-dashboard-s-components-page__widget-view">
-        <sly data-sly-resource="${model.widgetResource @ selectors=model.getSelectors}"></sly>
+        <sly data-sly-resource="${model.widgetResource @ selectors='view'}"></sly>
     </div>
     <div data-sly-test="${!model.widgetResource}"
          class="c-dashboard-s-components-page__widgets row">

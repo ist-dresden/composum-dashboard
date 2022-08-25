@@ -1,0 +1,8 @@
+{
+  "logFiles": [
+    "/logs/error.log"
+  ],
+  "errorPattern": "\\*ERROR\\*",
+  "warningPattern": "\\*WARN\\*",
+  "sizeLimit": 200
+}

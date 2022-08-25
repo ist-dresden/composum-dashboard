@@ -1,5 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.util.ValueEmbeddingReader;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.request.RequestPathInfo;
@@ -10,12 +12,19 @@ import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.io.Reader;
+import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
@@ -55,7 +64,7 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
         if (StringUtils.isNotBlank(mode)) {
             uri.append(mode).append(".html");
         }
-        return uri.toString();
+        return uri.toString().replaceAll("/jcr:", "/_jcr_");
     }
 
     protected @Nullable String getSelectorMode(@NotNull final SlingHttpServletRequest request,
@@ -114,15 +123,49 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
         return patterns;
     }
 
+    protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
+                                @NotNull final Writer writer, @NotNull final Map<String, Object> properties)
+            throws IOException {
+        try (Reader reader = openResource(context, resourcePath, properties)) {
+            if (reader != null) {
+                IOUtils.copy(reader, writer);
+            }
+        }
+    }
+
+    protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
+                                @NotNull final Writer writer)
+            throws IOException {
+        try (Reader reader = openResource(context, resourcePath)) {
+            if (reader != null) {
+                IOUtils.copy(reader, writer);
+            }
+        }
+    }
+
+    protected @Nullable Reader openResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
+                                            @NotNull final Map<String, Object> properties) {
+        final Reader reader = openResource(context, resourcePath);
+        return reader != null ? new ValueEmbeddingReader(reader, properties, null, context) : null;
+    }
+
+    protected @Nullable Reader openResource(@NotNull final Class<?> context, @NotNull final String resourcePath) {
+        final InputStream stream = context.getClassLoader().getResourceAsStream(resourcePath);
+        return stream != null ? new InputStreamReader(stream, StandardCharsets.UTF_8) : null;
+    }
+
     protected void htmlPageHead(@NotNull final PrintWriter writer, @NotNull final String title) {
-        writer.append("<html lang=\"en\"><head>\n"
-                + "<meta charset=\"utf-8\">\n"
-                + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
-                + "<title>").append(title).append("</title>\n"
-                + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css\" integrity=\"sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO\" crossorigin=\"anonymous\">\n"
-                + "</head><body><nav class=\"navbar navbar-dark bg-dark\">\n"
-                + "<span class=\"navbar-brand\">").append(title).append("</span>\n"
-                + "</nav><div class=\"container-fluid mt-3 mb-3\">\n");
+        writer.append("<html class=\"c-dashboard-s-widget__page\" lang=\"en\"><head>\n"
+                        + "<meta charset=\"utf-8\">\n"
+                        + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+                        + "<title>").append(title).append("</title>\n"
+                        + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css\" integrity=\"sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO\" crossorigin=\"anonymous\">\n"
+                        + "</head><body class=\"c-dashboard-s-widget__page-body ")
+                .append(title.replaceAll(" +", "-").toLowerCase())
+                .append("\"><nav class=\"c-dashboard-s-widget__navbar navbar navbar-dark bg-dark\">\n"
+                        + "<span class=\"navbar-brand\">")
+                .append(title).append("</span>\n"
+                        + "</nav><div class=\"c-dashboard-s-widget__view\">\n");
     }
 
     protected void htmlPageTail(@NotNull final PrintWriter writer) {

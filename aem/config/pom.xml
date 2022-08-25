@@ -27,8 +27,9 @@
                             <root>/apps/composum/dashboard/config.composum</root>
                             <includes>
                                 <include>.*/.*\.dashboard\..*\.GenericDashboardPlugin.*</include>
-                                <include>.*/.*\.dashboard\..*\.DashboardBrowser.*</include>
+                                <include>.*/.*\.dashboard\..*\.Dashboard.*Servlet.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*View.*</include>
+                                <include>.*/.*\.dashboard\..*\.Dashboard.*Widget.*</include>
                             </includes>
                         </filter>
                     </filters>

@@ -42,15 +42,15 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.RESOURCE_TYPE;
@@ -62,8 +62,8 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Browser",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/page",
+                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
                 ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tree",
                 ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=html",
                 ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=json"
@@ -74,7 +74,6 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardBrowser {
 
     public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/browser";
-    public static final String NT_UNSTRUCTURED = "nt:unstructured";
 
     @ObjectClassDefinition(name = "Composum Dashboard Browser")
     public @interface Config {
@@ -115,11 +114,12 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected static final String OPTION_TREE = "tree";
     protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TREE);
 
-    public static final String PT_NT_FILE = "nt:file";
     public static final String JCR_CONTENT = "jcr:content";
-    public static final String PT_NT_RESOURCE = "nt:resource";
     public static final String JCR_DATA = "jcr:data";
     public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
+    public static final String NT_UNSTRUCTURED = "nt:unstructured";
+    public static final String NT_RESOURCE = "nt:resource";
+    public static final String NT_FILE = "nt:file";
 
     @Reference
     protected XSSAPI xssapi;
@@ -242,9 +242,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     public void addCustomOption(@NotNull final Resource browser, @NotNull String name,
                                 @NotNull final Map<String, Object> properties) {
         Resource resource = browser.getChild("style.css");
-        if (resource != null && resource.isResourceType(PT_NT_FILE)) {
+        if (resource != null && resource.isResourceType(NT_FILE)) {
             final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && content.isResourceType(PT_NT_RESOURCE)) {
+            if (content != null && content.isResourceType(NT_RESOURCE)) {
                 final InputStream stream = content.getValueMap().get(JCR_DATA, InputStream.class);
                 if (stream != null) {
                     properties.put(name, new InputStreamReader(stream, StandardCharsets.UTF_8));
@@ -341,11 +341,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         writer.beginObject();
         writeNodeIdentifiers(writer, resource);
         writer.name("children").beginArray();
-        final List<Resource> children = getChildren(resource);
-        if (sortableTypes.contains(primaryType)) {
-            children.sort(Comparator.comparing(Resource::getName));
-        }
-        for (Resource child : children) {
+        final Map<String, Resource> children = sortableTypes.contains(primaryType)
+                ? new TreeMap<>() : new LinkedHashMap<>();
+        getChildren(resource, children);
+        for (Resource child : children.values()) {
             writer.beginObject();
             writeNodeIdentifiers(writer, child);
             writer.name("state").beginObject();
@@ -357,18 +356,17 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         writer.endObject();
     }
 
-    protected @NotNull List<Resource> getChildren(@NotNull final Resource resource) {
-        final List<Resource> children = new ArrayList<>();
+    protected void getChildren(@NotNull final Resource resource, @NotNull final Map<String, Resource> children) {
         for (Resource child : resource.getChildren()) {
             if (isAllowedResource(child)) {
-                children.add(child);
+                children.put(child.getName(), child);
             }
         }
         addSyntheticResources(resource, children);
-        return children;
     }
 
-    protected void addSyntheticResources(@NotNull final Resource resource, @NotNull final List<Resource> children) {
+    protected void addSyntheticResources(@NotNull final Resource resource,
+                                         @NotNull final Map<String, Resource> children) {
         final ResourceResolver resolver = resource.getResourceResolver();
         String base = resource.getPath();
         if (!base.endsWith("/")) {
@@ -377,12 +375,12 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         for (final String synthetic : syntheticPaths) {
             if (synthetic.startsWith(base)) {
                 final String name = StringUtils.substringBefore(synthetic.substring(base.length()), "/");
-                if (StringUtils.isNotBlank(name)) {
+                if (StringUtils.isNotBlank(name) && !children.containsKey(name)) {
                     Resource child = resolver.getResource(resource, name);
                     if (child == null) {
                         child = new SyntheticResource(resolver, base + name, null);
                         if (isAllowedResource(child)) {
-                            children.add(child);
+                            children.put(child.getName(), child);
                         }
                     }
                 }

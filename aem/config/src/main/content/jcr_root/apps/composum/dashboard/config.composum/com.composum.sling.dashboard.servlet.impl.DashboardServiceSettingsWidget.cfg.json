@@ -1,0 +1,6 @@
+{
+  "inspectedSettings": [
+    "org.osgi.service.http.HttpService[org.osgi.service.http\\..*,osgi.http.service.endpoints]",
+    "org.apache.sling.settings.SlingSettingsService[runModes]"
+  ]
+}

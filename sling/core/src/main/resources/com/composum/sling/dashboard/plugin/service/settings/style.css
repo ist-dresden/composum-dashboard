@@ -1,0 +1,32 @@
+.dashboard-widget__settings-tile,
+.dashboard-widget__settings-view {
+    color: #212529;
+}
+
+.dashboard-widget__settings-tile .list-group-item {
+    padding: 0.5rem 1.25rem;
+    line-height: 20px;
+    white-space: nowrap;
+}
+
+.dashboard-widget__settings-view .service-status,
+.dashboard-widget__settings-tile .service-status {
+    width: 25px;
+    height: 20px;
+    padding: 0;
+    line-height: 20px;
+    text-align: center;
+}
+
+.dashboard-widget__settings-view .card-header {
+    padding: 0.5rem;
+}
+
+.dashboard-widget__settings-view .card-header button {
+    width: 100%;
+    line-height: 20px;
+}
+
+.dashboard-widget__settings-view .card-body {
+    padding: 0;
+}

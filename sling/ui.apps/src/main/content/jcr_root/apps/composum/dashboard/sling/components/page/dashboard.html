@@ -7,7 +7,7 @@
          class="c-dashboard-s-components-page__widgets row">
         <sly data-sly-list.widget="${model.widgetModels}">
             <div data-sly-test="${widget.widget}"
-                 class="c-dashboard-s-components-page__widget col-lg-4 col-6">
+                 class="c-dashboard-s-components-page__widget col-lg-4 col-md-6 col-12">
                 <a href="${model.dashboardPath}.open.html/${widget.name}" style="text-decoration: none;">
                     <sly data-sly-resource="${widget.widgetResource @ selectors='tile'}"></sly>
                 </a>

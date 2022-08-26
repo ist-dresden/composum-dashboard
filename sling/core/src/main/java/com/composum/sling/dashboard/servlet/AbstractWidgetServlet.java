@@ -159,7 +159,10 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
                         + "<meta charset=\"utf-8\">\n"
                         + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
                         + "<title>").append(title).append("</title>\n"
-                        + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css\" integrity=\"sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO\" crossorigin=\"anonymous\">\n"
+                        + "<link rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/css/bootstrap.min.css\""
+                        + " integrity=\"sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO\" crossorigin=\"anonymous\">\n"
+                        + "<link href=\"https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css\" rel=\"stylesheet\""
+                        + " integrity=\"sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN\" crossorigin=\"anonymous\">\n"
                         + "</head><body class=\"c-dashboard-s-widget__page-body ")
                 .append(title.replaceAll(" +", "-").toLowerCase())
                 .append("\"><nav class=\"c-dashboard-s-widget__navbar navbar navbar-dark bg-dark\">\n"

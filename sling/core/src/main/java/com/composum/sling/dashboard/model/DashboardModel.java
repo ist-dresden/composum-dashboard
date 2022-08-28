@@ -1,19 +1,18 @@
 package com.composum.sling.dashboard.model;
 
+import com.composum.sling.dashboard.model.impl.DashboardModelImpl;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import org.apache.sling.api.resource.Resource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.List;
 
 public interface DashboardModel {
 
     interface WidgetModel {
 
-        boolean isWidget();
-
-        boolean isTool();
         @NotNull String getName();
 
         @NotNull String getLabel();
@@ -26,6 +25,8 @@ public interface DashboardModel {
     }
 
     @NotNull String getTitle();
+
+    @NotNull List<DashboardModelImpl.NavigationItem> getNavigation();
 
     @NotNull String getSelectors();
 

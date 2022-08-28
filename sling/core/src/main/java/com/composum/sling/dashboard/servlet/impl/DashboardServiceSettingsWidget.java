@@ -1,9 +1,12 @@
 package com.composum.sling.dashboard.servlet.impl;
 
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
+import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
@@ -29,14 +32,14 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.servlet.impl.DashboardServiceSettingsWidget.RESOURCE_TYPE;
+import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOARD_CONTEXT;
 
 /**
  * a primitive viewer for the settings of a configured set of services
@@ -44,25 +47,64 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardServiceSettings
 @Component(service = Servlet.class,
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Service Settings Widget",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tile",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/page",
-                ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=html"
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = DashboardServiceSettingsWidget.Config.class)
 public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
 
-    public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/service/settings";
+    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/service/settings";
 
     @ObjectClassDefinition(name = "Composum Dashboard Service Settings Widget")
     public @interface Config {
 
-        @AttributeDefinition(name = "Inspected Settings", description = "a set of request templates matching: 'service-type(filter)[service-properties,...]'")
+        @AttributeDefinition(name = "Context")
+        String[] context() default {
+                DASHBOARD_CONTEXT
+        };
+
+        @AttributeDefinition(name = "Category")
+        String category();
+
+        @AttributeDefinition(name = "Rank")
+        int rank() default 2000;
+
+        @AttributeDefinition(name = "Label")
+        String label() default "JSON";
+
+        @AttributeDefinition(name = "Navigation Title")
+        String navTitle();
+
+        @AttributeDefinition(name = "Inspected Settings",
+                description = "a set of request templates matching: 'service-type(filter)[service-properties,...]'")
         String[] inspectedSettings();
+
+        @AttributeDefinition(name = "Servlet Types",
+                description = "the resource types implemented by this servlet")
+        String[] sling_servlet_resourceTypes() default {
+                DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/tile",
+                DEFAULT_RESOURCE_TYPE + "/page",
+                DEFAULT_RESOURCE_TYPE + "/json"
+        };
+
+        @AttributeDefinition(name = "Servlet Extensions",
+                description = "the possible extensions supported by this servlet")
+        String[] sling_servlet_extensions() default {
+                "html",
+                "json"
+        };
+
+        @AttributeDefinition(name = "Servlet Paths",
+                description = "the servletd paths if this configuration variant should be supported")
+        String[] sling_servlet_paths();
     }
+
+    protected static final String OPTION_JSON = "json";
+
+    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TILE, OPTION_JSON);
 
     public static final Pattern RULE_PATTERN = Pattern.compile(
             "^(?<type>[^\\[(]+)(?<filter>\\([^)]+\\))?(\\[(?<props>.*)])?$");
@@ -96,6 +138,8 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
     @Activate
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) {
+        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
+                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.bundleContext = bundleContext;
         configuration = new ArrayList<>();
         for (final String rule : config.inspectedSettings()) {
@@ -106,6 +150,11 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
                 }
             }
         }
+    }
+
+    @Override
+    protected @NotNull String defaultResourceType() {
+        return DEFAULT_RESOURCE_TYPE;
     }
 
     protected @NotNull List<ServiceReference<?>> getServiceReferences(@NotNull final SettingsRule config) {
@@ -137,23 +186,18 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
      */
     protected @Nullable Map<String, Object> getProperties(@NotNull final ServiceReference<?> reference,
                                                           @Nullable final List<Pattern> patterns) {
-        Map<String, Object> properties = null;
+        Map<String, Object> properties = new TreeMap<>();
         final Object service = getService(reference);
-        properties = new LinkedHashMap<>();
         for (final String name : reference.getPropertyKeys()) {
             if (patterns == null || patterns.isEmpty()) {
                 properties.put(name, getProperty(reference, service, name));
             } else {
-                boolean found = false;
                 for (final Pattern pattern : patterns) {
                     final Matcher matcher = pattern.matcher(name);
                     if (matcher.matches()) {
                         properties.put(name, getProperty(reference, service, name));
-                        found = true;
                         break;
                     }
-                }
-                if (!found) {
                 }
             }
         }
@@ -203,22 +247,29 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
     @Override
     public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        final PrintWriter writer = response.getWriter();
+        final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String mode = getHtmlMode(request, HTML_MODES);
-        response.setContentType("text/html;charset=UTF-8");
-        switch (mode) {
-            case OPTION_TILE:
-                htmlTile(request, response, writer);
-                break;
-            case OPTION_VIEW:
-            default:
-                htmlView(request, response, writer);
-                break;
-            case OPTION_PAGE:
-                htmlPageHead(writer, "Service Settings");
-                htmlView(request, response, writer);
-                htmlPageTail(writer);
-                break;
+        if (!OPTION_JSON.equals(mode) && !"json".equals(pathInfo.getExtension())) {
+            response.setContentType("text/html;charset=UTF-8");
+            final PrintWriter writer = response.getWriter();
+            switch (mode) {
+                case OPTION_TILE:
+                    htmlTile(request, response, writer);
+                    break;
+                case OPTION_VIEW:
+                default:
+                    htmlView(request, response, writer);
+                    break;
+                case OPTION_PAGE:
+                    htmlPageHead(writer, "Service Settings");
+                    htmlView(request, response, writer);
+                    htmlPageTail(writer);
+                    break;
+            }
+        } else {
+            response.setContentType("application/json;charset=UTF-8");
+            final JsonWriter writer = new JsonWriter(response.getWriter());
+            dumpJson(request, response, writer);
         }
     }
 
@@ -311,5 +362,30 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
 
     protected @NotNull String domId(@NotNull final String serviceType) {
         return serviceType.replaceAll("[^a-zA-Z0-9_-]", "-");
+    }
+
+    protected void dumpJson(@NotNull final SlingHttpServletRequest request,
+                            @NotNull final SlingHttpServletResponse response,
+                            @NotNull final JsonWriter writer)
+            throws IOException {
+        writer.beginArray();
+        for (final SettingsRule config : configuration) {
+            for (final ServiceReference<?> reference : getServiceReferences(config)) {
+                writer.beginObject();
+                writer.name("name").value(getSimpleServiceName(config.serviceType));
+                writer.name("serviceType").value(config.serviceType);
+                writer.name("active").value(isServiceActive(reference));
+                Map<String, Object> properties = Optional.ofNullable(getProperties(reference, config.properties))
+                        .orElse(Collections.emptyMap());
+                writer.name("properties").beginObject();
+                for (final Map.Entry<String, Object> entry : properties.entrySet()) {
+                    writer.name(entry.getKey());
+                    jsonProperty(writer, entry.getValue());
+                }
+                writer.endObject();
+                writer.endObject();
+            }
+        }
+        writer.endArray();
     }
 }

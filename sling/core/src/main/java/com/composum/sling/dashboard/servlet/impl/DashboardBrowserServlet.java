@@ -2,6 +2,7 @@ package com.composum.sling.dashboard.servlet.impl;
 
 import com.composum.sling.dashboard.service.DashboardBrowser;
 import com.composum.sling.dashboard.service.DashboardManager;
+import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
@@ -17,6 +18,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
 import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
+import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
 import org.apache.sling.xss.XSSFilter;
@@ -28,6 +30,8 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -44,6 +48,7 @@ import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -53,36 +58,52 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.RESOURCE_TYPE;
-
 /**
  * a primitive repository browser for a simple repository content visualization
  */
-@Component(service = {Servlet.class, DashboardBrowser.class},
+@Component(service = {Servlet.class, DashboardBrowser.class, DashboardPlugin.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Browser",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/page",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tree",
-                ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=html",
-                ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=json"
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = DashboardBrowserServlet.Config.class)
 public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardBrowser {
 
-    public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/browser";
+    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/browser";
 
     @ObjectClassDefinition(name = "Composum Dashboard Browser")
     public @interface Config {
-        /* TODO - maybe later...
-        @AttributeDefinition(name = "Tree Roots")
-        String[] treeRoots() default {
-                "/"
+
+        @AttributeDefinition(name = "Category")
+        String[] context() default {
+                BROWSER_CONTEXT
         };
-        */
+
+        @AttributeDefinition(name = "Category")
+        String category();
+
+        @AttributeDefinition(name = "Rank")
+        int rank() default 2000;
+
+        @AttributeDefinition(name = "Label")
+        String label() default "JSON";
+
+        @AttributeDefinition(name = "Navigation Title")
+        String navTitle();
+
+        @AttributeDefinition(name = "Allowed Property Patterns")
+        String[] allowedPropertyPatterns() default {
+                "^.*$"
+        };
+
+        @AttributeDefinition(name = "Disabled Property Patterns")
+        String[] disabledPropertyPatterns() default {
+                "^rep:.*$",
+                "^.*password.*$"
+        };
+
         @AttributeDefinition(name = "Allowed Path Patterns")
         String[] allowedPathPatterns() default {
                 "^/$",
@@ -108,7 +129,29 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
         @AttributeDefinition(name = "Login URI")
         String loginUri() default "/system/sling/form/login.html";
+
+        @AttributeDefinition(name = "Servlet Types",
+                description = "the resource types implemented by this servlet")
+        String[] sling_servlet_resourceTypes() default {
+                DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/page",
+                DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/tree"
+        };
+
+        @AttributeDefinition(name = "Servlet Extensions",
+                description = "the possible extensions supported by this servlet")
+        String[] sling_servlet_extensions() default {
+                "html",
+                "json"
+        };
+
+        @AttributeDefinition(name = "Servlet Paths",
+                description = "the servletd paths if this configuration variant should be supported")
+        String[] sling_servlet_paths();
     }
+
+    public static final String BROWSER_CONTEXT = "browser";
 
     public static final String PAGE_TEMPLATE = "/com/composum/sling/dashboard/plugin/browser/page.html";
     protected static final String OPTION_TREE = "tree";
@@ -129,25 +172,55 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     @Reference
     protected DashboardManager dashboardManager;
 
+    protected List<Pattern> allowedPathPatterns;
+    protected List<Pattern> disabledPathPatterns;
+
     protected List<String> syntheticPaths;
     protected List<String> sortableTypes;
     protected String loginUri;
 
+    protected final Map<String, DashboardWidget> viewWidgets = new HashMap<>();
+
+    @Reference(
+            service = DashboardWidget.class,
+            policy = ReferencePolicy.DYNAMIC,
+            cardinality = ReferenceCardinality.MULTIPLE
+    )
+    protected void addDashboardWidget(@NotNull final DashboardWidget widget) {
+        if (widget.getContext().contains(BROWSER_CONTEXT)) {
+            synchronized (viewWidgets) {
+                viewWidgets.put(widget.getName(), widget);
+            }
+        }
+    }
+
+    protected void removeDashboardWidget(@NotNull final DashboardWidget widget) {
+        synchronized (viewWidgets) {
+            viewWidgets.remove(widget.getName());
+        }
+    }
+
+    @Override
+    public Collection<DashboardWidget> getWidgets(@NotNull SlingHttpServletRequest request) {
+        synchronized (viewWidgets) {
+            return Collections.unmodifiableCollection(viewWidgets.values());
+        }
+    }
+
     @Activate
     @Modified
     protected void activate(Config config) {
-        syntheticPaths = Arrays.asList(Optional.ofNullable(config.syntheticPaths()).orElse(new String[0]));
-        /* TODO - maybe later...
-        for (String path : config.treeRoots()) {
-            if (StringUtils.isNotBlank(path)) {
-                treeRoots.add(path);
-            }
-        }
-        */
+        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
+                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         allowedPathPatterns = patternList(config.allowedPathPatterns());
         disabledPathPatterns = patternList(config.disabledPathPatterns());
+        syntheticPaths = Arrays.asList(Optional.ofNullable(config.syntheticPaths()).orElse(new String[0]));
         sortableTypes = Arrays.asList(Optional.ofNullable(config.sortableTypes()).orElse(new String[0]));
         loginUri = config.loginUri();
+    }
+
+    protected @NotNull String defaultResourceType() {
+        return DEFAULT_RESOURCE_TYPE;
     }
 
     @Override
@@ -215,26 +288,30 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                                @NotNull final SlingHttpServletResponse response)
             throws IOException {
         final ResourceResolver resolver = request.getResourceResolver();
-        final Resource browser = getWidgetResource(request, RESOURCE_TYPE);
-        final String targtePath = Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse("");
-        final ValueMap values = browser.getValueMap();
-        final Map<String, Object> properties = new HashMap<>();
-        properties.put("status-line", xssapi.encodeForHTML(targtePath));
-        properties.put("target-path", xssapi.encodeForHTMLAttr(targtePath));
-        properties.put("browser-path", xssapi.encodeForHTMLAttr(browser.getPath()));
-        properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, RESOURCE_TYPE, HTML_MODES, null)));
-        properties.put("loginUrl", xssapi.encodeForHTMLAttr(loginUri));
-        properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
-        addCustomOption(browser, "style.css", properties);
-        addCustomOption(browser, "script.js", properties);
-        try (final InputStream pageContent = getClass().getClassLoader().getResourceAsStream(PAGE_TEMPLATE);
-             final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null;
-             final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass())) {
-            if (reader != null) {
-                response.setContentType("text/html;charset=UTF-8");
-                IOUtils.copy(reader, writer);
-            } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+        final Resource browser = getWidgetResource(request, DEFAULT_RESOURCE_TYPE);
+        if (browser != null) {
+            final String targetPath = Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse("");
+            final ValueMap values = browser.getValueMap();
+            final Map<String, Object> properties = new HashMap<>();
+            properties.put("status-line", xssapi.encodeForHTML(targetPath));
+            properties.put("target-path", xssapi.encodeForHTMLAttr(targetPath));
+            properties.put("browser-path", xssapi.encodeForHTMLAttr(browser.getPath()));
+            properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, null)));
+            properties.put("browser-tree", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_TREE)));
+            properties.put("browser-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_VIEW)));
+            properties.put("loginUrl", xssapi.encodeForHTMLAttr(loginUri));
+            properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
+            addCustomOption(browser, "style.css", properties);
+            addCustomOption(browser, "script.js", properties);
+            try (final InputStream pageContent = getClass().getClassLoader().getResourceAsStream(PAGE_TEMPLATE);
+                 final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null;
+                 final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass())) {
+                if (reader != null) {
+                    response.setContentType("text/html;charset=UTF-8");
+                    IOUtils.copy(reader, writer);
+                } else {
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                }
             }
         }
     }
@@ -263,31 +340,27 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             throws ServletException, IOException {
         final Resource resource = getRequestResource(request);
         if (resource != null) {
-            Collection<DashboardWidget> browserViews = dashboardManager.getWidgets(request, "browser");
+            Collection<DashboardWidget> browserViews = dashboardManager.getWidgets(request, BROWSER_CONTEXT);
             response.setContentType("text/html;charset=UTF-8");
             final PrintWriter writer = response.getWriter();
             writer.append("<ul class=\"nav nav-tabs\" id=\"myTab\" role=\"tablist\">\n");
             for (final DashboardWidget view : browserViews) {
-                if (!ResourceUtil.isNonExistingResource(resource)) {
-                    final String viewId = view.getName();
-                    writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                            .append("-tab\" data-toggle=\"tab\" href=\"#").append(xssapi.encodeForHTMLAttr(viewId))
-                            .append("\" role=\"tab\" aria-controls=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                            .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(view.getLabel()))
-                            .append("</a></li>\n");
-                }
+                final String viewId = view.getName();
+                writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                        .append("-tab\" data-toggle=\"tab\" href=\"#").append(xssapi.encodeForHTMLAttr(viewId))
+                        .append("\" role=\"tab\" aria-controls=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                        .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(view.getLabel()))
+                        .append("</a></li>\n");
             }
             writer.append("</ul>\n");
             writer.append("<div class=\"tab-content\">\n");
             for (final DashboardWidget view : browserViews) {
-                if (!ResourceUtil.isNonExistingResource(resource)) {
-                    final String viewId = view.getName();
-                    writer.append("<div class=\"tab-pane\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                            .append("\" role=\"tabpanel\" aria-labelledby=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                            .append("-tab\">\n");
-                    htmlView(request, response, view, request.getResource());
-                    writer.append("</div>\n");
-                }
+                final String viewId = view.getName();
+                writer.append("<div class=\"tab-pane\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                        .append("\" role=\"tabpanel\" aria-labelledby=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                        .append("-tab\">\n");
+                htmlView(request, response, view, request.getResource());
+                writer.append("</div>\n");
             }
             writer.append("</div>\n");
         } else {

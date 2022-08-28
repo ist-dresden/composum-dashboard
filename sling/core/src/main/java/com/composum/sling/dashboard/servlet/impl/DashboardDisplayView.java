@@ -15,9 +15,14 @@ import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.Constants;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import javax.servlet.Servlet;
 import javax.servlet.http.HttpServletResponse;
@@ -35,21 +40,61 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
-import static com.composum.sling.dashboard.servlet.impl.DashboardDisplayView.RESOURCE_TYPE;
+import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = Servlet.class,
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Display View",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/load",
-                ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=html"
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE
 )
+@Designate(ocd = DashboardDisplayView.Config.class)
 public class DashboardDisplayView extends AbstractWidgetServlet {
 
-    public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/display";
+    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/display";
+
+    @ObjectClassDefinition(name = "Composum Dashboard Display View")
+    public @interface Config {
+
+        @AttributeDefinition(name = "Context")
+        String[] context() default {
+                BROWSER_CONTEXT
+        };
+
+        @AttributeDefinition(name = "Category")
+        String category();
+
+        @AttributeDefinition(name = "Rank")
+        int rank() default 1000;
+
+        @AttributeDefinition(name = "Label")
+        String label() default "JSON";
+
+        @AttributeDefinition(name = "Navigation Title")
+        String navTitle();
+
+        @AttributeDefinition(name = "Document Loading")
+        boolean loadDocuments() default true;
+
+        @AttributeDefinition(name = "Servlet Types",
+                description = "the resource types implemented by this servlet")
+        String[] sling_servlet_resourceTypes() default {
+                DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/load"
+        };
+
+        @AttributeDefinition(name = "Servlet Extensions",
+                description = "the possible extensions supported by this servlet")
+        String[] sling_servlet_extensions() default {
+                "html"
+        };
+
+        @AttributeDefinition(name = "Servlet Paths",
+                description = "the servletd paths if this configuration variant should be supported")
+        String[] sling_servlet_paths();
+    }
 
     protected static final String OPTION_LOAD = "load";
 
@@ -69,6 +114,21 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
     @Reference
     protected DashboardBrowser browser;
 
+    protected boolean loadDocuments = true;
+
+    @Activate
+    @Modified
+    protected void activate(DashboardDisplayView.Config config) {
+        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
+                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+        loadDocuments = config.loadDocuments();
+    }
+
+    @Override
+    protected @NotNull String defaultResourceType() {
+        return DEFAULT_RESOURCE_TYPE;
+    }
+
     @Override
     public void doGet(@NotNull final SlingHttpServletRequest request,
                       @NotNull final SlingHttpServletResponse response)
@@ -87,7 +147,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
                             break;
                         case DOCUMENT:
                             preview(request, response, displayType, Collections.singletonMap("targetUrl",
-                                    getWidgetUri(request, RESOURCE_TYPE, HTML_MODES, OPTION_LOAD)
+                                    (loadDocuments ? getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD) : "")
                                             + getTargetUrl(resource, null)));
                             break;
                         case IMAGE:
@@ -128,8 +188,8 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
         try (final InputStream pageContent = getClass().getClassLoader()
                 .getResourceAsStream("/com/composum/sling/dashboard/plugin/view/display/"
                         + template.name().toLowerCase() + ".html");
-             final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null;
-             final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass())) {
+             final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
+            final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass());
             if (reader != null) {
                 response.setContentType("text/html;charset=UTF-8");
                 IOUtils.copy(reader, writer);

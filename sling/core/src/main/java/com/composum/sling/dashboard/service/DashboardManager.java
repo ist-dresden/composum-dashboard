@@ -8,7 +8,9 @@ import java.util.Collection;
 
 public interface DashboardManager {
 
-    @Nullable DashboardWidget getWidget(@NotNull SlingHttpServletRequest request, @NotNull String name);
+    @Nullable DashboardWidget getWidget(@NotNull SlingHttpServletRequest request,
+                                        @Nullable String context, @NotNull String name);
 
-    Collection<DashboardWidget> getWidgets(@NotNull SlingHttpServletRequest request, @Nullable String context);
+    Collection<DashboardWidget> getWidgets(@NotNull SlingHttpServletRequest request,
+                                           @Nullable String context);
 }

@@ -10,7 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.component.annotations.ReferencePolicy;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,12 +25,28 @@ public class SlingDashboardManager implements DashboardManager {
 
     protected static final String SA_WIDGETS = SlingDashboardManager.class.getName() + "#";
 
-    @Reference(policyOption = ReferencePolicyOption.GREEDY, cardinality = ReferenceCardinality.MULTIPLE)
-    protected List<DashboardPlugin> dashboardPlugins;
+    protected final List<DashboardPlugin> dashboardPlugins = new ArrayList<>();
+
+    @Reference(
+            service = DashboardPlugin.class,
+            policy = ReferencePolicy.DYNAMIC,
+            cardinality = ReferenceCardinality.MULTIPLE
+    )
+    protected void bindDashboardPlugin(@NotNull final DashboardPlugin plugin) {
+            synchronized (dashboardPlugins) {
+                dashboardPlugins.add(plugin);
+            }
+    }
+
+    protected void unbindDashboardPlugin(@NotNull final DashboardPlugin plugin) {
+        synchronized (dashboardPlugins) {
+            dashboardPlugins.remove(plugin);
+        }
+    }
 
     @Override
     public @Nullable DashboardWidget getWidget(@NotNull final SlingHttpServletRequest request,
-                                               @NotNull final String name) {
+                                               @Nullable final String context, @NotNull final String name) {
         for (DashboardWidget widget : getWidgets(request, null)) {
             if (name.equals(widget.getName())) {
                 return widget;

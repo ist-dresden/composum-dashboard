@@ -7,6 +7,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.models.annotations.Model;
 import org.apache.sling.models.annotations.injectorspecific.OSGiService;
 import org.apache.sling.models.annotations.injectorspecific.Self;
@@ -19,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Model(
         adaptables = SlingHttpServletRequest.class,
@@ -27,6 +31,48 @@ import java.util.List;
         cache = true
 )
 public class DashboardModelImpl implements DashboardModel {
+
+    public class NavigationItem {
+
+        protected final String label;
+        protected final String title;
+        protected final String linkUrl;
+        protected final String linkPath;
+        protected final String linkTarget;
+
+        public NavigationItem(@NotNull final Resource resource) {
+            final ValueMap values = resource.getValueMap();
+            label = values.get("label", values.get("jcr:title", resource.getName()));
+            title = values.get("title", values.get("jcr:title", ""));
+            linkUrl = values.get("linkUrl", String.class);
+            linkPath = values.get("linkPath", String.class);
+            linkTarget = values.get("linkTarget", String.class);
+        }
+
+        public boolean isValid() {
+            final ResourceResolver resolver = request.getResourceResolver();
+            return (StringUtils.isNotBlank(linkUrl) || StringUtils.isNotBlank(linkPath))
+                    && (StringUtils.isBlank(linkPath) || resolver.getResource(linkPath) != null)
+                    && (StringUtils.isBlank(linkUrl) || linkUrl.matches("^https?//")
+                    || !ResourceUtil.isNonExistingResource(resolver.resolve(linkUrl)));
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public String getTitle() {
+            return title;
+        }
+
+        public String getLinkUrl() {
+            return StringUtils.isNotBlank(linkUrl) ? linkUrl : (linkPath + ".html");
+        }
+
+        public String getLinkTarget() {
+            return linkTarget;
+        }
+    }
 
     public class WidgetModelImpl implements WidgetModel {
 
@@ -37,16 +83,6 @@ public class DashboardModelImpl implements DashboardModel {
 
         public WidgetModelImpl(DashboardModelImpl dashboardModel, DashboardWidget widget) {
             this.widget = widget;
-        }
-
-        @Override
-        public boolean isWidget() {
-            return widget.getType() == DashboardWidget.Type.WIDGET;
-        }
-
-        @Override
-        public boolean isTool() {
-            return widget.getType() == DashboardWidget.Type.TOOL;
         }
 
         @Override
@@ -80,6 +116,8 @@ public class DashboardModelImpl implements DashboardModel {
         }
     }
 
+    public static final String DASHBOARD_CONTEXT = "dashboard";
+
     protected static final String SA_CURRENT_VIEW = DashboardModelImpl.class.getName() + "#currentView";
 
     @Self
@@ -87,6 +125,8 @@ public class DashboardModelImpl implements DashboardModel {
 
     @OSGiService
     protected DashboardManager dashboardManager;
+
+    private transient List<NavigationItem> navigation;
 
     private transient List<WidgetModel> widgetModels;
 
@@ -114,6 +154,24 @@ public class DashboardModelImpl implements DashboardModel {
             }
         }
         currentWidget = getWidget(getCurrentView());
+    }
+
+    public @NotNull List<NavigationItem> getNavigation() {
+        if (navigation == null) {
+            navigation = new ArrayList<>();
+            final Resource dashboard = request.getResource();
+            final Resource navItems = Optional.ofNullable(dashboard.getChild("navigation"))
+                    .orElse(dashboard.getChild("jcr:content/navigation"));
+            if (navItems != null) {
+                for (final Resource item : navItems.getChildren()) {
+                    final NavigationItem navItem = new NavigationItem(item);
+                    if (navItem.isValid()) {
+                        navigation.add(navItem);
+                    }
+                }
+            }
+        }
+        return navigation;
     }
 
     protected @Nullable String getCurrentView() {
@@ -146,7 +204,7 @@ public class DashboardModelImpl implements DashboardModel {
             }
         }
         if (StringUtils.isNotBlank(name)) {
-            return dashboardManager.getWidget(request, name);
+            return dashboardManager.getWidget(request, DASHBOARD_CONTEXT, name);
         }
         return null;
     }
@@ -173,7 +231,7 @@ public class DashboardModelImpl implements DashboardModel {
     public Collection<WidgetModel> getWidgetModels() {
         if (widgetModels == null) {
             widgetModels = new ArrayList<>();
-            for (DashboardWidget widget : dashboardManager.getWidgets(request, null)) {
+            for (DashboardWidget widget : dashboardManager.getWidgets(request, DASHBOARD_CONTEXT)) {
                 widgetModels.add(new WidgetModelImpl(this, widget));
             }
         }
@@ -182,7 +240,7 @@ public class DashboardModelImpl implements DashboardModel {
 
     @Override
     public Collection<DashboardWidget> getWidgets() {
-        return dashboardManager.getWidgets(request, null);
+        return dashboardManager.getWidgets(request, DASHBOARD_CONTEXT);
     }
 
     @Override

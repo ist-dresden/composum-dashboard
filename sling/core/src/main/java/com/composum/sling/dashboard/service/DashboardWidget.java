@@ -10,25 +10,11 @@ import java.util.Comparator;
 
 public interface DashboardWidget {
 
-    enum Type {
-        WIDGET, TOOL, HIDDEN;
-
-        public static Type fromString(@NotNull final String key) {
-            try {
-                return Type.valueOf(key.toUpperCase());
-            } catch (IllegalArgumentException ignore) {
-                return Type.WIDGET;
-            }
-        }
-    }
-
     @NotNull Collection<String> getContext();
 
     @NotNull String getCategory();
 
     int getRank();
-
-    @NotNull Type getType();
 
     @NotNull String getName();
 

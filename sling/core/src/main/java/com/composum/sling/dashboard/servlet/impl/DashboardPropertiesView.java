@@ -7,6 +7,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
@@ -22,7 +23,6 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import javax.servlet.Servlet;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,24 +34,39 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.servlet.impl.DashboardPropertiesView.RESOURCE_TYPE;
+import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = Servlet.class,
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Properies View",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
-                ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=html"
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = DashboardPropertiesView.Config.class)
 public class DashboardPropertiesView extends AbstractWidgetServlet {
 
-    public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/properties";
+    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/properties";
 
     @ObjectClassDefinition(name = "Composum Dashboard Properies View")
     public @interface Config {
+
+        @AttributeDefinition(name = "Context")
+        String[] context() default {
+                BROWSER_CONTEXT
+        };
+
+        @AttributeDefinition(name = "Category")
+        String category();
+
+        @AttributeDefinition(name = "Rank")
+        int rank() default 500;
+
+        @AttributeDefinition(name = "Label")
+        String label() default "JSON";
+
+        @AttributeDefinition(name = "Navigation Title")
+        String navTitle();
 
         @AttributeDefinition(name = "Allowed Property Patterns")
         String[] allowedPropertyPatterns() default {
@@ -63,6 +78,23 @@ public class DashboardPropertiesView extends AbstractWidgetServlet {
                 "^rep:.*$",
                 "^.*password.*$"
         };
+
+        @AttributeDefinition(name = "Servlet Types",
+                description = "the resource types implemented by this servlet")
+        String[] sling_servlet_resourceTypes() default {
+                DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/view"
+        };
+
+        @AttributeDefinition(name = "Servlet Extensions",
+                description = "the possible extensions supported by this servlet")
+        String[] sling_servlet_extensions() default {
+                "html"
+        };
+
+        @AttributeDefinition(name = "Servlet Paths",
+                description = "the servletd paths if this configuration variant should be supported")
+        String[] sling_servlet_paths();
     }
 
     @Reference
@@ -77,8 +109,15 @@ public class DashboardPropertiesView extends AbstractWidgetServlet {
     @Activate
     @Modified
     protected void activate(DashboardPropertiesView.Config config) {
+        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
+                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         allowedPropertyPatterns = patternList(config.allowedPropertyPatterns());
         disabledPropertyPatterns = patternList(config.disabledPropertyPatterns());
+    }
+
+    @Override
+    protected @NotNull String defaultResourceType() {
+        return DEFAULT_RESOURCE_TYPE;
     }
 
     protected boolean isAllowedProperty(@NotNull final String name) {
@@ -97,7 +136,7 @@ public class DashboardPropertiesView extends AbstractWidgetServlet {
 
     @Override
     public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
-            throws ServletException, IOException {
+            throws IOException {
         final Resource resource = browser.getRequestResource(request);
         if (resource != null) {
             ResourceResolver resolver = resource.getResourceResolver();

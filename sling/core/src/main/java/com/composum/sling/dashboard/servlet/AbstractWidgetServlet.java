@@ -1,6 +1,8 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
+import com.google.gson.stream.JsonWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -8,9 +10,12 @@ import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
+import org.apache.sling.api.resource.ResourceWrapper;
+import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.service.metatype.annotations.AttributeDefinition;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,21 +28,128 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
-public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
+public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet implements DashboardWidget {
+
+    public interface Config {
+
+        @AttributeDefinition(name = "Context")
+        String[] context();
+
+        @AttributeDefinition(name = "Category")
+        String category();
+
+        @AttributeDefinition(name = "Rank")
+        int rank();
+
+        @AttributeDefinition(name = "Label")
+        String label();
+
+        @AttributeDefinition(name = "Navigation Title")
+        String navTitle();
+
+        @AttributeDefinition(name = "Servlet Types")
+        String[] sling_servlet_resourceTypes();
+
+        @AttributeDefinition(name = "Servlet Extensions")
+        String[] sling_servlet_extensions();
+
+        @AttributeDefinition(name = "Servlet Paths")
+        String[] sling_servlet_paths();
+    }
 
     protected static final String OPTION_TILE = "tile";
     protected static final String OPTION_VIEW = "view";
     protected static final String OPTION_PAGE = "page";
 
-    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_TILE, OPTION_PAGE);
+    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TILE);
 
-    protected List<Pattern> allowedPathPatterns;
-    protected List<Pattern> disabledPathPatterns;
+    protected List<String> context;
+    protected String category;
+    protected int rank;
+    protected String label;
+    protected String navTitle;
+
+    protected String resourceType;
+    protected List<String> resourceTypes;
+    protected String servletPath;
+    protected List<String> servletPaths;
+
+    protected void activate(String[] context, String categors, int rank, String label, String navTitle,
+                            String[] resourceTypes, String[] servletPaths) {
+        this.context = Arrays.asList(context);
+        this.category = categors;
+        this.rank = rank;
+        this.label = label;
+        this.navTitle = navTitle;
+        this.resourceType = getFirstProperty(resourceTypes, defaultResourceType());
+        this.resourceTypes = resourceTypes != null ? Arrays.asList(resourceTypes) : Collections.emptyList();
+        this.servletPath = getFirstProperty(servletPaths, null);
+        this.servletPaths = servletPaths != null ? Arrays.asList(servletPaths) : Collections.emptyList();
+    }
+
+    protected abstract @NotNull String defaultResourceType();
+
+    // Widget
+
+    @Override
+    public @NotNull Collection<String> getContext() {
+        return Collections.unmodifiableList(context);
+    }
+
+    @Override
+    public @NotNull String getCategory() {
+        return StringUtils.defaultString(category, getName());
+    }
+
+    @Override
+    public int getRank() {
+        return rank;
+    }
+
+    @Override
+    public @NotNull String getName() {
+        return "json";
+    }
+
+    @Override
+    public @NotNull String getLabel() {
+        return StringUtils.defaultString(label, getName());
+    }
+
+    @Override
+    public @NotNull String getNavTitle() {
+        return StringUtils.defaultString(navTitle, getLabel());
+    }
+
+    @Override
+    public @NotNull Resource getWidgetResource(@NotNull SlingHttpServletRequest request) {
+        final Resource resource = request.getResource();
+        return new ResourceWrapper(resource) {
+            @Override
+            public @NotNull String getResourceType() {
+                return resourceType;
+            }
+        };
+    }
+
+    @Override
+    public @NotNull String getWidgetPageUrl(@NotNull SlingHttpServletRequest request) {
+        return (StringUtils.isNotBlank(servletPath) ? servletPath : request.getResource().getPath()) + ".html";
+    }
+
+    @Override
+    public <T> @Nullable T getProperty(@NotNull String name, T defaultValue) {
+        return null;
+    }
+
+    // Helpers
 
     protected @NotNull String getHtmlMode(@NotNull final SlingHttpServletRequest request,
                                           @NotNull final List<String> options) {
@@ -53,18 +165,53 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
                 }
             }
         }
-        return options.get(0);
+        final String suffixMode = getSuffixMode(request, options);
+        return StringUtils.isNotBlank(suffixMode) ? suffixMode : options.get(0);
     }
 
-    protected String getWidgetUri(@NotNull final SlingHttpServletRequest request, @NotNull final String resourceType,
-                                  @NotNull final List<String> options, @Nullable final String mode) {
-        final Resource widget = getWidgetResource(request, resourceType);
-        final StringBuilder uri = new StringBuilder(widget.getPath());
-        uri.append(StringUtils.isNotBlank(getSelectorMode(request, options)) ? '.' : '/');
-        if (StringUtils.isNotBlank(mode)) {
-            uri.append(mode).append(".html");
+    protected @Nullable Resource getWidgetResource(@NotNull final SlingHttpServletRequest request,
+                                                   @NotNull final String resourceType) {
+        Resource widget = request.getResource();
+        if (!widget.isResourceType(resourceType) && !resourceType.equals(widget.getResourceType())) {
+            Resource parent = widget.getParent();
+            if (parent != null && (parent.isResourceType(resourceType)
+                    || resourceType.equals(parent.getResourceType()))) {
+                return parent;
+            }
+            if (StringUtils.isNotBlank(servletPath)) {
+                return new SyntheticResource(request.getResourceResolver(), servletPath, resourceType);
+            }
+            return null;
         }
-        return uri.toString().replaceAll("/jcr:", "/_jcr_");
+        return widget;
+    }
+
+    protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
+                                           @NotNull final String resourceType,
+                                           @NotNull final List<String> options, @Nullable final String mode) {
+        final Resource widget = getWidgetResource(request, resourceType);
+        if (widget != null) {
+            String uri = getWidgetPath(widget, mode);
+            if (StringUtils.isNotBlank(mode) && !uri.endsWith("/" + mode)) {
+                uri += "." + mode;
+            }
+            uri += ".html";
+            return uri.replaceAll("/jcr:", "/_jcr_");
+        }
+        return "";
+    }
+
+    protected @NotNull String getWidgetPath(@NotNull final Resource widget, @Nullable final String mode) {
+        String path = widget.getPath();
+        if (StringUtils.isNotBlank(mode)) {
+            Resource modeResource = widget.getChild(mode);
+            if (modeResource != null) {
+                path = modeResource.getPath();
+            } else if (servletPaths.contains(path + "/" + mode)) {
+                path += "/" + mode;
+            }
+        }
+        return path;
     }
 
     protected @Nullable String getSelectorMode(@NotNull final SlingHttpServletRequest request,
@@ -79,13 +226,16 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
         return null;
     }
 
-    protected Resource getWidgetResource(@NotNull final SlingHttpServletRequest request,
-                                         @NotNull final String resourceType) {
-        Resource widget = request.getResource();
-        if (!widget.isResourceType(resourceType)) {
-            widget = Objects.requireNonNull(widget.getParent());
+    protected @Nullable String getSuffixMode(@NotNull final SlingHttpServletRequest request,
+                                             @NotNull final List<String> options) {
+        final RequestPathInfo pathInfo = request.getRequestPathInfo();
+        final String suffix = Optional.ofNullable(pathInfo.getSuffix())
+                .map(s -> s.startsWith("/") ? s.substring(1) : s)
+                .orElse("");
+        if (options.contains(suffix)) {
+            return suffix;
         }
-        return widget;
+        return null;
     }
 
     protected @Nullable Resource resolveUrl(@NotNull final SlingHttpServletRequest request,
@@ -111,16 +261,6 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
             }
         }
         return result;
-    }
-
-    protected List<Pattern> patternList(@Nullable final String[] config) {
-        List<Pattern> patterns = new ArrayList<>();
-        for (String rule : config) {
-            if (StringUtils.isNotBlank(rule)) {
-                patterns.add(Pattern.compile(rule));
-            }
-        }
-        return patterns;
     }
 
     protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
@@ -177,6 +317,45 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet {
                 + "<script src=\"https://cdn.jsdelivr.net/npm/popper.js@1.14.3/dist/umd/popper.min.js\" integrity=\"sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49\" crossorigin=\"anonymous\"></script>\n"
                 + "<script src=\"https://cdn.jsdelivr.net/npm/bootstrap@4.1.3/dist/js/bootstrap.min.js\" integrity=\"sha384-ChfqqxuZUCnJSK3+MXmPNIyE6ZbWh2IMqE241rYiqJxyMiZ6OW/JmZQ5stwEULTy\" crossorigin=\"anonymous\"></script>\n"
                 + "</body></html>\n");
+    }
+
+    protected void jsonProperty(@NotNull final JsonWriter writer, @Nullable final Object value)
+            throws IOException {
+        if (value == null) {
+            writer.nullValue();
+        } else if (value instanceof Object[]) {
+            writer.beginArray();
+            for (Object item : (Object[]) value) {
+                jsonProperty(writer, item);
+            }
+            writer.endArray();
+        } else if (value instanceof Boolean) {
+            writer.value((Boolean) value);
+        } else if (value instanceof Long) {
+            writer.value((Long) value);
+        } else if (value instanceof Integer) {
+            writer.value((Integer) value);
+        } else if (value instanceof Double) {
+            writer.value((Double) value);
+        } else if (value instanceof Number) {
+            writer.value((Number) value);
+        } else {
+            writer.value(value.toString());
+        }
+    }
+
+    protected String getFirstProperty(@Nullable final String[] stringSet, final String defaultValue) {
+        return stringSet != null && stringSet.length > 0 ? stringSet[0] : defaultValue;
+    }
+
+    protected List<Pattern> patternList(@Nullable final String[] config) {
+        List<Pattern> patterns = new ArrayList<>();
+        for (String rule : config) {
+            if (StringUtils.isNotBlank(rule)) {
+                patterns.add(Pattern.compile(rule));
+            }
+        }
+        return patterns;
     }
 }
 

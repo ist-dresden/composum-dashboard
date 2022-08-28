@@ -4,6 +4,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ResourceWrapper;
 import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
@@ -48,7 +49,6 @@ public class GenericDashboardPlugin implements DashboardPlugin {
 
     protected static class Widget implements DashboardWidget, Serializable {
 
-        protected final Type type;
         protected final String name;
         protected final String path;
         protected final String resourceType;
@@ -59,20 +59,25 @@ public class GenericDashboardPlugin implements DashboardPlugin {
             path = resource.getPath();
             resourceType = resource.getResourceType();
             properties = new ValueMapDecorator(new HashMap<>(resource.getValueMap()));
-            type = Type.fromString(properties.get("type", Type.WIDGET.name()));
-        }
-
-        @Override
-        public @NotNull Type getType() {
-            return type;
         }
 
         @Override
         public @NotNull Resource getWidgetResource(@NotNull final SlingHttpServletRequest request) {
-            ResourceResolver resolver = request.getResourceResolver();
+            final String resourceType = properties.get("widgetResourceType", String.class);
+            final ResourceResolver resolver = request.getResourceResolver();
             Resource resource = resolver.getResource(path);
-            return resource != null ? resource
-                    : new SyntheticResource(resolver, path, properties.get("widgetResourceType", String.class));
+            if (resource != null) {
+                if (StringUtils.isNotBlank(resourceType)) {
+                    resource = new ResourceWrapper(resource) {
+                        @Override
+                        public @NotNull String getResourceType() {
+                            return resourceType;
+                        }
+                    };
+                }
+                return resource;
+            }
+            return new SyntheticResource(resolver, path, resourceType);
         }
 
         @Override

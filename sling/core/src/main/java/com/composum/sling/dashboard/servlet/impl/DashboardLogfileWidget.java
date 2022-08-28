@@ -5,6 +5,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.settings.SlingSettingsService;
 import org.apache.sling.xss.XSSAPI;
@@ -34,7 +35,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.servlet.impl.DashboardLogfileWidget.RESOURCE_TYPE;
+import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOARD_CONTEXT;
 
 /**
  * a primitive logfile viewer servlet implementation to declare a Composum Dashborad Widget for logfiles
@@ -42,22 +43,34 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardLogfileWidget.R
 @Component(service = Servlet.class,
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Logfile Widget",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE,
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/view",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tail",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/tile",
-                ServletResolverConstants.SLING_SERVLET_RESOURCE_TYPES + "=" + RESOURCE_TYPE + "/page",
-                ServletResolverConstants.SLING_SERVLET_EXTENSIONS + "=html"
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = DashboardLogfileWidget.Config.class)
 public class DashboardLogfileWidget extends AbstractWidgetServlet {
 
-    public static final String RESOURCE_TYPE = "composum/dashboard/sling/components/logfile";
+    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/logfile";
 
     @ObjectClassDefinition(name = "Composum Dashboard Logfile Widget")
     public @interface Config {
+
+        @AttributeDefinition(name = "Context")
+        String[] context() default {
+                DASHBOARD_CONTEXT
+        };
+
+        @AttributeDefinition(name = "Category")
+        String category();
+
+        @AttributeDefinition(name = "Rank")
+        int rank() default 5000;
+
+        @AttributeDefinition(name = "Label")
+        String label() default "JSON";
+
+        @AttributeDefinition(name = "Navigation Title")
+        String navTitle();
 
         @AttributeDefinition(name = "Logfile Set")
         String[] logFiles() default {
@@ -71,7 +84,27 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
         String warningPattern() default "\\*WARN\\*";
 
         @AttributeDefinition(name = "Size Limit (Kb)")
-        int sizeLimit() default 1000;
+        int sizeLimit() default 5000;
+
+        @AttributeDefinition(name = "Servlet Types",
+                description = "the resource types implemented by this servlet")
+        String[] sling_servlet_resourceTypes() default {
+                DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/tail",
+                DEFAULT_RESOURCE_TYPE + "/tile",
+                DEFAULT_RESOURCE_TYPE + "/page"
+        };
+
+        @AttributeDefinition(name = "Servlet Extensions",
+                description = "the possible extensions supported by this servlet")
+        String[] sling_servlet_extensions() default {
+                "html"
+        };
+
+        @AttributeDefinition(name = "Servlet Paths",
+                description = "the servletd paths if this configuration variant should be supported")
+        String[] sling_servlet_paths();
     }
 
     public class LoggerSession implements Serializable {
@@ -163,7 +196,7 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
     }
 
     protected static final String OPTION_TAIL = "tail";
-    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_TAIL, OPTION_TILE, OPTION_PAGE);
+    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TAIL, OPTION_TILE);
 
     public static final String SA_SESSIONS = DashboardLogfileWidget.class.getName() + "#sessions";
 
@@ -184,12 +217,19 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
     @Activate
     @Modified
     protected void activate(DashboardLogfileWidget.Config config) {
+        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
+                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         slingHomePath = slingSettingsService.getSlingHomePath();
         slingHomeName = StringUtils.substringAfterLast(slingHomePath, "/");
         logFiles = Arrays.asList(config.logFiles());
         errorPattern = Pattern.compile(config.errorPattern());
         warningPattern = Pattern.compile(config.warningPattern());
         sizeLimit = config.sizeLimit();
+    }
+
+    @Override
+    protected @NotNull String defaultResourceType() {
+        return DEFAULT_RESOURCE_TYPE;
     }
 
     @Override
@@ -330,7 +370,7 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
                                @NotNull final SlingHttpServletResponse response,
                                @NotNull LoggerSession session, @NotNull final PrintWriter writer) {
         writer.append("<div class=\"dashboard-widget__logfile\"><textarea readonly=\"readonly\" data-tail=\"")
-                .append(getWidgetUri(request, RESOURCE_TYPE, HTML_MODES, OPTION_TAIL))
+                .append(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_TAIL))
                 .append(session.getLogfile()).append("\">");
         session.dump(writer, true);
         writer.append("</textarea></div>\n");

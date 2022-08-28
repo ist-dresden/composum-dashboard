@@ -18,6 +18,11 @@
     text-align: center;
 }
 
+.dashboard-widget__settings-view .service-status .fa,
+.dashboard-widget__settings-tile .service-status .fa {
+    line-height: 20px;
+}
+
 .dashboard-widget__settings-view .card-header {
     padding: 0.5rem;
 }

@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * the browser is providing general restrictions for the display plugins
  */
-public interface DashboardBrowser {
+public interface DashboardBrowser extends DashboardPlugin {
 
     /**
      * checks if a given resource is allowed by the configured restrictions

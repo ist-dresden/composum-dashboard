@@ -2,9 +2,10 @@
      data-sly-use.model="com.composum.sling.dashboard.model.DashboardModel">
     <span class="navbar-brand" style="min-width:15rem;">${model.title}</span>
     <ul class="navbar-nav mr-auto">
-        <sly data-sly-list.widget="${model.widgetModels}">
-            <li data-sly-test="${widget.tool}" class="nav-item">
-                <a class="nav-link" href="${widget.widgetPageUrl}">${widget.navTitle}</a>
+        <sly data-sly-list.item="${model.navigation}">
+            <li class="nav-item">
+                <a class="nav-link" href="${item.linkUrl}" data-sly-attribute.title="${item.title}"
+                   data-sly-attribute.target="${item.linkTarget}">${item.label}</a>
             </li>
         </sly>
     </ul>

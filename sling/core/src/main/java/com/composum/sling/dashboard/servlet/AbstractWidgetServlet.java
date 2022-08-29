@@ -26,10 +26,12 @@ import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -63,6 +65,8 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
         @AttributeDefinition(name = "Servlet Paths")
         String[] sling_servlet_paths();
     }
+
+    public static final String JSON_DATE_FORMAT = "yyyy-MM-dd MM:mm:ss.SSSZ";
 
     protected static final String OPTION_TILE = "tile";
     protected static final String OPTION_VIEW = "view";
@@ -319,6 +323,26 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
                 + "</body></html>\n");
     }
 
+    protected @Nullable Object filterValues(@Nullable Object value, @NotNull final Collection<Pattern> blacklist) {
+        if (value instanceof String[]) {
+            List<String> values = new ArrayList<>();
+            for (String string : (String[]) value) {
+                boolean skip = false;
+                for (Pattern pattern : blacklist) {
+                    if (pattern.matcher(string).matches()) {
+                        skip = true;
+                        break;
+                    }
+                }
+                if (!skip) {
+                    values.add(string);
+                }
+            }
+            value = values.toArray(new String[0]);
+        }
+        return value;
+    }
+
     protected void jsonProperty(@NotNull final JsonWriter writer, @Nullable final Object value)
             throws IOException {
         if (value == null) {
@@ -329,6 +353,21 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
                 jsonProperty(writer, item);
             }
             writer.endArray();
+        } else if (value instanceof Collection) {
+            writer.beginArray();
+            for (Object item : (Collection<?>) value) {
+                jsonProperty(writer, item);
+            }
+            writer.endArray();
+        } else if (value instanceof Map) {
+            writer.beginObject();
+            for (Map.Entry<?, ?> item : ((Map<?, ?>) value).entrySet()) {
+                writer.name(item.getKey().toString());
+                jsonProperty(writer, item.getValue());
+            }
+            writer.endObject();
+        } else if (value instanceof Date) {
+            writer.value(new SimpleDateFormat(JSON_DATE_FORMAT).format((Date) value));
         } else if (value instanceof Boolean) {
             writer.value((Boolean) value);
         } else if (value instanceof Long) {

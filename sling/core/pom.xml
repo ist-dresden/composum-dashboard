@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard-sling-parent</artifactId>
-        <version>0.5</version>
+        <version>0.6</version>
     </parent>
 
     <artifactId>composum-dashboard-sling-core</artifactId>
@@ -52,6 +52,14 @@
         <dependency>
             <groupId>org.apache.sling</groupId>
             <artifactId>org.apache.sling.adapter</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.caconfig.api</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.sling</groupId>
+            <artifactId>org.apache.sling.commons.classloader</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.sling</groupId>

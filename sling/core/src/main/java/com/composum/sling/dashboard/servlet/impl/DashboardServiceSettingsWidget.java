@@ -1,11 +1,8 @@
 package com.composum.sling.dashboard.servlet.impl;
 
-import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
-import com.google.gson.stream.JsonWriter;
+import com.composum.sling.dashboard.servlet.AbstractSettingsWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.api.SlingHttpServletResponse;
-import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -25,17 +22,11 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import javax.servlet.Servlet;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.TreeMap;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,7 +43,7 @@ import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOA
         configurationPolicy = ConfigurationPolicy.REQUIRE
 )
 @Designate(ocd = DashboardServiceSettingsWidget.Config.class)
-public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
+public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/service/settings";
 
@@ -101,8 +92,6 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
                 description = "the servletd paths if this configuration variant should be supported")
         String[] sling_servlet_paths();
     }
-
-    protected static final String OPTION_JSON = "json";
 
     protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TILE, OPTION_JSON);
 
@@ -157,6 +146,94 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
         return DEFAULT_RESOURCE_TYPE;
     }
 
+    @Override
+    protected @NotNull List<String> getHtmlModes() {
+        return HTML_MODES;
+    }
+
+    @Override
+    protected @NotNull XSSAPI xssApi() {
+        return xssapi;
+    }
+
+    protected class ReferenceProvider extends SettingsProvider {
+
+        protected final SettingsRule config;
+        protected final ServiceReference<?> reference;
+
+        public ReferenceProvider(SettingsRule config, ServiceReference<?> reference) {
+            this.config = config;
+            this.reference = reference;
+        }
+
+        public Object getService() {
+            return bundleContext.getService(reference);
+        }
+
+        @Override
+        public String getName() {
+            return config.serviceType;
+        }
+
+        @Override
+        public String getLabel() {
+            return StringUtils.substringAfterLast(getName(), ".");
+        }
+
+        @Override
+        public boolean isAvailable() {
+            return getService() != null;
+        }
+
+        @Override
+        public @NotNull Iterable<String> getPropertyNames() {
+            final Set<String> propertyNames = new HashSet<>();
+            for (final String name : reference.getPropertyKeys()) {
+                if (config.properties.isEmpty()) {
+                    propertyNames.add(name);
+                } else {
+                    for (final Pattern pattern : config.properties) {
+                        final Matcher matcher = pattern.matcher(name);
+                        if (matcher.matches()) {
+                            propertyNames.add(name);
+                            break;
+                        }
+                    }
+                }
+            }
+            Object service = bundleContext.getService(reference);
+            if (service != null) {
+                for (final Pattern pattern : config.properties) {
+                    final String name = pattern.toString();
+                    if (PROPERTY_NAME.matcher(name).matches()) {
+                        propertyNames.add(name);
+                    }
+                }
+            }
+            return propertyNames;
+        }
+
+        @Override
+        public @Nullable Object getProperty(@NotNull final String name) {
+            Object value = reference.getProperty(name);
+            if (value == null) {
+                value = getProperty(getService(), name);
+            }
+            return value;
+        }
+    }
+
+    @Override
+    protected @NotNull List<SettingsProvider> getSettingsProviders(@NotNull final SlingHttpServletRequest request) {
+        List<SettingsProvider> providers = new ArrayList<>();
+        for (SettingsRule config : configuration) {
+            for (ServiceReference<?> reference : getServiceReferences(config)) {
+                providers.add(new ReferenceProvider(config, reference));
+            }
+        }
+        return providers;
+    }
+
     protected @NotNull List<ServiceReference<?>> getServiceReferences(@NotNull final SettingsRule config) {
         final List<ServiceReference<?>> serviceReferences = new ArrayList<>();
         try {
@@ -179,213 +256,5 @@ public class DashboardServiceSettingsWidget extends AbstractWidgetServlet {
         } catch (InvalidSyntaxException ignore) {
         }
         return serviceReferences;
-    }
-
-    /**
-     * @return the service properties, 'null' if the service is not available
-     */
-    protected @Nullable Map<String, Object> getProperties(@NotNull final ServiceReference<?> reference,
-                                                          @Nullable final List<Pattern> patterns) {
-        Map<String, Object> properties = new TreeMap<>();
-        final Object service = getService(reference);
-        for (final String name : reference.getPropertyKeys()) {
-            if (patterns == null || patterns.isEmpty()) {
-                properties.put(name, getProperty(reference, service, name));
-            } else {
-                for (final Pattern pattern : patterns) {
-                    final Matcher matcher = pattern.matcher(name);
-                    if (matcher.matches()) {
-                        properties.put(name, getProperty(reference, service, name));
-                        break;
-                    }
-                }
-            }
-        }
-        if (service != null && patterns != null) {
-            for (final Pattern pattern : patterns) {
-                String name = pattern.toString();
-                if (!properties.containsKey(name)) {
-                    Object value = getProperty(reference, service, name);
-                    if (value != null) {
-                        properties.put(name, getProperty(reference, service, name));
-                    }
-                }
-            }
-        }
-        return properties;
-    }
-
-
-    public @Nullable Object getProperty(@NotNull final ServiceReference<?> reference, @Nullable final Object service,
-                                        @NotNull final String name) {
-        Object value = null;
-        if (StringUtils.isNotBlank(name)) {
-            value = reference.getProperty(name);
-            if (value == null && service != null) {
-                try {
-                    Method getter = service.getClass().getMethod(
-                            "get" + Character.toUpperCase(name.charAt(0)) + name.substring(1));
-                    value = getter.invoke(service);
-                } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException ignore) {
-                }
-            }
-        }
-        return value;
-    }
-
-    protected @Nullable Object getService(@Nullable final ServiceReference<?> reference) {
-        if (reference != null) {
-            return bundleContext.getService(reference);
-        }
-        return null;
-    }
-
-    protected boolean isServiceActive(@NotNull final ServiceReference<?> reference) {
-        return getService(reference) != null;
-    }
-
-    @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
-            throws IOException {
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final String mode = getHtmlMode(request, HTML_MODES);
-        if (!OPTION_JSON.equals(mode) && !"json".equals(pathInfo.getExtension())) {
-            response.setContentType("text/html;charset=UTF-8");
-            final PrintWriter writer = response.getWriter();
-            switch (mode) {
-                case OPTION_TILE:
-                    htmlTile(request, response, writer);
-                    break;
-                case OPTION_VIEW:
-                default:
-                    htmlView(request, response, writer);
-                    break;
-                case OPTION_PAGE:
-                    htmlPageHead(writer, "Service Settings");
-                    htmlView(request, response, writer);
-                    htmlPageTail(writer);
-                    break;
-            }
-        } else {
-            response.setContentType("application/json;charset=UTF-8");
-            final JsonWriter writer = new JsonWriter(response.getWriter());
-            dumpJson(request, response, writer);
-        }
-    }
-
-    protected void htmlTile(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
-                            @NotNull final PrintWriter writer)
-            throws IOException {
-        writer.append("<style>\n");
-        copyResource(this.getClass(), "/com/composum/sling/dashboard/plugin/service/settings/style.css", writer);
-        writer.append("</style>\n");
-        writer.append("<div class=\"card dashboard-widget__settings-tile\"><div class=\"card-header bg-")
-                .append("info".replace("info", "primary"))
-                .append(" text-white\">").append("Service Settings")
-                .append("</div><ul class=\"list-group list-group-flush\">\n");
-        for (final SettingsRule config : configuration) {
-            for (final ServiceReference<?> reference : getServiceReferences(config)) {
-                final String label = xssapi.encodeForHTML(getSimpleServiceName(config.serviceType));
-                final boolean active = isServiceActive(reference);
-                writer.append("<li class=\"list-group-item d-flex justify-content-between\">")
-                        .append(label).append("<span class=\"service-status badge badge-pill badge-")
-                        .append(active ? "success" : "danger").append("\"><i class=\"fa fa-")
-                        .append(active ? "check" : "times").append("\"></i></span></li>\n");
-            }
-        }
-        writer.append("</ul></div>\n");
-    }
-
-    protected void htmlView(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
-                            @NotNull final PrintWriter writer)
-            throws IOException {
-        writer.append("<style>\n");
-        copyResource(this.getClass(), "/com/composum/sling/dashboard/plugin/service/settings/style.css", writer);
-        writer.append("</style>\n");
-        writer.append("<div class=\"dashboard-widget__settings-view\">");
-        for (final SettingsRule config : configuration) {
-            for (final ServiceReference<?> reference : getServiceReferences(config)) {
-                final String domId = domId(config.serviceType);
-                final boolean active = isServiceActive(reference);
-                writer.append("<div class=\"card\"><div class=\"card-header\" id=\"card-")
-                        .append(domId).append("\">")
-                        .append("<button class=\"btn btn-link d-flex justify-content-between\" data-toggle=\"collapse\" data-target=\"#pane-")
-                        .append(domId).append("\" aria-controls=\"pane-").append(domId).append("\"><span>")
-                        .append(xssapi.encodeForHTML(config.serviceType)).append("</span><span class=\"service-status badge badge-pill badge-")
-                        .append(active ? "success" : "danger").append("\"><i class=\"fa fa-")
-                        .append(active ? "check" : "times").append("\"></i></span></button></div><div class=\"card-body\">\n");
-                writer.append("<div id=\"pane-").append(domId)
-                        .append("\" class=\"collapse\" aria-labelledby=\"card-").append(domId).append("\">\n");
-                writer.append("<table class=\"table table-sm table-striped\"><tbody>\n");
-                Map<String, Object> properties = Optional.ofNullable(getProperties(reference, config.properties))
-                        .orElse(Collections.emptyMap());
-                for (final Map.Entry<String, Object> entry : properties.entrySet()) {
-                    writer.append("<tr><td>").append(xssapi.encodeForHTML(entry.getKey())).append("</td><td>")
-                            .append(xssapi.encodeForHTML(propertyString(entry.getValue())))
-                            .append("</td></tr>\n");
-                }
-                writer.append("</tbody></table></div>\n");
-                writer.append("</div></div>\n");
-            }
-        }
-        writer.append("</div>\n");
-    }
-
-    protected @NotNull String propertyString(@Nullable final Object value) {
-        return propertyString(new StringBuilder(), value).toString();
-    }
-
-    protected @NotNull StringBuilder propertyString(@NotNull final StringBuilder builder, @Nullable final Object value) {
-        if (value == null) {
-            builder.append("null");
-        } else if (value instanceof Object[]) {
-            final Object[] array = (Object[]) value;
-            builder.append("[ ");
-            for (int i = 0; i < array.length; ) {
-                propertyString(builder, array[i]);
-                if (++i < array.length) {
-                    builder.append(", ");
-                }
-            }
-            builder.append(" ]");
-        } else {
-            builder.append(value);
-        }
-        return builder;
-    }
-
-    protected @NotNull String getSimpleServiceName(@NotNull final String serviceType) {
-        return StringUtils.substringAfterLast(serviceType, ".");
-    }
-
-    protected @NotNull String domId(@NotNull final String serviceType) {
-        return serviceType.replaceAll("[^a-zA-Z0-9_-]", "-");
-    }
-
-    protected void dumpJson(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
-                            @NotNull final JsonWriter writer)
-            throws IOException {
-        writer.beginArray();
-        for (final SettingsRule config : configuration) {
-            for (final ServiceReference<?> reference : getServiceReferences(config)) {
-                writer.beginObject();
-                writer.name("name").value(getSimpleServiceName(config.serviceType));
-                writer.name("serviceType").value(config.serviceType);
-                writer.name("active").value(isServiceActive(reference));
-                Map<String, Object> properties = Optional.ofNullable(getProperties(reference, config.properties))
-                        .orElse(Collections.emptyMap());
-                writer.name("properties").beginObject();
-                for (final Map.Entry<String, Object> entry : properties.entrySet()) {
-                    writer.name(entry.getKey());
-                    jsonProperty(writer, entry.getValue());
-                }
-                writer.endObject();
-                writer.endObject();
-            }
-        }
-        writer.endArray();
     }
 }

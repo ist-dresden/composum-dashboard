@@ -160,6 +160,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     public static final String JCR_CONTENT = "jcr:content";
     public static final String JCR_DATA = "jcr:data";
     public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
+    public static final String JCR_MIXIN_TYPES = "jcr:mixinTypes";
     public static final String NT_UNSTRUCTURED = "nt:unstructured";
     public static final String NT_RESOURCE = "nt:resource";
     public static final String NT_FILE = "nt:file";

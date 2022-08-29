@@ -41,6 +41,7 @@ import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.BROWSER_CONTEXT;
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.JCR_CONTENT;
+import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.JCR_MIXIN_TYPES;
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.JCR_PRIMARY_TYPE;
 
 @Component(service = {Servlet.class},
@@ -118,16 +119,14 @@ public class DashboardJsonView extends AbstractWidgetServlet {
     public static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_LOAD);
 
     public static final List<Pattern> NON_SOURCE_PROPS = Arrays.asList(
-            Pattern.compile("^jcr:baseVersion$"),
-            Pattern.compile("^jcr:predecessors$"),
-            Pattern.compile("^jcr:versionHistory$"),
-            Pattern.compile("^jcr:isCheckedOut$"),
-            Pattern.compile("^jcr:created"),
-            Pattern.compile("^jcr:lastModified.*$"),
-            Pattern.compile("^jcr:uuid$"),
-            Pattern.compile("^jcr:data$"),
-            Pattern.compile("^cq:lastModified.*$"),
-            Pattern.compile("^cq:lastReplicat.*$")
+            Pattern.compile("^jcr:(uuid|data)$"),
+            Pattern.compile("^jcr:(baseVersion|predecessors|versionHistory|isCheckedOut)$"),
+            Pattern.compile("^jcr:(created|lastModified).*$"),
+            Pattern.compile("^cq:last(Modified|Replicat).*$")
+    );
+
+    public static final List<Pattern> NON_SOURCE_MIXINS = List.of(
+            Pattern.compile("^rep:AccessControllable$")
     );
 
     @Reference
@@ -279,7 +278,14 @@ public class DashboardJsonView extends AbstractWidgetServlet {
                     writer.name(name);
                     jsonProperty(writer, property.getValue());
                 } else {
-                    properties.put(name, property.getValue());
+                    if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
+                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
+                        if (values instanceof String[] && ((String[]) values).length > 0) {
+                            properties.put(name, values);
+                        }
+                    } else {
+                        properties.put(name, property.getValue());
+                    }
                 }
             }
         }

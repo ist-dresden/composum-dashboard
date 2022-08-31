@@ -5,5 +5,9 @@
   "disabledPropertyPatterns": [
     "^rep:.*$",
     "^.*[Pp]assword.*$"
+  ],
+  "sling.servlet.paths": [
+    "/bin/tools/browser/view/properties",
+    "/bin/tools/browser/view/properties/view"
   ]
 }

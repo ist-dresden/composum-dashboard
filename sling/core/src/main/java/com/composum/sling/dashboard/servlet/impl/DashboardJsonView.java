@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet.impl;
 
 import com.composum.sling.dashboard.service.DashboardBrowser;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import com.google.gson.stream.JsonWriter;
@@ -44,7 +45,7 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.JCR_MIXIN_TYPES;
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.JCR_PRIMARY_TYPE;
 
-@Component(service = {Servlet.class},
+@Component(service = {Servlet.class, DashboardWidget.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Json Source View",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET

@@ -202,9 +202,16 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     @Override
-    public Collection<DashboardWidget> getWidgets(@NotNull SlingHttpServletRequest request) {
+    public void provideWidgets(@NotNull SlingHttpServletRequest request, @Nullable final String context,
+                               @NotNull final Map<String, DashboardWidget> widgetSet) {
         synchronized (viewWidgets) {
-            return Collections.unmodifiableCollection(viewWidgets.values());
+            for (DashboardWidget widget : viewWidgets.values()) {
+                if (context == null || widget.getContext().contains(context)) {
+                    if (BROWSER_CONTEXT.equals(context) || !widgetSet.containsKey(widget.getName())) {
+                        widgetSet.put(widget.getName(), widget);
+                    }
+                }
+            }
         }
     }
 
@@ -300,6 +307,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, null)));
             properties.put("browser-tree", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_TREE)));
             properties.put("browser-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_VIEW)));
+            properties.put("browser-tab", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_VIEW, "#id#")));
             properties.put("loginUrl", xssapi.encodeForHTMLAttr(loginUri));
             properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
             addCustomOption(browser, "style.css", properties);
@@ -341,29 +349,38 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             throws ServletException, IOException {
         final Resource resource = getRequestResource(request);
         if (resource != null) {
-            Collection<DashboardWidget> browserViews = dashboardManager.getWidgets(request, BROWSER_CONTEXT);
             response.setContentType("text/html;charset=UTF-8");
-            final PrintWriter writer = response.getWriter();
-            writer.append("<ul class=\"nav nav-tabs\" id=\"myTab\" role=\"tablist\">\n");
-            for (final DashboardWidget view : browserViews) {
-                final String viewId = view.getName();
-                writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                        .append("-tab\" data-toggle=\"tab\" href=\"#").append(xssapi.encodeForHTMLAttr(viewId))
-                        .append("\" role=\"tab\" aria-controls=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                        .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(view.getLabel()))
-                        .append("</a></li>\n");
+            final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_VIEW));
+            final DashboardWidget selectedView = StringUtils.isNotBlank(submode)
+                    ? dashboardManager.getWidget(request, BROWSER_CONTEXT, submode) : null;
+            if (selectedView != null) {
+                htmlView(request, response, selectedView);
+            } else {
+                final Collection<DashboardWidget> browserViews = dashboardManager.getWidgets(request, BROWSER_CONTEXT);
+                final PrintWriter writer = response.getWriter();
+                if (StringUtils.isBlank(submode)) {
+                    writer.append("<ul class=\"dashboard-browser__tabs nav nav-tabs\" role=\"tablist\">\n");
+                    for (final DashboardWidget view : browserViews) {
+                        final String viewId = view.getName();
+                        writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                                .append("-tab\" data-toggle=\"tab\" href=\"#").append(xssapi.encodeForHTMLAttr(viewId))
+                                .append("\" role=\"tab\" aria-controls=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                                .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(view.getLabel()))
+                                .append("</a></li>\n");
+                    }
+                    writer.append("</ul><div class=\"dashboard-browser__action-reload fa fa-refresh\"></div>\n");
+                    writer.append("<div class=\"dashboard-browser__tabs-content tab-content\">\n");
+                    for (final DashboardWidget view : browserViews) {
+                        final String viewId = view.getName();
+                        writer.append("<div class=\"tab-pane\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                                .append("\" role=\"tabpanel\" aria-labelledby=\"").append(xssapi.encodeForHTMLAttr(viewId))
+                                .append("-tab\">\n");
+                        //htmlView(request, response, view);
+                        writer.append("</div>\n");
+                    }
+                    writer.append("</div>\n");
+                }
             }
-            writer.append("</ul>\n");
-            writer.append("<div class=\"tab-content\">\n");
-            for (final DashboardWidget view : browserViews) {
-                final String viewId = view.getName();
-                writer.append("<div class=\"tab-pane\" id=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                        .append("\" role=\"tabpanel\" aria-labelledby=\"").append(xssapi.encodeForHTMLAttr(viewId))
-                        .append("-tab\">\n");
-                htmlView(request, response, view, request.getResource());
-                writer.append("</div>\n");
-            }
-            writer.append("</div>\n");
         } else {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -371,7 +388,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     public void htmlView(@NotNull final SlingHttpServletRequest request,
                          @NotNull final SlingHttpServletResponse response,
-                         @NotNull final DashboardWidget view, @NotNull final Resource resource)
+                         @NotNull final DashboardWidget view)
             throws ServletException, IOException {
         final RequestDispatcherOptions options = new RequestDispatcherOptions();
         final Resource widgetResource = view.getWidgetResource(request);

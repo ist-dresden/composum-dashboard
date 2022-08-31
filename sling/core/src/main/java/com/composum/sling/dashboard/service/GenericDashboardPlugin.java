@@ -19,12 +19,11 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import javax.jcr.query.Query;
 import java.io.Serializable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
+import java.util.Map;
 
 @Component(service = DashboardPlugin.class)
 @Designate(ocd = GenericDashboardPlugin.Config.class, factory = true)
@@ -42,6 +41,9 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         @AttributeDefinition(name = "Search Root", description =
                 "the repository root folder for searching widgets declared by content resources")
         String searchRoot() default "/content";
+
+        @AttributeDefinition(name = "Rank")
+        int rank() default 9000;
 
         @AttributeDefinition()
         String webconsole_configurationFactory_nameHint() default "'{resourceType}' @ '{searchRoot}'";
@@ -96,6 +98,16 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
+        public boolean equals(Object other) {
+            return other instanceof DashboardWidget && getName().equals(((DashboardWidget) other).getName());
+        }
+
+        @Override
+        public int hashCode() {
+            return getName().hashCode();
+        }
+
+        @Override
         public @NotNull String getName() {
             return name;
         }
@@ -138,24 +150,33 @@ public class GenericDashboardPlugin implements DashboardPlugin {
 
     protected String resourceType;
     protected String searchRoot;
+    protected int rank;
 
     @Activate
     @Modified
     protected void activate(Config config) {
         resourceType = config.resourceType();
         searchRoot = config.searchRoot();
+        rank = config.rank();
+    }
+
+    @Override
+    public int getRank() {
+        return rank;
     }
 
     @SuppressWarnings("deprecated")
     @Override
-    public Collection<DashboardWidget> getWidgets(@NotNull final SlingHttpServletRequest request) {
-        List<DashboardWidget> widgets = new ArrayList<>();
+    public void provideWidgets(@NotNull final SlingHttpServletRequest request, @Nullable final String context,
+                               @NotNull final Map<String, DashboardWidget> widgetSet) {
         final String query = String.format(WIDGET_QUERY_FMT, searchRoot, resourceType);
         final Iterator<Resource> widgetResources = request.getResourceResolver().findResources(query, Query.XPATH);
         while (widgetResources.hasNext()) {
-            widgets.add(new Widget(widgetResources.next()));
+            Widget widget = new Widget(widgetResources.next());
+            if ((context == null || widget.getContext().contains(context))
+                    && !widgetSet.containsKey(widget.getName())) {
+                widgetSet.put(widget.getName(), widget);
+            }
         }
-        widgets.sort(DashboardWidget.COMPARATOR);
-        return widgets;
     }
 }

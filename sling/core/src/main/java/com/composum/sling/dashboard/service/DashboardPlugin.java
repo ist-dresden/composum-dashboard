@@ -2,10 +2,14 @@ package com.composum.sling.dashboard.service;
 
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
+import java.util.Map;
 
 public interface DashboardPlugin {
 
-    Collection<DashboardWidget> getWidgets(@NotNull final SlingHttpServletRequest request);
+    int getRank();
+
+    void provideWidgets(@NotNull SlingHttpServletRequest request, @Nullable final String context,
+                        @NotNull Map<String, DashboardWidget> widgetSet);
 }

@@ -266,36 +266,107 @@ class StatusLine {
     }
 }
 
+class Profile {
+
+    constructor(aspect) {
+        this.aspect = aspect;
+        this.load();
+    }
+
+    load() {
+        this.profile = JSON.parse(localStorage.getItem('composum-dashboard') || '{}');
+        if (!this.profile[this.aspect]) {
+            this.profile[this.aspect] = {};
+        }
+    }
+
+    get(key) {
+        return this.profile[this.aspect][key];
+    }
+
+    set(key, value) {
+        this.load();
+        this.profile[this.aspect][key] = value;
+        localStorage.setItem('composum-dashboard', JSON.stringify(this.profile));
+    }
+}
 
 class View {
 
     constructor(element) {
+        this.profile = new Profile('browser');
         this.$el = $(element);
+        this.loadContent(undefined, function () {
+            this.$el.find('.dashboard-browser__action-reload').click(this.reload.bind(this));
+            this.$el.find('.dashboard-browser__tabs a[data-toggle="tab"]').on('shown.bs.tab', this.onTabShown.bind(this));
+            this.showTab(this.profile.get('currentTab'), true);
+        }.bind(this))
         $(document).on('path:selected', this.onPathSelected.bind(this));
     }
 
-    dataUrl(path) {
-        return this.$el.data('view-url') + path;
+    reload(event) {
+        this.onPathSelected(event, this.currentPath, true);
     }
 
-    onPathSelected(event, path) {
-        if (path !== this.currentPath) {
+    onPathSelected(event, path, force) {
+        if (force || path !== this.currentPath) {
             this.currentPath = path;
-            const view = this;
-            const activeTab = view.$el.find('.nav-tabs .nav-link.active').attr('id');
+            const $tab = this.$el.find('.dashboard-browser__tabs-content .tab-pane').data('loaded', 'false');
+            this.loadContent(this.activeTabId());
+        }
+    }
+
+    activeTabId() {
+        const active = this.$el.find('.dashboard-browser__tabs .nav-link.active').attr('aria-controls');
+        return active || this.$el.find('.dashboard-browser__tabs .nav-link').first().attr('aria-controls')
+    }
+
+    $tabPane(tabId) {
+        return tabId ? this.$el.find('.dashboard-browser__tabs-content .tab-pane[id="' + tabId + '"]') : undefined;
+    }
+
+    onTabShown(event) {
+        const tabId = $(event.target).attr('aria-controls');
+        this.profile.set('currentTab', tabId);
+        const $tab = this.$tabPane(tabId);
+        if ($tab.data('loaded') !== 'true') {
+            this.loadContent(tabId);
+        }
+    }
+
+    showTab(tabId, force) {
+        const $tab = this.$el.find('.dashboard-browser__tabs .nav-link[aria-controls="' + tabId + '"]');
+        if ($tab.length > 0) {
+            $tab.tab('show');
+        } else if (force) {
+            this.$el.find('.dashboard-browser__tabs .nav-link').first().tab('show');
+        }
+    }
+
+    dataUrl(tabId, path) {
+        return (tabId ? this.$el.data('view-tab').replaceAll('#id#', tabId) : this.$el.data('view-url'))
+            + (path ? path : '');
+    }
+
+    loadContent(tabId, callback) {
+        if (!tabId || this.currentPath) {
             $.ajax({
                 type: 'GET',
-                url: view.dataUrl(path),
-                success: function (result, msg, xhr) {
-                    view.$el.html(result);
-                    const $tabToActivate = view.$el.find('.nav-tabs .nav-link[id="' + activeTab + '"]');
-                    view.onLoaded();
-                    if ($tabToActivate.length > 0) {
-                        $tabToActivate.tab('show');
+                url: this.dataUrl(tabId, this.currentPath),
+                success: function (content) {
+                    if (tabId) {
+                        const $tab = this.$tabPane(tabId);
+                        $tab.html(content);
+                        $tab.data('loaded', 'true');
+                        this.onLoaded($tab);
                     } else {
-                        view.$el.find('.nav-tabs .nav-link').first().tab('show');
+                        this.$el.html(content);
+                        this.onLoaded();
                     }
-                },
+                    if (callback) {
+                        callback();
+                    }
+                }.bind(this),
                 async: true,
                 cache: false
             });

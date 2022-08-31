@@ -24,7 +24,7 @@ public interface DashboardWidget {
 
     @NotNull Resource getWidgetResource(@NotNull SlingHttpServletRequest request);
 
-    @NotNull String getWidgetPageUrl(@NotNull  SlingHttpServletRequest request);
+    @NotNull String getWidgetPageUrl(@NotNull SlingHttpServletRequest request);
 
     @Nullable <T> T getProperty(@NotNull String name, T defaultValue);
 

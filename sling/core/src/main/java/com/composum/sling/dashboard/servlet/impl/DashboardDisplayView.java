@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet.impl;
 
 import com.composum.sling.dashboard.service.DashboardBrowser;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
@@ -42,7 +43,7 @@ import java.util.Optional;
 
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.BROWSER_CONTEXT;
 
-@Component(service = Servlet.class,
+@Component(service = {Servlet.class, DashboardWidget.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Display View",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
@@ -69,7 +70,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
         int rank() default 1000;
 
         @AttributeDefinition(name = "Label")
-        String label() default "JSON";
+        String label() default "Preview";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();

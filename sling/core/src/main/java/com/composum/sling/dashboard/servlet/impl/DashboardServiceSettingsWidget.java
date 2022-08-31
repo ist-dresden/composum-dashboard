@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.servlet.impl;
 
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractSettingsWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -35,7 +36,7 @@ import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOA
 /**
  * a primitive viewer for the settings of a configured set of services
  */
-@Component(service = Servlet.class,
+@Component(service = {Servlet.class, DashboardWidget.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Service Settings Widget",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
@@ -75,9 +76,9 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/page",
                 DEFAULT_RESOURCE_TYPE + "/view",
                 DEFAULT_RESOURCE_TYPE + "/tile",
-                DEFAULT_RESOURCE_TYPE + "/page",
                 DEFAULT_RESOURCE_TYPE + "/json"
         };
 

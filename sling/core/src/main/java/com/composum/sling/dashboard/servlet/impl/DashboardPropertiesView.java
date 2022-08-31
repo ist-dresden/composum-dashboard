@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet.impl;
 
 import com.composum.sling.dashboard.service.DashboardBrowser;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -36,7 +37,7 @@ import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.BROWSER_CONTEXT;
 
-@Component(service = Servlet.class,
+@Component(service = {Servlet.class, DashboardWidget.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Properies View",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
@@ -63,7 +64,7 @@ public class DashboardPropertiesView extends AbstractWidgetServlet {
         int rank() default 500;
 
         @AttributeDefinition(name = "Label")
-        String label() default "JSON";
+        String label() default "Properties";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();

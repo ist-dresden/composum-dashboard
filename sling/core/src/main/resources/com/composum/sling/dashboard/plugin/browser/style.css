@@ -104,28 +104,43 @@ body {
     position: relative;
 }
 
-.dashboard-browser__view .nav-tabs {
+.dashboard-browser__view .dashboard-browser__tabs {
     border-bottom: none;
-    height: 39px;
-    padding: 2px 5px;
+    height: 35px;
+    padding: 2px;
     background: #777;
 }
 
-.dashboard-browser__view .nav-tabs .nav-item .nav-link {
+.dashboard-browser__view .dashboard-browser__tabs .nav-item .nav-link {
     margin: 0 2px 0 0;
     border: none;
     border-bottom: 1px solid #777;
+    border-radius: 0;
+    line-height: 32px;
+    color: #495057;
     background: #ddd;
 }
 
-.dashboard-browser__view .nav-tabs .nav-item .nav-link.active {
+.dashboard-browser__view .dashboard-browser__tabs .nav-item .nav-link.active {
     border-bottom: 1px solid transparent;
     background: #fff;
 }
 
+.dashboard-browser__view .dashboard-browser__action-reload {
+    cursor: pointer;
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    width: 24px;
+    line-height: 24px;
+    font-size: 24px;
+    text-align: center;
+    color: #aaa;
+}
+
 .dashboard-browser__view .tab-content {
     position: absolute;
-    top: 40px;
+    top: 36px;
     bottom: 0;
     right: 0;
     left: 0;
@@ -204,7 +219,8 @@ body {
 
 .dashboard-browser__view .table ul {
     margin: 0;
-    padding: 0 0 0 13px;
+    padding: 0 0 0 14px;
     max-height: 106px;
     overflow: auto;
+    list-style: circle;
 }

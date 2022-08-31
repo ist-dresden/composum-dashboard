@@ -4,5 +4,12 @@
   ],
   "errorPattern": "\\*ERROR\\*",
   "warningPattern": "\\*WARN\\*",
-  "sizeLimit": 200
+  "sizeLimit": 200,
+  "sling.servlet.paths": [
+    "/bin/tools/log",
+    "/bin/tools/log/page",
+    "/bin/tools/log/view",
+    "/bin/tools/log/tail",
+    "/bin/tools/log/tile"
+  ]
 }

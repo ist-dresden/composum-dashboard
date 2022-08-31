@@ -337,7 +337,7 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
     }
 
     protected void htmlPageHead(@NotNull final PrintWriter writer, @NotNull final String title) {
-        writer.append("<html class=\"c-dashboard-s-widget__page\" lang=\"en\"><head>\n"
+        writer.append("<!DOCTYPE html><html class=\"c-dashboard-s-widget__page\" lang=\"en\"><head>\n"
                         + "<meta charset=\"utf-8\">\n"
                         + "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
                         + "<title>").append(title).append("</title>\n"

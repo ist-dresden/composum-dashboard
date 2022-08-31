@@ -2,5 +2,12 @@
   "inspectedSettings": [
     "org.osgi.service.http.HttpService[org.osgi.service.http\\..*,osgi.http.service.endpoints]",
     "org.apache.sling.settings.SlingSettingsService[runModes]"
+  ],
+  "sling.servlet.paths": [
+    "/bin/tools/service/settings",
+    "/bin/tools/service/settings/page",
+    "/bin/tools/service/settings/view",
+    "/bin/tools/service/settings/tile",
+    "/bin/tools/service/settings/json"
   ]
 }

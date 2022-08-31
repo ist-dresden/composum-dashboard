@@ -3,7 +3,6 @@ package com.composum.sling.dashboard.service.impl;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,7 +13,10 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
 
 @Component(
         service = DashboardManager.class,
@@ -33,9 +35,10 @@ public class SlingDashboardManager implements DashboardManager {
             cardinality = ReferenceCardinality.MULTIPLE
     )
     protected void bindDashboardPlugin(@NotNull final DashboardPlugin plugin) {
-            synchronized (dashboardPlugins) {
-                dashboardPlugins.add(plugin);
-            }
+        synchronized (dashboardPlugins) {
+            dashboardPlugins.add(plugin);
+            dashboardPlugins.sort(Comparator.comparingInt(DashboardPlugin::getRank));
+        }
     }
 
     protected void unbindDashboardPlugin(@NotNull final DashboardPlugin plugin) {
@@ -58,14 +61,11 @@ public class SlingDashboardManager implements DashboardManager {
     @Override
     public Collection<DashboardWidget> getWidgets(@NotNull final SlingHttpServletRequest request,
                                                   @Nullable final String context) {
-        List<DashboardWidget> widgets = new ArrayList<>();
+        Map<String, DashboardWidget> wigetSet = new TreeMap<>();
         for (DashboardPlugin plugin : dashboardPlugins) {
-            for (DashboardWidget widget : plugin.getWidgets(request)) {
-                if (StringUtils.isBlank(context) || widget.getContext().contains(context)) {
-                    widgets.add(widget);
-                }
-            }
+            plugin.provideWidgets(request, context, wigetSet);
         }
+        List<DashboardWidget> widgets = new ArrayList<>(wigetSet.values());
         widgets.sort(DashboardWidget.COMPARATOR);
         return widgets;
     }

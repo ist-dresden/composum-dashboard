@@ -103,6 +103,16 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
     // Widget
 
     @Override
+    public boolean equals(Object other) {
+        return other instanceof DashboardWidget && getName().equals(((DashboardWidget) other).getName());
+    }
+
+    @Override
+    public int hashCode() {
+        return getName().hashCode();
+    }
+
+    @Override
     public @NotNull Collection<String> getContext() {
         return Collections.unmodifiableList(context);
     }
@@ -119,7 +129,7 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
 
     @Override
     public @NotNull String getName() {
-        return "json";
+        return StringUtils.substringAfterLast(defaultResourceType(), "/");
     }
 
     @Override
@@ -134,13 +144,17 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
 
     @Override
     public @NotNull Resource getWidgetResource(@NotNull SlingHttpServletRequest request) {
-        final Resource resource = request.getResource();
-        return new ResourceWrapper(resource) {
-            @Override
-            public @NotNull String getResourceType() {
-                return resourceType;
-            }
-        };
+        if (StringUtils.isNotBlank(servletPath)) {
+            return new SyntheticResource(request.getResourceResolver(), servletPath, resourceType);
+        } else {
+            final Resource resource = request.getResource();
+            return new ResourceWrapper(resource) {
+                @Override
+                public @NotNull String getResourceType() {
+                    return resourceType;
+                }
+            };
+        }
     }
 
     @Override
@@ -150,27 +164,38 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
 
     @Override
     public <T> @Nullable T getProperty(@NotNull String name, T defaultValue) {
-        return null;
+        return defaultValue;
     }
 
     // Helpers
 
     protected @NotNull String getHtmlMode(@NotNull final SlingHttpServletRequest request,
                                           @NotNull final List<String> options) {
-        final String selectorMode = getSelectorMode(request, options);
-        if (StringUtils.isNotBlank(selectorMode)) {
-            return selectorMode;
+        final List<String> selectorMode = getSelectorMode(request, options);
+        if (!selectorMode.isEmpty()) {
+            return selectorMode.get(0);
         }
-        final String resourceType = request.getResource().getResourceType();
+        String resourceType = request.getResource().getResourceType();
         if (StringUtils.isNotBlank(resourceType)) {
+            resourceType = resourceType.replaceAll("\\.servlet$", "");
             for (String option : options) {
                 if (resourceType.endsWith("/" + option)) {
                     return option;
                 }
             }
         }
-        final String suffixMode = getSuffixMode(request, options);
-        return StringUtils.isNotBlank(suffixMode) ? suffixMode : options.get(0);
+        final List<String> suffixMode = getSuffixMode(request, options);
+        return suffixMode.size() > 0 ? suffixMode.get(0) : options.get(0);
+    }
+
+    protected @Nullable String getHtmlSubmode(@NotNull final SlingHttpServletRequest request,
+                                              @NotNull final List<String> options) {
+        final List<String> selectorMode = getSelectorMode(request, options);
+        if (selectorMode.size() > 1) {
+            return selectorMode.get(1);
+        }
+        final List<String> suffixMode = getSuffixMode(request, options);
+        return suffixMode.size() > 1 ? suffixMode.get(1) : null;
     }
 
     protected @Nullable Resource getWidgetResource(@NotNull final SlingHttpServletRequest request,
@@ -191,13 +216,20 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
     }
 
     protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
-                                           @NotNull final String resourceType,
-                                           @NotNull final List<String> options, @Nullable final String mode) {
+                                           @NotNull final String resourceType, @NotNull final List<String> options,
+                                           @Nullable final String mode, String... selectors) {
         final Resource widget = getWidgetResource(request, resourceType);
         if (widget != null) {
             String uri = getWidgetPath(widget, mode);
             if (StringUtils.isNotBlank(mode) && !uri.endsWith("/" + mode)) {
                 uri += "." + mode;
+                for (String sel : selectors) {
+                    uri += "." + sel;
+                }
+            } else {
+                for (String sel : selectors) {
+                    uri += "/" + sel;
+                }
             }
             uri += ".html";
             return uri.replaceAll("/jcr:", "/_jcr_");
@@ -218,28 +250,34 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
         return path;
     }
 
-    protected @Nullable String getSelectorMode(@NotNull final SlingHttpServletRequest request,
-                                               @NotNull final List<String> options) {
+    protected @NotNull List<String> getSelectorMode(@NotNull final SlingHttpServletRequest request,
+                                                    @NotNull final List<String> options) {
+        List<String> result = new ArrayList<>();
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String[] selectors = pathInfo.getSelectors();
-        for (String selector : selectors) {
-            if (options.contains(selector)) {
-                return selector;
+        for (int i = 0; i < selectors.length; i++) {
+            if (options.contains(selectors[i])) {
+                for (; i < selectors.length; i++) {
+                    result.add(selectors[i]);
+                }
             }
         }
-        return null;
+        return result;
     }
 
-    protected @Nullable String getSuffixMode(@NotNull final SlingHttpServletRequest request,
-                                             @NotNull final List<String> options) {
+    protected @NotNull List<String> getSuffixMode(@NotNull final SlingHttpServletRequest request,
+                                                  @NotNull final List<String> options) {
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String suffix = Optional.ofNullable(pathInfo.getSuffix())
                 .map(s -> s.startsWith("/") ? s.substring(1) : s)
                 .orElse("");
-        if (options.contains(suffix)) {
-            return suffix;
+        if (StringUtils.isNotBlank(suffix)) {
+            List<String> keys = Arrays.asList(StringUtils.split(suffix, "/"));
+            if (options.contains(keys.get(0))) {
+                return keys;
+            }
         }
-        return null;
+        return Collections.emptyList();
     }
 
     protected @Nullable Resource resolveUrl(@NotNull final SlingHttpServletRequest request,

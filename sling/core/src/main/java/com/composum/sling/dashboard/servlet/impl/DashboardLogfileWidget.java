@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.servlet.impl;
 
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -40,7 +41,7 @@ import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOA
 /**
  * a primitive logfile viewer servlet implementation to declare a Composum Dashborad Widget for logfiles
  */
-@Component(service = Servlet.class,
+@Component(service = {Servlet.class, DashboardWidget.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Logfile Widget",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
@@ -90,10 +91,10 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
+                DEFAULT_RESOURCE_TYPE + "/page",
                 DEFAULT_RESOURCE_TYPE + "/view",
                 DEFAULT_RESOURCE_TYPE + "/tail",
-                DEFAULT_RESOURCE_TYPE + "/tile",
-                DEFAULT_RESOURCE_TYPE + "/page"
+                DEFAULT_RESOURCE_TYPE + "/tile"
         };
 
         @AttributeDefinition(name = "Servlet Extensions",

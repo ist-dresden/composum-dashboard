@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet.impl;
 
 import com.composum.sling.dashboard.service.DashboardBrowser;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.servlet.AbstractSettingsWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -39,7 +40,7 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 /**
  * a primitive viewer for the settings of a configured set of services
  */
-@Component(service = Servlet.class,
+@Component(service = {Servlet.class, DashboardWidget.class},
         property = {
                 Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Service Settings Widget",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
@@ -229,7 +230,8 @@ public class DashboardCaConfigView extends AbstractSettingsWidget {
                     try {
                         final Class<?> caConfigType = classLoaderManager.getDynamicClassLoader().loadClass(config.configType);
                         if (caConfigType != null) {
-                            providers.add(new ConfigurationProvider(config, caConfigType, builder.as(caConfigType)));
+                            providers.add(new ConfigurationProvider(config, caConfigType,
+                                    builder.has(caConfigType) ? builder.as(caConfigType) : null));
                         }
                     } catch (ClassNotFoundException | ConfigurationResolveException ignore) {
                     }

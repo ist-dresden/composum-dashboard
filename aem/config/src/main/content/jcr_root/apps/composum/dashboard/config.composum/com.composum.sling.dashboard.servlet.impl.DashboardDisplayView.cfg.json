@@ -1,3 +1,8 @@
 {
-  "loadDocuments": true
+  "loadDocuments": true,
+  "sling.servlet.paths": [
+    "/bin/tools/browser/view/display",
+    "/bin/tools/browser/view/display/view",
+    "/bin/tools/browser/view/display/load"
+  ]
 }

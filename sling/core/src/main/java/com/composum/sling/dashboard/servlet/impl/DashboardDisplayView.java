@@ -57,7 +57,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
     public @interface Config {
 
         @AttributeDefinition(name = "Name")
-        String name() default "display-view";
+        String name() default "display";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {

@@ -55,7 +55,7 @@ public class DashboardCaConfigView extends AbstractSettingsWidget {
     public @interface Config {
 
         @AttributeDefinition(name = "Name")
-        String name() default "caconfig-view";
+        String name() default "caconfig";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {

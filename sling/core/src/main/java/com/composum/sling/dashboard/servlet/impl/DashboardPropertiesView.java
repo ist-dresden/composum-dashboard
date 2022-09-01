@@ -45,7 +45,7 @@ public class DashboardPropertiesView extends AbstractWidgetServlet {
     public @interface Config {
 
         @AttributeDefinition(name = "Name")
-        String name() default "properties-view";
+        String name() default "properties";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {

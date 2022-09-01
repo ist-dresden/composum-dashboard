@@ -61,7 +61,7 @@ public class DashboardJsonView extends AbstractWidgetServlet {
     public @interface Config {
 
         @AttributeDefinition(name = "Name")
-        String name() default "json-view";
+        String name() default "json";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {

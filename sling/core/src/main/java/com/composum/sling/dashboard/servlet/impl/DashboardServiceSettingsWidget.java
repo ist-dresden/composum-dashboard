@@ -1,6 +1,8 @@
 package com.composum.sling.dashboard.servlet.impl;
 
+import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.servlet.AbstractSettingsWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -10,7 +12,6 @@ import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Constants;
 import org.osgi.framework.InvalidSyntaxException;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
@@ -38,10 +39,9 @@ import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOA
  */
 @Component(service = {Servlet.class, DashboardWidget.class},
         property = {
-                Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Service Settings Widget",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
-        configurationPolicy = ConfigurationPolicy.REQUIRE
+        configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardServiceSettingsWidget.Config.class)
 public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
@@ -50,6 +50,9 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
 
     @ObjectClassDefinition(name = "Composum Dashboard Service Settings Widget")
     public @interface Config {
+
+        @AttributeDefinition(name = "Name")
+        String name() default "service-settings";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {
@@ -63,7 +66,7 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
         int rank() default 2000;
 
         @AttributeDefinition(name = "Label")
-        String label() default "JSON";
+        String label() default "Service Settings";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
@@ -121,6 +124,9 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
     @Reference
     protected XSSAPI xssapi;
 
+    @Reference
+    protected DashboardManager dashboardManager;
+
     protected transient List<SettingsRule> configuration;
 
     protected transient BundleContext bundleContext;
@@ -128,8 +134,8 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
     @Activate
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) {
-        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
-                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.bundleContext = bundleContext;
         configuration = new ArrayList<>();
         for (final String rule : config.inspectedSettings()) {
@@ -150,6 +156,11 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
     @Override
     protected @NotNull List<String> getHtmlModes() {
         return HTML_MODES;
+    }
+
+    @Override
+    protected @NotNull ResourceFilter resourceFilter() {
+        return dashboardManager;
     }
 
     @Override

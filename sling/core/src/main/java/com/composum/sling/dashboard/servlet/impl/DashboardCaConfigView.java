@@ -1,7 +1,8 @@
 package com.composum.sling.dashboard.servlet.impl;
 
-import com.composum.sling.dashboard.service.DashboardBrowser;
+import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.servlet.AbstractSettingsWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -15,7 +16,6 @@ import org.apache.sling.commons.classloader.DynamicClassLoaderManager;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -42,10 +42,9 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
  */
 @Component(service = {Servlet.class, DashboardWidget.class},
         property = {
-                Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Service Settings Widget",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
-        configurationPolicy = ConfigurationPolicy.REQUIRE
+        configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardCaConfigView.Config.class)
 public class DashboardCaConfigView extends AbstractSettingsWidget {
@@ -54,6 +53,9 @@ public class DashboardCaConfigView extends AbstractSettingsWidget {
 
     @ObjectClassDefinition(name = "Composum Dashboard CA Config View")
     public @interface Config {
+
+        @AttributeDefinition(name = "Name")
+        String name() default "caconfig-view";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {
@@ -127,16 +129,15 @@ public class DashboardCaConfigView extends AbstractSettingsWidget {
     protected ConfigurationResourceResolver configurationResolver;
 
     @Reference
-    protected DashboardBrowser browser;
-
+    protected DashboardManager dashboardManager;
 
     protected transient List<ConfigurationRule> configuration;
 
     @Activate
     @Modified
     protected void activate(final Config config) {
-        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
-                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         configuration = new ArrayList<>();
         for (final String rule : config.inspectedConfigurations()) {
             if (StringUtils.isNotBlank(rule)) {
@@ -156,6 +157,11 @@ public class DashboardCaConfigView extends AbstractSettingsWidget {
     @Override
     protected @NotNull List<String> getHtmlModes() {
         return HTML_MODES;
+    }
+
+    @Override
+    protected @NotNull ResourceFilter resourceFilter() {
+        return dashboardManager;
     }
 
     @Override
@@ -222,7 +228,7 @@ public class DashboardCaConfigView extends AbstractSettingsWidget {
     @Override
     protected @NotNull List<SettingsProvider> getSettingsProviders(@NotNull final SlingHttpServletRequest request) {
         final List<SettingsProvider> providers = new ArrayList<>();
-        final Resource targetResource = browser.getRequestResource(request);
+        final Resource targetResource = dashboardManager.getRequestResource(request);
         if (targetResource != null) {
             final ConfigurationBuilder builder = targetResource.adaptTo(ConfigurationBuilder.class);
             if (builder != null) {

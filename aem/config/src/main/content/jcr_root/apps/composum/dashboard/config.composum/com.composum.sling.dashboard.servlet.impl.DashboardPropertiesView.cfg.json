@@ -1,13 +1,6 @@
 {
-  "allowedPropertyPatterns": [
-    "^.*$"
-  ],
-  "disabledPropertyPatterns": [
-    "^rep:.*$",
-    "^.*[Pp]assword.*$"
-  ],
   "sling.servlet.paths": [
-    "/bin/tools/browser/view/properties",
-    "/bin/tools/browser/view/properties/view"
+    "/apps/cpm/browser/view/properties",
+    "/apps/cpm/browser/view/properties/view"
   ]
 }

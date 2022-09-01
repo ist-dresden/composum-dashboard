@@ -2,8 +2,8 @@
   "maxDepth": 1,
   "sourceMode": true,
   "sling.servlet.paths": [
-    "/bin/tools/browser/view/json",
-    "/bin/tools/browser/view/json/view",
-    "/bin/tools/browser/view/json/load"
+    "/apps/cpm/browser/view/json",
+    "/apps/cpm/browser/view/json/view",
+    "/apps/cpm/browser/view/json/load"
   ]
 }

@@ -6,11 +6,15 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 
-public interface DashboardManager {
+public interface DashboardManager extends ResourceFilter {
 
     @Nullable DashboardWidget getWidget(@NotNull SlingHttpServletRequest request,
                                         @Nullable String context, @NotNull String name);
 
     Collection<DashboardWidget> getWidgets(@NotNull SlingHttpServletRequest request,
                                            @Nullable String context);
+
+    boolean isSortableType(@Nullable String type);
+
+    @NotNull String getLoginUri();
 }

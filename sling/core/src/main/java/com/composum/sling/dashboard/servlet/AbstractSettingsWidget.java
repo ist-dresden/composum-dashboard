@@ -1,10 +1,13 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.ResourceFilter;
+import com.composum.sling.dashboard.util.Properties;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.Resource;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -13,9 +16,9 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
@@ -84,6 +87,8 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
 
     protected abstract @NotNull List<SettingsProvider> getSettingsProviders(@NotNull SlingHttpServletRequest request);
 
+    protected abstract @NotNull ResourceFilter resourceFilter();
+
     protected abstract @NotNull XSSAPI xssApi();
 
     protected abstract @NotNull List<String> getHtmlModes();
@@ -91,6 +96,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
     @Override
     public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
             throws IOException {
+        final Resource resource = Optional.ofNullable(resourceFilter().getRequestResource(request)).orElse(request.getResource());
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String mode = getHtmlMode(request, getHtmlModes());
         if (!OPTION_JSON.equals(mode) && !"json".equals(pathInfo.getExtension())) {
@@ -102,11 +108,11 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                     break;
                 case OPTION_VIEW:
                 default:
-                    htmlView(request, response, writer);
+                    htmlView(request, response, writer, resource);
                     break;
                 case OPTION_PAGE:
                     htmlPageHead(writer, "Service Settings");
-                    htmlView(request, response, writer);
+                    htmlView(request, response, writer, resource);
                     htmlPageTail(writer);
                     break;
             }
@@ -141,7 +147,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
 
     protected void htmlView(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response,
-                            @NotNull final PrintWriter writer)
+                            @NotNull final PrintWriter writer, @NotNull final Resource context)
             throws IOException {
         writer.append("<style>\n");
         copyResource(this.getClass(), "/com/composum/sling/dashboard/plugin/service/settings/style.css", writer);
@@ -164,38 +170,16 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                     .append("\" aria-labelledby=\"card-").append(domId).append("\">\n");
             writer.append("<table class=\"table table-sm table-striped\"><tbody>\n");
             for (final Map.Entry<String, Object> entry : provider.getProperties().entrySet()) {
-                writer.append("<tr><td>").append(xssApi().encodeForHTML(entry.getKey())).append("</td><td>")
-                        .append(xssApi().encodeForHTML(propertyString(entry.getValue())))
-                        .append("</td></tr>\n");
+                writer.append("<tr><td class=\"name\">").append(xssApi().encodeForHTML(entry.getKey()))
+                        .append("</td><td class=\"value\">");
+                String type = Properties.toHtml(writer, context, name, entry.getValue(), resourceFilter(), xssApi());
+                writer.append("</td><td class=\"type\">").append(xssApi().encodeForHTML(type)).append("</td></tr>\n");
             }
             writer.append("</tbody></table></div>\n");
             writer.append("</div></div>\n");
             index++;
         }
         writer.append("</div>\n");
-    }
-
-    protected @NotNull String propertyString(@Nullable final Object value) {
-        return propertyString(new StringBuilder(), value).toString();
-    }
-
-    protected @NotNull StringBuilder propertyString(@NotNull final StringBuilder builder, @Nullable final Object value) {
-        if (value == null) {
-            builder.append("null");
-        } else if (value instanceof Object[] || value instanceof Collection) {
-            final Object[] array = value instanceof Object[] ? (Object[]) value : ((Collection<?>) value).toArray();
-            builder.append("[ ");
-            for (int i = 0; i < array.length; ) {
-                propertyString(builder, array[i]);
-                if (++i < array.length) {
-                    builder.append(", ");
-                }
-            }
-            builder.append(" ]");
-        } else {
-            builder.append(value);
-        }
-        return builder;
     }
 
     protected @NotNull String domId(@NotNull final String serviceType) {
@@ -215,7 +199,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
             writer.name("properties").beginObject();
             for (final Map.Entry<String, Object> entry : provider.getProperties().entrySet()) {
                 writer.name(entry.getKey());
-                jsonProperty(writer, entry.getValue());
+                Properties.toJson(writer, entry.getValue(), JSON_DATE_FORMAT);
             }
             writer.endObject();
             writer.endObject();

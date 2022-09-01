@@ -1,31 +1,8 @@
 {
-  "allowedPathPatterns": [
-    "^/$",
-    "^/content(/.*)?$",
-    "^/conf(/.*)?$",
-    "^/apps(/.*)?$",
-    "^/libs(/.*)?$",
-    "^/etc(/.*)?$",
-    "^/var(/.*)?$",
-    "^/tmp(/.*)?$",
-    "^/mnt(/.*)?$",
-    "^/oak:index(/.*)?$",
-    "^/jcr:system(/.*)?$"
-  ],
-  "disabledPathPatterns": [
-    ".*/rep:.*",
-    "^(/.*)?/api(/.*)?$"
-  ],
-  "sortableTypes": [
-    "nt:folder",
-    "sling:Folder",
-    "cq:Component"
-  ],
-  "loginUri": "/libs/granite/core/content/login.html",
   "sling.servlet.paths": [
-    "/bin/tools/browser",
-    "/bin/tools/browser/page",
-    "/bin/tools/browser/view",
-    "/bin/tools/browser/tree"
+    "/apps/cpm/browser",
+    "/apps/cpm/browser/page",
+    "/apps/cpm/browser/view",
+    "/apps/cpm/browser/tree"
   ]
 }

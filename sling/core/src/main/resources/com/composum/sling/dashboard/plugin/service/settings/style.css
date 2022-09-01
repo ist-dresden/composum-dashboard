@@ -35,3 +35,17 @@
 .dashboard-widget__settings-view .card-body {
     padding: 0;
 }
+
+.dashboard-widget__settings-view .table td {
+    padding: 0.3rem 0.6rem;
+}
+
+.dashboard-widget__settings-view .table td.value {
+    width: 100%;
+}
+
+.dashboard-widget__settings-view .table ul {
+    margin: 0;
+    padding: 0 0 0 18px;
+    list-style: circle;
+}

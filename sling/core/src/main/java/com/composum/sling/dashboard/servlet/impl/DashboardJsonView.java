@@ -1,8 +1,9 @@
 package com.composum.sling.dashboard.servlet.impl;
 
-import com.composum.sling.dashboard.service.DashboardBrowser;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
+import com.composum.sling.dashboard.util.Properties;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.io.IOUtils;
@@ -15,7 +16,6 @@ import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -47,10 +47,9 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 
 @Component(service = {Servlet.class, DashboardWidget.class},
         property = {
-                Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Json Source View",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
-        configurationPolicy = ConfigurationPolicy.REQUIRE
+        configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardJsonView.Config.class)
 public class DashboardJsonView extends AbstractWidgetServlet {
@@ -60,6 +59,9 @@ public class DashboardJsonView extends AbstractWidgetServlet {
 
     @ObjectClassDefinition(name = "Composum Dashboard Json Source View")
     public @interface Config {
+
+        @AttributeDefinition(name = "Name")
+        String name() default "json";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {
@@ -77,17 +79,6 @@ public class DashboardJsonView extends AbstractWidgetServlet {
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
-
-        @AttributeDefinition(name = "Allowed Property Patterns")
-        String[] allowedPropertyPatterns() default {
-                "^.*$"
-        };
-
-        @AttributeDefinition(name = "Disabled Property Patterns")
-        String[] disabledPropertyPatterns() default {
-                "^rep:.*$",
-                "^.*password.*$"
-        };
 
         @AttributeDefinition(name = "Max Depth")
         int maxDepth() default 1;
@@ -131,21 +122,16 @@ public class DashboardJsonView extends AbstractWidgetServlet {
     );
 
     @Reference
-    protected DashboardBrowser browser;
-
-    protected List<Pattern> allowedPropertyPatterns;
-    protected List<Pattern> disabledPropertyPatterns;
+    protected ResourceFilter resourceFilter;
 
     protected int maxDepth = 1;
     protected boolean sourceMode = true;
 
     @Activate
     @Modified
-    protected void activate(DashboardJsonView.Config config) {
-        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
-                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
-        allowedPropertyPatterns = patternList(config.allowedPropertyPatterns());
-        disabledPropertyPatterns = patternList(config.disabledPropertyPatterns());
+    protected void activate(Config config) {
+        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         maxDepth = config.maxDepth();
         sourceMode = config.sourceMode();
     }
@@ -155,32 +141,11 @@ public class DashboardJsonView extends AbstractWidgetServlet {
         return DEFAULT_RESOURCE_TYPE;
     }
 
-    protected boolean isAllowedProperty(@NotNull final String name) {
-        for (Pattern allowed : allowedPropertyPatterns) {
-            if (allowed.matcher(name).matches()) {
-                for (Pattern disabled : disabledPropertyPatterns) {
-                    if (disabled.matcher(name).matches()) {
-                        return false;
-                    }
-                }
-                if (sourceMode) {
-                    for (Pattern disabled : NON_SOURCE_PROPS) {
-                        if (disabled.matcher(name).matches()) {
-                            return false;
-                        }
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
     @Override
     public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
             throws IOException {
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final Resource targetResource = browser.getRequestResource(request);
+        final Resource targetResource = resourceFilter.getRequestResource(request);
         if (targetResource != null) {
             final String mode = getHtmlMode(request, HTML_MODES);
             if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
@@ -250,14 +215,14 @@ public class DashboardJsonView extends AbstractWidgetServlet {
             depth = null;
         } else {
             final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && browser.isAllowedResource(content)) {
+            if (content != null && resourceFilter.isAllowedResource(content)) {
                 writer.name(content.getName());
                 dumpJson(writer, content, null);
             }
         }
         if (depth == null || depth < maxDepth) {
             for (final Resource child : resource.getChildren()) {
-                if (browser.isAllowedResource(child)) {
+                if (resourceFilter.isAllowedResource(child)) {
                     final String childName = child.getName();
                     if (!JCR_CONTENT.equals(childName)) {
                         writer.name(childName);
@@ -274,10 +239,10 @@ public class DashboardJsonView extends AbstractWidgetServlet {
         final Map<String, Object> properties = new TreeMap<>();
         for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
             final String name = property.getKey();
-            if (isAllowedProperty(name)) {
+            if (resourceFilter.isAllowedProperty(name)) {
                 if (JCR_PRIMARY_TYPE.equals(name)) {
                     writer.name(name);
-                    jsonProperty(writer, property.getValue());
+                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
                 } else {
                     if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
                         final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
@@ -292,7 +257,7 @@ public class DashboardJsonView extends AbstractWidgetServlet {
         }
         for (final Map.Entry<String, Object> property : properties.entrySet()) {
             writer.name(property.getKey());
-            jsonProperty(writer, property.getValue());
+            Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
         }
     }
 }

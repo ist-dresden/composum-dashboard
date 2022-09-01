@@ -26,10 +26,12 @@
                         <filter>
                             <root>/apps/composum/dashboard/config.composum</root>
                             <includes>
+                                <include>.*/.*\.dashboard\..*\.SlingDashboardManager.*</include>
                                 <include>.*/.*\.dashboard\..*\.GenericDashboardPlugin.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Servlet.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*View.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Widget.*</include>
+                                <include>.*/.*\.dashboard\..*\.DefaultTrace.*</include>
                             </includes>
                         </filter>
                     </filters>

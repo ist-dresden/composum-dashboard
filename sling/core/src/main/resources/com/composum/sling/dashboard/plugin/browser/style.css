@@ -41,6 +41,15 @@ body {
     line-height: 36px;
 }
 
+.dashboard-browser__navbar .browser__home-link,
+.dashboard-browser__navbar .nav-item {
+    line-height: 36px;
+}
+
+.dashboard-browser__navbar .nav-item {
+    color: rgba(255, 255, 255, .5);
+}
+
 .browser__status-bar {
     flex-grow: 1;
     margin: 0 20px 0 0;

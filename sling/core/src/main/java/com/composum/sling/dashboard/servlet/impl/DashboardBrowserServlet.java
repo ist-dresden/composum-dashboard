@@ -1,6 +1,5 @@
 package com.composum.sling.dashboard.servlet.impl;
 
-import com.composum.sling.dashboard.service.DashboardBrowser;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
@@ -16,7 +15,6 @@ import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
@@ -24,7 +22,6 @@ import org.apache.sling.xss.XSSAPI;
 import org.apache.sling.xss.XSSFilter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -56,25 +53,26 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import java.util.regex.Pattern;
 
 /**
  * a primitive repository browser for a simple repository content visualization
  */
-@Component(service = {Servlet.class, DashboardBrowser.class, DashboardPlugin.class},
+@Component(service = {Servlet.class, DashboardPlugin.class},
         property = {
-                Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Browser",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
-        configurationPolicy = ConfigurationPolicy.REQUIRE
+        configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardBrowserServlet.Config.class)
-public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardBrowser {
+public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardPlugin {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/components/browser";
 
     @ObjectClassDefinition(name = "Composum Dashboard Browser")
     public @interface Config {
+
+        @AttributeDefinition(name = "Name")
+        String name() default "browser";
 
         @AttributeDefinition(name = "Category")
         String[] context() default {
@@ -88,47 +86,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         int rank() default 2000;
 
         @AttributeDefinition(name = "Label")
-        String label() default "JSON";
+        String label() default "Browser";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
-
-        @AttributeDefinition(name = "Allowed Property Patterns")
-        String[] allowedPropertyPatterns() default {
-                "^.*$"
-        };
-
-        @AttributeDefinition(name = "Disabled Property Patterns")
-        String[] disabledPropertyPatterns() default {
-                "^rep:.*$",
-                "^.*password.*$"
-        };
-
-        @AttributeDefinition(name = "Allowed Path Patterns")
-        String[] allowedPathPatterns() default {
-                "^/$",
-                "^/content(/.*)?$",
-                "^/conf(/.*)?$",
-                "^/var(/.*)?$",
-                "^/mnt(/.*)?$"
-        };
-
-        @AttributeDefinition(name = "Disabled Path Patterns")
-        String[] disabledPathPatterns() default {
-                ".*/rep:.*",
-                "^(/.*)?/api(/.*)?$"
-        };
-
-        @AttributeDefinition(name = "Synthetic Paths")
-        String[] syntheticPaths();
-
-        @AttributeDefinition(name = "Sortable Types")
-        String[] sortableTypes() default {
-                "nt:folder", "sling:Folder"
-        };
-
-        @AttributeDefinition(name = "Login URI")
-        String loginUri() default "/system/sling/form/login.html";
 
         @AttributeDefinition(name = "Servlet Types",
                 description = "the resource types implemented by this servlet")
@@ -173,13 +134,6 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     @Reference
     protected DashboardManager dashboardManager;
 
-    protected List<Pattern> allowedPathPatterns;
-    protected List<Pattern> disabledPathPatterns;
-
-    protected List<String> syntheticPaths;
-    protected List<String> sortableTypes;
-    protected String loginUri;
-
     protected final Map<String, DashboardWidget> viewWidgets = new HashMap<>();
 
     @Reference(
@@ -218,55 +172,12 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     @Activate
     @Modified
     protected void activate(Config config) {
-        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
-                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
-        allowedPathPatterns = patternList(config.allowedPathPatterns());
-        disabledPathPatterns = patternList(config.disabledPathPatterns());
-        syntheticPaths = Arrays.asList(Optional.ofNullable(config.syntheticPaths()).orElse(new String[0]));
-        sortableTypes = Arrays.asList(Optional.ofNullable(config.sortableTypes()).orElse(new String[0]));
-        loginUri = config.loginUri();
+        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
     }
 
     protected @NotNull String defaultResourceType() {
         return DEFAULT_RESOURCE_TYPE;
-    }
-
-    @Override
-    public boolean isAllowedResource(@NotNull final Resource resource) {
-        final String path = resource.getPath();
-        for (Pattern allowed : allowedPathPatterns) {
-            if (allowed.matcher(path).matches()) {
-                for (Pattern disabled : disabledPathPatterns) {
-                    if (disabled.matcher(path).matches()) {
-                        return false;
-                    }
-                }
-                return true;
-            }
-        }
-        return false;
-    }
-
-    @Override
-    public @Nullable Resource getRequestResource(@NotNull final SlingHttpServletRequest request) {
-        ResourceResolver resolver = request.getResourceResolver();
-        Resource resource = request.getRequestPathInfo().getSuffixResource();
-        if (resource == null) {
-            String path = request.getRequestPathInfo().getSuffix();
-            if (StringUtils.isNotBlank(path)) {
-                for (String synthPath : syntheticPaths) {
-                    if (path.equals(synthPath) || synthPath.startsWith(path + "/")) {
-                        final Resource synthetic = new SyntheticResource(resolver, path, null);
-                        if (isAllowedResource(synthetic)) {
-                            return synthetic;
-                        }
-                    }
-                }
-            } else {
-                resource = resolver.getResource("/");
-            }
-        }
-        return resource != null && isAllowedResource(resource) ? resource : null;
     }
 
     @Override
@@ -308,7 +219,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("browser-tree", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_TREE)));
             properties.put("browser-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_VIEW)));
             properties.put("browser-tab", xssapi.encodeForHTMLAttr(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_VIEW, "#id#")));
-            properties.put("loginUrl", xssapi.encodeForHTMLAttr(loginUri));
+            properties.put("loginUrl", xssapi.encodeForHTMLAttr(dashboardManager.getLoginUri()));
             properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
             addCustomOption(browser, "style.css", properties);
             addCustomOption(browser, "script.js", properties);
@@ -347,7 +258,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected void htmlView(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        final Resource resource = getRequestResource(request);
+        final Resource resource = dashboardManager.getRequestResource(request);
         if (resource != null) {
             response.setContentType("text/html;charset=UTF-8");
             final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_VIEW));
@@ -408,14 +319,14 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             // instead of using the resources path given by the requests suffix
             if (StringUtils.isNotBlank(url)) {
                 resource = resolveUrl(request, url);
-                if (resource == null || !isAllowedResource(resource)) {
+                if (resource == null || !dashboardManager.isAllowedResource(resource)) {
                     response.sendError(HttpServletResponse.SC_NOT_FOUND);
                     return;
                 }
             }
         }
         if (resource == null) {
-            resource = getRequestResource(request);
+            resource = dashboardManager.getRequestResource(request);
         }
         if (resource != null) {
             response.setContentType("application/json;charset=UTF-8");
@@ -432,7 +343,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         writer.beginObject();
         writeNodeIdentifiers(writer, resource);
         writer.name("children").beginArray();
-        final Map<String, Resource> children = sortableTypes.contains(primaryType)
+        final Map<String, Resource> children = dashboardManager.isSortableType(primaryType)
                 ? new TreeMap<>() : new LinkedHashMap<>();
         getChildren(resource, children);
         for (Resource child : children.values()) {
@@ -449,32 +360,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     protected void getChildren(@NotNull final Resource resource, @NotNull final Map<String, Resource> children) {
         for (Resource child : resource.getChildren()) {
-            if (isAllowedResource(child)) {
+            if (dashboardManager.isAllowedResource(child)) {
                 children.put(child.getName(), child);
-            }
-        }
-        addSyntheticResources(resource, children);
-    }
-
-    protected void addSyntheticResources(@NotNull final Resource resource,
-                                         @NotNull final Map<String, Resource> children) {
-        final ResourceResolver resolver = resource.getResourceResolver();
-        String base = resource.getPath();
-        if (!base.endsWith("/")) {
-            base += "/";
-        }
-        for (final String synthetic : syntheticPaths) {
-            if (synthetic.startsWith(base)) {
-                final String name = StringUtils.substringBefore(synthetic.substring(base.length()), "/");
-                if (StringUtils.isNotBlank(name) && !children.containsKey(name)) {
-                    Resource child = resolver.getResource(resource, name);
-                    if (child == null) {
-                        child = new SyntheticResource(resolver, base + name, null);
-                        if (isAllowedResource(child)) {
-                            children.put(child.getName(), child);
-                        }
-                    }
-                }
             }
         }
     }

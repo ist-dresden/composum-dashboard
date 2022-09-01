@@ -2,7 +2,6 @@ package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
-import com.google.gson.stream.JsonWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -15,7 +14,6 @@ import org.apache.sling.api.resource.SyntheticResource;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.osgi.service.metatype.annotations.AttributeDefinition;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,45 +24,16 @@ import java.io.Writer;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
 public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet implements DashboardWidget {
-
-    public interface Config {
-
-        @AttributeDefinition(name = "Context")
-        String[] context();
-
-        @AttributeDefinition(name = "Category")
-        String category();
-
-        @AttributeDefinition(name = "Rank")
-        int rank();
-
-        @AttributeDefinition(name = "Label")
-        String label();
-
-        @AttributeDefinition(name = "Navigation Title")
-        String navTitle();
-
-        @AttributeDefinition(name = "Servlet Types")
-        String[] sling_servlet_resourceTypes();
-
-        @AttributeDefinition(name = "Servlet Extensions")
-        String[] sling_servlet_extensions();
-
-        @AttributeDefinition(name = "Servlet Paths")
-        String[] sling_servlet_paths();
-    }
 
     public static final String JSON_DATE_FORMAT = "yyyy-MM-dd MM:mm:ss.SSSZ";
 
@@ -74,6 +43,7 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
 
     protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TILE);
 
+    protected String name;
     protected List<String> context;
     protected String category;
     protected int rank;
@@ -85,8 +55,9 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
     protected String servletPath;
     protected List<String> servletPaths;
 
-    protected void activate(String[] context, String categors, int rank, String label, String navTitle,
+    protected void activate(String name, String[] context, String categors, int rank, String label, String navTitle,
                             String[] resourceTypes, String[] servletPaths) {
+        this.name = name;
         this.context = Arrays.asList(context);
         this.category = categors;
         this.rank = rank;
@@ -129,7 +100,7 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
 
     @Override
     public @NotNull String getName() {
-        return StringUtils.substringAfterLast(defaultResourceType(), "/");
+        return StringUtils.isNotBlank(name) ? name : StringUtils.substringAfterLast(defaultResourceType(), "/");
     }
 
     @Override
@@ -381,51 +352,11 @@ public abstract class AbstractWidgetServlet extends SlingSafeMethodsServlet impl
         return value;
     }
 
-    protected void jsonProperty(@NotNull final JsonWriter writer, @Nullable final Object value)
-            throws IOException {
-        if (value == null) {
-            writer.nullValue();
-        } else if (value instanceof Object[]) {
-            writer.beginArray();
-            for (Object item : (Object[]) value) {
-                jsonProperty(writer, item);
-            }
-            writer.endArray();
-        } else if (value instanceof Collection) {
-            writer.beginArray();
-            for (Object item : (Collection<?>) value) {
-                jsonProperty(writer, item);
-            }
-            writer.endArray();
-        } else if (value instanceof Map) {
-            writer.beginObject();
-            for (Map.Entry<?, ?> item : ((Map<?, ?>) value).entrySet()) {
-                writer.name(item.getKey().toString());
-                jsonProperty(writer, item.getValue());
-            }
-            writer.endObject();
-        } else if (value instanceof Date) {
-            writer.value(new SimpleDateFormat(JSON_DATE_FORMAT).format((Date) value));
-        } else if (value instanceof Boolean) {
-            writer.value((Boolean) value);
-        } else if (value instanceof Long) {
-            writer.value((Long) value);
-        } else if (value instanceof Integer) {
-            writer.value((Integer) value);
-        } else if (value instanceof Double) {
-            writer.value((Double) value);
-        } else if (value instanceof Number) {
-            writer.value((Number) value);
-        } else {
-            writer.value(value.toString());
-        }
-    }
-
-    protected String getFirstProperty(@Nullable final String[] stringSet, final String defaultValue) {
+    public static String getFirstProperty(@Nullable final String[] stringSet, final String defaultValue) {
         return stringSet != null && stringSet.length > 0 ? stringSet[0] : defaultValue;
     }
 
-    protected List<Pattern> patternList(@Nullable final String[] config) {
+    public static List<Pattern> patternList(@Nullable final String[] config) {
         List<Pattern> patterns = new ArrayList<>();
         for (String rule : config) {
             if (StringUtils.isNotBlank(rule)) {

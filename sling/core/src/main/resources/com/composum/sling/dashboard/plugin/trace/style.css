@@ -1,0 +1,67 @@
+.dashboard-widget__trace {
+}
+
+.dashboard-widget__trace-tile .list-group {
+    color: #212529;
+}
+
+.dashboard-widget__trace-view .nav-tabs {
+    position: absolute;
+    top: 62px;
+    left: 0;
+    right: 0;
+    padding: 0 10px;
+}
+
+.dashboard-widget__trace-view .tab-content {
+    position: absolute;
+    top: 110px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.dashboard-widget__trace-view .tab-content .dashboard-widget__trace {
+    top: 0;
+}
+
+.dashboard-widget__trace .card-header {
+    padding: inherit;
+}
+
+.dashboard-widget__trace .card-header .btn {
+    width: 100%;
+}
+
+.dashboard-widget__trace .card-header .btn,
+.dashboard-widget__trace .card-header .btn:hover {
+    color: #495057;
+    text-decoration: none;
+}
+
+.dashboard-widget__trace .trace-time {
+    font-family: monospace;
+    line-height: 24px;
+    font-size: 14px;
+}
+
+.dashboard-widget__trace .trace-level {
+    width: 5%;
+    min-width: 80px;
+    margin: 1px 15px -1px;
+    line-height: 18px;
+}
+
+.dashboard-widget__trace .card-body {
+    padding: inherit;
+}
+
+.dashboard-widget__trace textarea {
+    width: 100%;
+    height: 300px;
+    resize: none;
+    border: none;
+    font-family: 'Courier New', 'Courier', monospace;
+    font-size: 14px;
+    white-space: pre;
+}

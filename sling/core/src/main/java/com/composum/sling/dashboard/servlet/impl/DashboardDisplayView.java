@@ -1,7 +1,7 @@
 package com.composum.sling.dashboard.servlet.impl;
 
-import com.composum.sling.dashboard.service.DashboardBrowser;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
@@ -15,7 +15,6 @@ import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -45,10 +44,9 @@ import static com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.
 
 @Component(service = {Servlet.class, DashboardWidget.class},
         property = {
-                Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Display View",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
-        configurationPolicy = ConfigurationPolicy.REQUIRE
+        configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardDisplayView.Config.class)
 public class DashboardDisplayView extends AbstractWidgetServlet {
@@ -57,6 +55,9 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
 
     @ObjectClassDefinition(name = "Composum Dashboard Display View")
     public @interface Config {
+
+        @AttributeDefinition(name = "Name")
+        String name() default "display-view";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {
@@ -113,15 +114,15 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
     protected XSSAPI xssapi;
 
     @Reference
-    protected DashboardBrowser browser;
+    protected ResourceFilter resourceFilter;
 
     protected boolean loadDocuments = true;
 
     @Activate
     @Modified
-    protected void activate(DashboardDisplayView.Config config) {
-        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
-                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+    protected void activate(Config config) {
+        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         loadDocuments = config.loadDocuments();
     }
 
@@ -137,7 +138,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
         switch (getHtmlMode(request, HTML_MODES)) {
             case OPTION_VIEW:
             default:
-                final Resource resource = browser.getRequestResource(request);
+                final Resource resource = resourceFilter.getRequestResource(request);
                 if (resource != null) {
                     final Resource target = getTargetResource(resource);
                     final Type displayType = getDisplayType(resource);
@@ -406,7 +407,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
     protected void loadContent(@NotNull final SlingHttpServletRequest request,
                                @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        Resource resource = browser.getRequestResource(request);
+        Resource resource = resourceFilter.getRequestResource(request);
         if (resource != null) {
             String filename = null;
             String primaryType = resource.getValueMap().get(JCR_PRIMARY_TYPE, "");

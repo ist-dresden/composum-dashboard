@@ -13,6 +13,9 @@ import org.jetbrains.annotations.Nullable;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -23,7 +26,9 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Component(service = DashboardPlugin.class)
 @Designate(ocd = GenericDashboardPlugin.Config.class, factory = true)
@@ -41,6 +46,10 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         @AttributeDefinition(name = "Search Root", description =
                 "the repository root folder for searching widgets declared by content resources")
         String searchRoot() default "/content";
+
+        @AttributeDefinition(name = "Widget Context", description =
+                "if specified all matching widget implementations are registred as widget services also")
+        String[] widgetContext();
 
         @AttributeDefinition(name = "Rank")
         int rank() default 9000;
@@ -141,7 +150,6 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         public int getRank() {
             return properties.get("rank", 0L).intValue();
         }
-
     }
 
     protected static final String SA_WIDGETS = GenericDashboardPlugin.class.getName() + "#";
@@ -150,13 +158,47 @@ public class GenericDashboardPlugin implements DashboardPlugin {
 
     protected String resourceType;
     protected String searchRoot;
+    protected List<String> widgetContext;
     protected int rank;
+
+    protected final Map<String, DashboardWidget> widgetServices = new HashMap<>();
+
+    @Reference(
+            service = DashboardWidget.class,
+            policy = ReferencePolicy.DYNAMIC,
+            cardinality = ReferenceCardinality.MULTIPLE
+    )
+    protected void addDashboardWidget(@NotNull final DashboardWidget widget) {
+        if (isMatchingWidget(widget)) {
+            synchronized (widgetServices) {
+                widgetServices.put(widget.getName(), widget);
+            }
+        }
+    }
+
+    protected void removeDashboardWidget(@NotNull final DashboardWidget widget) {
+        if (isMatchingWidget(widget)) {
+            synchronized (widgetServices) {
+                widgetServices.remove(widget.getName());
+            }
+        }
+    }
+
+    protected boolean isMatchingWidget(@NotNull final DashboardWidget widget) {
+        for (String context : widgetContext) {
+            if (widget.getContext().contains(context)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     @Activate
     @Modified
     protected void activate(Config config) {
         resourceType = config.resourceType();
         searchRoot = config.searchRoot();
+        widgetContext = Arrays.asList(Optional.ofNullable(config.widgetContext()).orElse(new String[0]));
         rank = config.rank();
     }
 
@@ -173,6 +215,12 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         final Iterator<Resource> widgetResources = request.getResourceResolver().findResources(query, Query.XPATH);
         while (widgetResources.hasNext()) {
             Widget widget = new Widget(widgetResources.next());
+            if ((context == null || widget.getContext().contains(context))
+                    && !widgetSet.containsKey(widget.getName())) {
+                widgetSet.put(widget.getName(), widget);
+            }
+        }
+        for (DashboardWidget widget : widgetServices.values()) {
             if ((context == null || widget.getContext().contains(context))
                     && !widgetSet.containsKey(widget.getName())) {
                 widgetSet.put(widget.getName(), widget);

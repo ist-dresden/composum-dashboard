@@ -12,7 +12,6 @@ import org.apache.sling.settings.SlingSettingsService;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.osgi.framework.Constants;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -34,6 +33,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOARD_CONTEXT;
@@ -43,10 +43,9 @@ import static com.composum.sling.dashboard.model.impl.DashboardModelImpl.DASHBOA
  */
 @Component(service = {Servlet.class, DashboardWidget.class},
         property = {
-                Constants.SERVICE_DESCRIPTION + "=Composum Dashboard Logfile Widget",
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
-        configurationPolicy = ConfigurationPolicy.REQUIRE
+        configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardLogfileWidget.Config.class)
 public class DashboardLogfileWidget extends AbstractWidgetServlet {
@@ -55,6 +54,9 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
 
     @ObjectClassDefinition(name = "Composum Dashboard Logfile Widget")
     public @interface Config {
+
+        @AttributeDefinition(name = "Name")
+        String name() default "logfiles";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {
@@ -73,7 +75,7 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
 
-        @AttributeDefinition(name = "Logfile Set")
+        @AttributeDefinition(name = "Logfiles")
         String[] logFiles() default {
                 "/logs/error.log"
         };
@@ -217,15 +219,20 @@ public class DashboardLogfileWidget extends AbstractWidgetServlet {
 
     @Activate
     @Modified
-    protected void activate(DashboardLogfileWidget.Config config) {
-        super.activate(config.context(), config.category(), config.rank(), config.label(), config.navTitle(),
-                config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+    protected void activate(Config config) {
+        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         slingHomePath = slingSettingsService.getSlingHomePath();
         slingHomeName = StringUtils.substringAfterLast(slingHomePath, "/");
-        logFiles = Arrays.asList(config.logFiles());
+        logFiles = Arrays.asList(Optional.ofNullable(config.logFiles()).orElse(new String[0]));
         errorPattern = Pattern.compile(config.errorPattern());
         warningPattern = Pattern.compile(config.warningPattern());
         sizeLimit = config.sizeLimit();
+    }
+
+    @Override
+    public @NotNull String getLabel() {
+        return StringUtils.defaultString(label, getName());
     }
 
     @Override

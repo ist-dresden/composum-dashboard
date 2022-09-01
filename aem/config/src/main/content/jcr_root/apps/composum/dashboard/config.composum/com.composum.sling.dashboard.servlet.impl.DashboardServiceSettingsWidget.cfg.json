@@ -4,10 +4,10 @@
     "org.apache.sling.settings.SlingSettingsService[runModes]"
   ],
   "sling.servlet.paths": [
-    "/bin/tools/service/settings",
-    "/bin/tools/service/settings/page",
-    "/bin/tools/service/settings/view",
-    "/bin/tools/service/settings/tile",
-    "/bin/tools/service/settings/json"
+    "/apps/cpm/service/settings",
+    "/apps/cpm/service/settings/page",
+    "/apps/cpm/service/settings/view",
+    "/apps/cpm/service/settings/tile",
+    "/apps/cpm/service/settings/json"
   ]
 }

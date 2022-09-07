@@ -1,0 +1,32 @@
+<div class="dashboard-widget__query-head">
+    <form class="dashboard-widget__query-form d-flex align-items-stretch" action="${action}" method="GET">
+        <input type="hidden" name="_charset_" value="UTF-8"/>
+        <input class="dashboard-widget__query-field" style="flex-grow:1;"
+               name="query" value="${pattern}" type="text"/>
+        <button type="submit" class="btn btn-dark">Search</button>
+    </form>
+    <button class="dashboard-widget__query-form_hint" data-toggle="popover" data-trigger="focus" data-placement="bottom"
+            data-content="
+    <div>
+    text search patterns...
+    <ul>
+    <li>all terms are combined with AND, '+' starts a new AND group which is combined with OR</li>
+    <li>if the first term starts with a '/' it's used as search path, otherwise '/content' is used</li>
+    <li>the path can be prepended by the [primary:type| of the searched resources</li>
+    <li>each term can be prepended by a [property/path]; '-' negates a term (NOT)</li>
+    <li>each term can contain or start/end with '*' wildcards</li>
+    <li>a quoted text term can contain spaces, e.g. &quot;this phrase is searched&quot;</li>
+    <li>if a '=' operator is prepended the property must be equal instead of 'like' or 'contains()'</li>
+    </ul>
+    <div>
+    text search examples...
+    <ul>
+    <li>[cq:PageContent]/content/my/site *likepattern*</li>
+    <li>/content/my/site -[jcr:title]*likepattern*</li>
+    <li>/content/my/site [jcr:title]=&quot;property value&quot; +&quot;alternative value&quot;</li>
+    </ul>
+    </div>">
+        submit a SQL2 or a XPATH query or use an optional path and some text patterns, e.g.
+        '/content/path/for/search starting* "some words" -ignoreIt +"or these words" and this'...
+    </button>
+</div>

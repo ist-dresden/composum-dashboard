@@ -1,8 +1,48 @@
-class Tree {
+class ToolLink extends ViewWidget {
+
+    static selector = '.composum-dashboard__navbar .tool-link';
 
     constructor(element) {
-        this.el = element;
-        this.$el = $(element);
+        super(element);
+        this.$el.click(function (event) {
+            event.preventDefault();
+            $(document).trigger('tool:toggle', [this.$el.data('tool-uri')]);
+            return false;
+        }.bind(this));
+    }
+
+    static setActive(toolUri) {
+        $(ToolLink.selector).removeClass('active');
+        if (toolUri) {
+            $(ToolLink.selector + '[data-tool-uri="' + toolUri + '"]').addClass('active');
+        }
+    }
+}
+
+CPM.widgets.register(ToolLink);
+
+class StatusLine extends ViewWidget {
+
+    static selector = '.dashboard__status-line';
+
+    constructor(element) {
+        super(element);
+        $(document).on('path:selected', this.onPathSelected.bind(this));
+    }
+
+    onPathSelected(event, path) {
+        this.$el.attr('value', path);
+    }
+}
+
+CPM.widgets.register(StatusLine);
+
+class BrowserTree extends ViewWidget {
+
+    static selector = '.dashboard-browser__tree';
+
+    constructor(element) {
+        super(element)
         const treeOptions = {
             'plugins': [
                 'types',
@@ -116,11 +156,6 @@ class Tree {
                 }.bind(this), true);
             }.bind(this), 200);
         }
-        window.onpopstate = function (event) {
-            this.openNode(event.state, function (path) {
-                $(document).trigger('path:selected', [path]);
-            }.bind(this), true);
-        }.bind(this);
     }
 
     browserUrl(path) {
@@ -128,14 +163,15 @@ class Tree {
     }
 
     doSelectPath(event, path) {
-        this.openNode(path);
+        const selected = this.getSelectedNode();
+        if (!selected || path !== selected.original.path) {
+            this.openNode(path);
+        }
     }
 
     triggerPathSelected(path) {
         $(document).trigger('path:selected', [path]);
-        if (history.pushState) {
-            history.pushState(path, name, this.browserUrl(path));
-        }
+        CPM.history.pushUri(this.browserUrl(path));
     }
 
     onPageChanged(event, url) {
@@ -225,10 +261,12 @@ class Tree {
                     tree.suppressEvent = suppressEvent;
                     try {
                         tree.jstree.select_node($node);
-                        tree.scrollIntoView($node);
-                        if (callback) {
-                            callback(path, $node[0])
-                        }
+                        setTimeout(function () {
+                            tree.scrollIntoView($node);
+                            if (callback) {
+                                callback(path, $node[0])
+                            }
+                        }.bind(this), 100);
                     } finally {
                         delete tree.suppressEvent;
                     }
@@ -254,48 +292,88 @@ class Tree {
     }
 }
 
-class StatusLine {
+CPM.widgets.register(BrowserTree);
+
+class BrowserPanel extends ViewWidget {
 
     constructor(element) {
-        this.$el = $(element);
-        $(document).on('path:selected', this.onPathSelected.bind(this));
+        super(element);
+        this.profile = new Profile('browser');
+        $(document).on('content:loaded', this.attachLinkHandler.bind(this));
     }
 
-    onPathSelected(event, path) {
-        this.$el.attr('value', path);
+    onContentLoaded(element) {
+        super.onContentLoaded(element)
+        this.attachLinkHandler(undefined, element);
+    }
+
+    attachLinkHandler(event, element) {
+        $(element || this.el).find('a.path').click(function (event) {
+            event.preventDefault();
+            let path = $(event.currentTarget).attr('href');
+            if (path) {
+                path = path.replaceAll(/\/_jcr_/g, '/jcr:');
+                $(document).trigger('path:select', [path]);
+            }
+            return false;
+        }.bind(this));
     }
 }
 
-class Profile {
+class BrowserTool extends BrowserPanel {
 
-    constructor(aspect) {
-        this.aspect = aspect;
-        this.load();
+    static selector = '.dashboard-browser__tool';
+
+    constructor(element) {
+        super(element);
+        this.$parent = this.$el.closest('.dashboard-browser__right-panel');
+        this.showTool(this.profile.get('currentTool'));
+        $(document).on('tool:toggle', function (event, toolUri) {
+            this.toggleTool(toolUri);
+        }.bind(this));
     }
 
-    load() {
-        this.profile = JSON.parse(localStorage.getItem('composum-dashboard') || '{}');
-        if (!this.profile[this.aspect]) {
-            this.profile[this.aspect] = {};
+    setCurrentTool(toolUri) {
+        this.currentTool = toolUri;
+        this.profile.set('currentTool', toolUri || '');
+    }
+
+    toggleTool(toolUri) {
+        this.showTool(this.currentTool === toolUri ? undefined : toolUri);
+    }
+
+    showTool(toolUri) {
+        ToolLink.setActive();
+        if (toolUri) {
+            $.ajax({
+                type: 'GET',
+                url: toolUri,
+                success: function (content) {
+                    this.setCurrentTool(toolUri);
+                    this.$el.html(content);
+                    this.$parent.addClass('tool-visible');
+                    ToolLink.setActive(toolUri);
+                    this.onContentLoaded(this.$el);
+                }.bind(this),
+                async: true,
+                cache: false
+            });
+        } else {
+            this.setCurrentTool();
+            this.$parent.removeClass('tool-visible');
+            this.$el.html('');
         }
     }
-
-    get(key) {
-        return this.profile[this.aspect][key];
-    }
-
-    set(key, value) {
-        this.load();
-        this.profile[this.aspect][key] = value;
-        localStorage.setItem('composum-dashboard', JSON.stringify(this.profile));
-    }
 }
 
-class View {
+CPM.widgets.register(BrowserTool);
+
+class BrowserView extends BrowserPanel {
+
+    static selector = '.dashboard-browser__view';
 
     constructor(element) {
-        this.profile = new Profile('browser');
-        this.$el = $(element);
+        super(element);
         this.loadContent(undefined, function () {
             this.$el.find('.dashboard-browser__action-reload').click(this.reload.bind(this));
             this.$el.find('.dashboard-browser__tabs a[data-toggle="tab"]').on('shown.bs.tab', this.onTabShown.bind(this));
@@ -358,10 +436,10 @@ class View {
                         const $tab = this.$tabPane(tabId);
                         $tab.html(content);
                         $tab.data('loaded', 'true');
-                        this.onLoaded($tab);
+                        this.onContentLoaded($tab);
                     } else {
                         this.$el.html(content);
-                        this.onLoaded();
+                        this.onContentLoaded();
                     }
                     if (callback) {
                         callback();
@@ -373,18 +451,13 @@ class View {
         }
     }
 
-    onLoaded($element) {
-        ($element || this.$el).find('a.path').click(function (event) {
-            event.preventDefault();
-            const path = $(event.currentTarget).attr('href');
-            if (path) {
-                $(document).trigger('path:select', [path]);
-            }
-            return false;
-        }.bind(this));
+    onContentLoaded($element) {
+        super.onContentLoaded($element);
         ($element || this.$el).find('.preview iframe').on('load.preview', function (event) {
             var url = event.currentTarget.contentDocument.URL;
             //$(document).trigger('page:changed', [url]); // FIXME...
         }.bind(this));
     }
 }
+
+CPM.widgets.register(BrowserView);

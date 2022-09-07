@@ -1,24 +1,10 @@
-.dashboard-widget__trace {
+
+.dashboard-widget__trace-view .tab-content {
+    padding: 5px;
 }
 
 .dashboard-widget__trace-tile .list-group {
     color: #212529;
-}
-
-.dashboard-widget__trace-view .nav-tabs {
-    position: absolute;
-    top: 62px;
-    left: 0;
-    right: 0;
-    padding: 0 10px;
-}
-
-.dashboard-widget__trace-view .tab-content {
-    position: absolute;
-    top: 110px;
-    left: 0;
-    right: 0;
-    bottom: 0;
 }
 
 .dashboard-widget__trace-view .tab-content .dashboard-widget__trace {
@@ -46,7 +32,6 @@
 }
 
 .dashboard-widget__trace .trace-level {
-    width: 5%;
     min-width: 80px;
     margin: 1px 15px -1px;
     line-height: 18px;

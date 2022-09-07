@@ -1,0 +1,6 @@
+{
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/properties",
+    "/apps/cpm/browser/view/properties/view"
+  ]
+}

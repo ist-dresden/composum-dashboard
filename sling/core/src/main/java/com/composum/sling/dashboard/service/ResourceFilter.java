@@ -17,5 +17,8 @@ public interface ResourceFilter {
      */
     boolean isAllowedResource(@NotNull Resource resource);
 
+    /**
+     * @return the requested resource if this resource is allowed, otherwise 'null'
+     */
     @Nullable Resource getRequestResource(@NotNull SlingHttpServletRequest request);
 }

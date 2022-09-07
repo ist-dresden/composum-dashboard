@@ -1,9 +1,9 @@
-class Logger {
+class LogfileView extends ViewWidget {
+
+    static selector = '.dashboard-widget__logfile textarea';
 
     constructor(element) {
-        this.el = element;
-        this.$el = $(element);
-        this.el.view = this;
+        super(element);
         this.scrollToEnd();
         setTimeout(this.tail.bind(this), 10000);
     }
@@ -33,19 +33,22 @@ class Logger {
     }
 }
 
-document.addEventListener('DOMContentLoaded', function () {
-    $('.dashboard-widget__logfile textarea').each(function () {
-        new Logger(this)
-    });
-    $('.dasboard-widget__logfile-view .nav-tabs a[data-toggle="tab"]').on('shown.bs.tab', function (event) {
-        const $tab = $(event.target);
-        const $pane = $tab.closest('.dasboard-widget__logfile-view')
-            .find('.tab-content .tab-pane[aria-labelledby="' + $tab.attr('id') + '"]');
-        const $view = $pane.find('.dashboard-widget__logfile textarea');
-        const view = $view[0].view;
-        if (!view.initialized) {
-            view.initialized = true;
-            view.scrollToEnd();
-        }
-    })
-});
+CPM.widgets.register(LogfileView);
+
+class LogfileTabs extends ResumingTabs {
+
+    static selector = '.logfile-tabs';
+
+    constructor(element) {
+        super(element, undefined, function (event, tabId, $tab) {
+            const $view = $tab.find('.dashboard-widget__logfile textarea');
+            const view = Widgets.getView($view, LogfileView);
+            if (view && !view.initialized) {
+                view.initialized = true;
+                view.scrollToEnd();
+            }
+        });
+    }
+}
+
+CPM.widgets.register(LogfileTabs);

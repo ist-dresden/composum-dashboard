@@ -44,6 +44,8 @@ public class Properties {
                 toJson(writer, item.getValue(), dateFormat);
             }
             writer.endObject();
+        } else if (value instanceof Calendar) {
+            writer.value(new SimpleDateFormat(dateFormat).format(((Calendar) value).getTime()));
         } else if (value instanceof Date) {
             writer.value(new SimpleDateFormat(dateFormat).format((Date) value));
         } else if (value instanceof Boolean) {

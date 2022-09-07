@@ -1,0 +1,9 @@
+{
+  "maxResults": 500,
+  "sling.servlet.paths": [
+    "/apps/cpm/query",
+    "/apps/cpm/query/page",
+    "/apps/cpm/query/view",
+    "/apps/cpm/query/find"
+  ]
+}

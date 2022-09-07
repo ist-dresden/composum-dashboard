@@ -1,0 +1,8 @@
+{
+  "sling.servlet.paths": [
+    "/apps/cpm/trace",
+    "/apps/cpm/trace/page",
+    "/apps/cpm/trace/view",
+    "/apps/cpm/trace/tile"
+  ]
+}

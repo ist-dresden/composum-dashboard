@@ -1,6 +1,11 @@
+
+.dashboard-widget__logfile-tile .list-group {
+    color: #212529;
+}
+
 .dashboard-widget__logfile {
     position: absolute;
-    top: 62px;
+    top: 5px;
     left: 5px;
     right: 5px;
     bottom: 5px;
@@ -18,28 +23,4 @@
     font-family: 'Courier New', 'Courier', monospace;
     font-size: 14px;
     white-space: pre;
-}
-
-.dashboard-widget__logfile-tile .list-group {
-    color: #212529;
-}
-
-.dasboard-widget__logfile-view .nav-tabs {
-    position: absolute;
-    top: 62px;
-    left: 0;
-    right: 0;
-    padding: 0 10px;
-}
-
-.dasboard-widget__logfile-view .tab-content {
-    position: absolute;
-    top: 110px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-}
-
-.dasboard-widget__logfile-view .tab-content .dashboard-widget__logfile {
-    top: 0;
 }

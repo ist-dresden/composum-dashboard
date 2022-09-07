@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html class="composum-dashboard__page" lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>${title}</title>
+    ${resource:/com/composum/sling/dashboard/commons/favicon.svg.html}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.6.2/css/bootstrap.min.css"
+          integrity="sha512-rt/SrQ4UNIaGfDyEXZtNcyWvQeOq0QLygHluFQcSjaGB04IxWhal71tKuzP6K8eYXYB6vJV4pHkXcmFGGQ1/0w=="
+          crossorigin="anonymous" referrerpolicy="no-referrer"/>
+    <link href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet"
+          integrity="sha384-wvfXpqpZZVQGK6TAh5PVlGOfQNHSoD2xbE+QkPxCAFlNEevoEH3Sl0sibVcOQVnN" crossorigin="anonymous">
+    <style>
+        ${resource:/com/composum/sling/dashboard/commons/style.css}
+        ${resource:/com/composum/sling/dashboard/page/style.css}
+    </style>
+</head>
+<body class="composum-dashboard__page-body">
+<nav class="composum-dashboard__navbar navbar navbar-expand navbar-dark bg-dark mb-3">
+    <span class="navbar-brand"><a href="${home-url}" class="dashboard__home-link">
+        ${resource:/com/composum/sling/dashboard/commons/logo.svg.html}<span>${title}</span></a></span>

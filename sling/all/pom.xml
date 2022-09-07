@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard-sling-parent</artifactId>
-        <version>0.8</version>
+        <version>0.9</version>
     </parent>
 
     <artifactId>composum-dashboard-sling</artifactId>
@@ -77,22 +77,15 @@
 
         <dependency>
             <groupId>${project.groupId}</groupId>
-            <artifactId>composum-dashboard-sling-core</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>composum-dashboard-sling-ui-apps</artifactId>
-            <version>${project.version}</version>
-            <type>content-package</type>
-        </dependency>
-
-        <dependency>
-            <groupId>${project.groupId}</groupId>
             <artifactId>composum-dashboard-sling-osgi-config</artifactId>
             <version>${project.version}</version>
             <type>content-package</type>
+        </dependency>
+
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>composum-dashboard-sling-core</artifactId>
+            <version>${project.version}</version>
         </dependency>
 
     </dependencies>

@@ -85,6 +85,8 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
 
     public static final Pattern PROPERTY_NAME = Pattern.compile("^[a-zA-Z0-9$@_:.-]+$");
 
+    protected abstract @NotNull String getClientlibPath();
+
     protected abstract @NotNull List<SettingsProvider> getSettingsProviders(@NotNull SlingHttpServletRequest request);
 
     protected abstract @NotNull ResourceFilter resourceFilter();
@@ -107,11 +109,11 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                     htmlTile(request, response, writer);
                     break;
                 case OPTION_VIEW:
-                default:
                     htmlView(request, response, writer, resource);
                     break;
                 case OPTION_PAGE:
-                    htmlPageHead(writer, "Service Settings");
+                default:
+                    htmlPageHead(writer);
                     htmlView(request, response, writer, resource);
                     htmlPageTail(writer);
                     break;
@@ -128,11 +130,11 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                             @NotNull final PrintWriter writer)
             throws IOException {
         writer.append("<style>\n");
-        copyResource(this.getClass(), "/com/composum/sling/dashboard/plugin/service/settings/style.css", writer);
+        copyResource(this.getClass(), getClientlibPath() + "/style.css", writer);
         writer.append("</style>\n");
         writer.append("<div class=\"card dashboard-widget__settings-tile\"><div class=\"card-header bg-")
                 .append("info".replace("info", "primary"))
-                .append(" text-white\">").append("Service Settings")
+                .append(" text-white\">").append(getLabel())
                 .append("</div><ul class=\"list-group list-group-flush\">\n");
         for (final SettingsProvider provider : getSettingsProviders(request)) {
             final String label = xssApi().encodeForHTML(provider.getLabel());
@@ -143,6 +145,9 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                     .append(active ? "check" : "times").append("\"></i></span></li>\n");
         }
         writer.append("</ul></div>\n");
+        writer.append("<script>\n");
+        copyResource(this.getClass(), getClientlibPath() + "/script.js", writer);
+        writer.append("</script>\n");
     }
 
     protected void htmlView(@NotNull final SlingHttpServletRequest request,

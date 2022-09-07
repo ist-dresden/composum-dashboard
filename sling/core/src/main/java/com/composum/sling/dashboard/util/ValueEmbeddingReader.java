@@ -19,6 +19,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.MissingResourceException;
 import java.util.ResourceBundle;
+import java.util.function.Supplier;
 
 /**
  * replace all '${key}' elements in the stream by their values from the value map;
@@ -237,6 +238,11 @@ public class ValueEmbeddingReader extends Reader {
                                     embed = new ValueEmbeddingReader((Reader) value, values,
                                             locale, resourceContext, resourceBundle);
                                     return; // stop buffering up to the end of the embedded reader
+                                } else if (value instanceof Supplier) {
+                                    @SuppressWarnings("unchecked")
+                                    String content = ((Supplier<String>)value).get();
+                                    content.getChars(0, content.length(), buf, len);
+                                    len += content.length();
                                 } else if (value != null) {
                                     String string;
                                     if (StringUtils.isNotBlank(key.format)) {

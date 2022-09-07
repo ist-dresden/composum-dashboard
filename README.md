@@ -152,7 +152,7 @@ The browser determines the available views by requesting the avaialable widgets 
 Each such widget avaialable via the DashboardManager is shown in the browsers view section.
 
 <details>
-  <summary>com.composum.sling.dashboard.servlet.impl.DashboardBrowserServlet.cfg.json</summary>
+  <summary>com.composum.sling.dashboard.servlet.DashboardBrowserServlet.cfg.json</summary>
 
 ```json
 {
@@ -184,7 +184,7 @@ Each such widget avaialable via the DashboardManager is shown in the browsers vi
 </details>
 
 <details>
-  <summary>com.composum.sling.dashboard.servlet.impl.DashboardPropertiesView.cfg.json</summary>
+  <summary>com.composum.sling.dashboard.servlet.DashboardPropertiesView.cfg.json</summary>
 
 ```json
 {
@@ -200,7 +200,7 @@ Each such widget avaialable via the DashboardManager is shown in the browsers vi
 </details>
 
 <details>
-  <summary>com.composum.sling.dashboard.servlet.impl.DashboardDisplayView.cfg.json</summary>
+  <summary>com.composum.sling.dashboard.servlet.DashboardDisplayView.cfg.json</summary>
 
 ```json
 {}

@@ -1,0 +1,10 @@
+
+.composum-dashboard__widget {
+    margin-bottom: 1rem;
+}
+
+.composum-widget__view {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}

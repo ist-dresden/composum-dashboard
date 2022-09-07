@@ -16,11 +16,13 @@ import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import javax.jcr.query.Query;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Collection;
@@ -92,21 +94,6 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
-        public @NotNull String getWidgetPageUrl(@NotNull final SlingHttpServletRequest request) {
-            Resource widgetResource = getWidgetResource(request);
-            String widgetPageUrl = properties.get("widgetPageUrl", String.class);
-            if (StringUtils.isBlank(widgetPageUrl)) {
-                Resource widgetPage = widgetResource.getChild("page");
-                widgetPageUrl = widgetPage != null
-                        ? widgetPage.getPath() + ".html"
-                        : widgetResource.getPath() + ".page.html";
-            } else {
-                widgetPageUrl = widgetPageUrl.replaceAll("\\$?\\{path}", widgetResource.getPath());
-            }
-            return widgetPageUrl;
-        }
-
-        @Override
         public boolean equals(Object other) {
             return other instanceof DashboardWidget && getName().equals(((DashboardWidget) other).getName());
         }
@@ -132,7 +119,7 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
-        public @Nullable <T> T getProperty(@NotNull String name, T defaultValue) {
+        public @NotNull <T> T getProperty(@NotNull String name, @NotNull T defaultValue) {
             return properties.get(name, defaultValue);
         }
 
@@ -142,13 +129,17 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
-        public @NotNull String getCategory() {
-            return properties.get("category", getName());
+        public @NotNull Collection<String> getCategory() {
+            return Arrays.asList(properties.get("category", new String[]{getName()}));
         }
 
         @Override
         public int getRank() {
             return properties.get("rank", 0L).intValue();
+        }
+
+        @Override
+        public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
         }
     }
 
@@ -166,7 +157,8 @@ public class GenericDashboardPlugin implements DashboardPlugin {
     @Reference(
             service = DashboardWidget.class,
             policy = ReferencePolicy.DYNAMIC,
-            cardinality = ReferenceCardinality.MULTIPLE
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policyOption = ReferencePolicyOption.GREEDY
     )
     protected void addDashboardWidget(@NotNull final DashboardWidget widget) {
         if (isMatchingWidget(widget)) {

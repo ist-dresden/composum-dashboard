@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard</artifactId>
-        <version>0.8</version>
+        <version>0.9</version>
     </parent>
 
     <artifactId>composum-dashboard-sling-parent</artifactId>
@@ -20,7 +20,6 @@
 
     <modules>
         <module>core</module>
-        <module>ui.apps</module>
         <module>config</module>
         <module>all</module>
     </modules>

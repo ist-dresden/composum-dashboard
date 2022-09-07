@@ -1,0 +1,15 @@
+{
+  "logFiles": [
+    "/logs/error.log"
+  ],
+  "errorPattern": "\\*ERROR\\*",
+  "warningPattern": "\\*WARN\\*",
+  "sizeLimit": 200,
+  "sling.servlet.paths": [
+    "/apps/cpm/log",
+    "/apps/cpm/log/page",
+    "/apps/cpm/log/view",
+    "/apps/cpm/log/tail",
+    "/apps/cpm/log/tile"
+  ]
+}

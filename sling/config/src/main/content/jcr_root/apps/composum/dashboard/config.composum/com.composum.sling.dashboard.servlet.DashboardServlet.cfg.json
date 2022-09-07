@@ -1,0 +1,5 @@
+{
+  "sling.servlet.paths": [
+    "/apps/cpm/dasboard"
+  ]
+}

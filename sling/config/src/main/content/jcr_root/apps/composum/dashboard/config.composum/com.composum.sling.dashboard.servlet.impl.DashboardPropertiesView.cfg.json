@@ -1,9 +1,0 @@
-{
-  "allowedPropertyPatterns": [
-    "^.*$"
-  ],
-  "disabledPropertyPatterns": [
-    "^rep:.*$",
-    "^.*[Pp]assword.*$"
-  ]
-}

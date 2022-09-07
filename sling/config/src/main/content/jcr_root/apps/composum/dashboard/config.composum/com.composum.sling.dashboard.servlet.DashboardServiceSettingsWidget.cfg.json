@@ -1,0 +1,13 @@
+{
+  "inspectedSettings": [
+    "org.osgi.service.http.HttpService[org.osgi.service.http\\..*,osgi.http.service.endpoints]",
+    "org.apache.sling.settings.SlingSettingsService[runModes]"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/service/settings",
+    "/apps/cpm/service/settings/page",
+    "/apps/cpm/service/settings/view",
+    "/apps/cpm/service/settings/tile",
+    "/apps/cpm/service/settings/json"
+  ]
+}

@@ -1,0 +1,112 @@
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    position: relative;
+}
+
+.composum-dashboard__navbar {
+    flex-wrap: nowrap;
+    padding: 4px 10px;
+    background-color: #1e1e1e !important;
+}
+
+.composum-dashboard__navbar .navbar-brand {
+    min-width: 220px;
+    margin-right: 25px;
+    padding: 0 20px 0 70px;
+    font-size: 1rem;
+    line-height: 26px;
+}
+
+.composum-dashboard__navbar .navbar-brand .logo {
+    position: absolute;
+    width: 60px;
+    height: auto;
+    top: 0;
+    left: 10px;
+    z-index: 9998;
+}
+
+.composum-dashboard__navbar .navbar-brand a,
+.composum-dashboard__navbar .navbar-brand a:hover,
+.composum-dashboard__navbar .navbar-brand a:active,
+.composum-dashboard__navbar .navbar-brand a:visited {
+    text-decoration: none;
+    color: #ddd;
+}
+
+.composum-dashboard__navbar .nav-link {
+    padding: 0 10px;
+    line-height: 36px;
+}
+
+.composum-dashboard__navbar .nav-link .fa {
+    font-size: 120%;
+}
+
+.composum-dashboard__navbar .dashboard__current-user {
+    margin-left: 15px;
+}
+
+.composum-dashboard__navbar .dashboard__home-link,
+.composum-dashboard__navbar .nav-item {
+    line-height: 36px;
+}
+
+.composum-dashboard__navbar .nav-item,
+.composum-dashboard__navbar .nav-item .nav-link {
+    color: rgba(255, 255, 255, .7);
+}
+
+.composum-dashboard__navbar .btn {
+    line-height: 16px;
+}
+
+.composum-dashboard__widget-view {
+    position: absolute;
+    top: 44px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+}
+
+.composum-dashboard__widget-view .nav-tabs {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    border: none;
+    padding: 0 15px 0 80px;
+    background: #777;
+}
+
+.composum-dashboard__widget-view .nav-link {
+    margin: 0 2px 0 0;
+    border: none;
+    border-radius: 0;
+    line-height: 22px;
+    color: #495057;
+    background: #ddd;
+}
+
+.composum-dashboard__widget-view .nav .dashboard-widget__badges {
+    display: inline-block;
+    margin: -1px 0 0 10px;
+}
+
+.composum-dashboard__widget-view .nav .badge {
+    vertical-align: text-top;
+}
+
+.composum-dashboard__widget-view .tab-content {
+    position: absolute;
+    top: 38px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow: auto;
+}

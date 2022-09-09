@@ -26,6 +26,7 @@ import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -119,14 +120,6 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected static final String OPTION_TOOL = "tool";
     protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TOOL, OPTION_TREE);
 
-    public static final String JCR_CONTENT = "jcr:content";
-    public static final String JCR_DATA = "jcr:data";
-    public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
-    public static final String JCR_MIXIN_TYPES = "jcr:mixinTypes";
-    public static final String NT_UNSTRUCTURED = "nt:unstructured";
-    public static final String NT_RESOURCE = "nt:resource";
-    public static final String NT_FILE = "nt:file";
-
     @Reference
     protected XSSAPI xssapi;
     @Reference
@@ -143,7 +136,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     @Reference(
             service = DashboardWidget.class,
             policy = ReferencePolicy.DYNAMIC,
-            cardinality = ReferenceCardinality.MULTIPLE
+            cardinality = ReferenceCardinality.MULTIPLE,
+            policyOption = ReferencePolicyOption.GREEDY
     )
     protected void addDashboardWidget(@NotNull final DashboardWidget widget) {
         if (widget.getContext().contains(BROWSER_CONTEXT)) {
@@ -276,7 +270,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             final String toolUri = getWidgetUri(tool.getWidgetResource(request),
                     Collections.singletonList(OPTION_VIEW), OPTION_VIEW);
             final String toolIcon = tool.getProperty("icon", "ellipsis-h");
-            writer.append("<li class=\"nav-item\"><a class=\"tool-link nav-link\" data-tool-uri=\"")
+            writer.append("<li class=\"nav-item\"><a class=\"tool-link nav-link\" href=\"#\" data-tool-uri=\"")
                     .append(xssapi.encodeForHTMLAttr(toolUri))
                     .append("\" title=\"").append(xssapi.encodeForHTMLAttr(tool.getLabel()))
                     .append("\"><i class=\"nav-icon fa fa-").append(xssapi.encodeForHTMLAttr(toolIcon))

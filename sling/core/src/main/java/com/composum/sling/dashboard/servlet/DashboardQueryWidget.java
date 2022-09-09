@@ -249,7 +249,8 @@ public class DashboardQueryWidget extends AbstractWidgetServlet {
                         final String path = resource.getPath();
                         final ValueMap values = resource.getValueMap();
                         writer.append("<tr><td class=\"path\" width=\"100%\">");
-                        writer.append("<a class=\"path\" href=\"").append(xssapi.encodeForHTMLAttr(path)).append("\">")
+                        writer.append("<a class=\"path\" href=\"#\" data-path=\"")
+                                .append(xssapi.encodeForHTMLAttr(path)).append("\">")
                                 .append(xssapi.encodeForHTML(path)).append("</a>");
                         writer.append("</td><td class=\"json\">");
                         jsonPopup(writer, resource);

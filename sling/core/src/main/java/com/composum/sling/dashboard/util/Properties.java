@@ -18,6 +18,8 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 
+import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_CONTENT;
+
 public class Properties {
 
     public static void toJson(@NotNull final JsonWriter writer, @Nullable final Object value,
@@ -90,8 +92,8 @@ public class Properties {
                 writer.append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS Z").format(((Calendar) value).getTime()));
                 type = "Date";
             } else if (value instanceof InputStream) {
-                writer.append("<a class=\"binary\" href=\"")
-                        .append(StringUtils.substringBeforeLast(resource.getPath(), "/jcr:content"))
+                writer.append("<a class=\"binary\" data-target=\"_blank\" data-href=\"")
+                        .append(StringUtils.substringBeforeLast(resource.getPath(), "/" + JCR_CONTENT))
                         .append("\">download...</a>");
                 type = "Binary";
             } else if (value instanceof String) {
@@ -101,7 +103,7 @@ public class Properties {
                     target = resolveType(resource.getResourceResolver(), string, filter);
                 }
                 if (target != null) {
-                    writer.append("<a class=\"path\" href=\"").append(target.getPath()).append("\">")
+                    writer.append("<a class=\"path\" href=\"#\" data-path=\"").append(target.getPath()).append("\">")
                             .append(xssapi.encodeForHTML(string)).append("</a>");
                 } else {
                     writer.append(xssapi.encodeForHTML(string));

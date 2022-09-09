@@ -3,6 +3,7 @@ package com.composum.sling.dashboard.servlet;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -25,6 +26,14 @@ import java.util.regex.Pattern;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
+    public static final String JCR_CONTENT = "jcr:content";
+    public static final String JCR_DATA = "jcr:data";
+    public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
+    public static final String JCR_MIXIN_TYPES = "jcr:mixinTypes";
+    public static final String NT_UNSTRUCTURED = "nt:unstructured";
+    public static final String NT_RESOURCE = "nt:resource";
+    public static final String NT_FILE = "nt:file";
+
     public static final String JSON_DATE_FORMAT = "yyyy-MM-dd MM:mm:ss.SSSZ";
 
     protected String resourceType;
@@ -40,6 +49,10 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
     }
 
     protected abstract @NotNull String defaultResourceType();
+
+    public  @NotNull String getPagePath(@NotNull final SlingHttpServletRequest request) {
+        return StringUtils.substringBefore(request.getResource().getPath(), "/jcr:content");
+    }
 
     protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
                                 @NotNull final Writer writer, @NotNull final Map<String, Object> properties)

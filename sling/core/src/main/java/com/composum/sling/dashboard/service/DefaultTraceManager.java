@@ -58,7 +58,7 @@ public class DefaultTraceManager implements TraceManager {
     @Override
     public @NotNull Iterable<TraceService> getTraces() {
         List<TraceService> traces = new ArrayList<>(traceServices.values());
-        traces.sort(new Comparator<TraceService>() {
+        traces.sort(new Comparator<>() {
 
             public static final String KEY_FMT = "%04d:%s";
 

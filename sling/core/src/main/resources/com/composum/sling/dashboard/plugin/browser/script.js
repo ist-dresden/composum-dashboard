@@ -1,3 +1,28 @@
+class PathLink extends ViewWidget {
+
+    static selector = '.composum-dashboard__navbar .path-link';
+
+    constructor(element) {
+        super(element);
+        this.$el.click(function (event) {
+            event.preventDefault();
+            const browser = Widgets.getView(this.$el.closest(BrowserPage.selector), BrowserPage);
+            if (browser) {
+                const path = browser.getCurrentPath();
+                if (path) {
+                    const url = this.$el.data('path-uri')
+                        .replaceAll(/\\\$\\{path}/g, path)
+                        .replaceAll(/\[([^\]]*)]/g, /\.[^.]+$/.exec(path) ? '' : '$1');
+                    window.open(url, this.$el.data('target'));
+                }
+            }
+            return false;
+        }.bind(this));
+    }
+}
+
+CPM.widgets.register(PathLink);
+
 class ToolLink extends ViewWidget {
 
     static selector = '.composum-dashboard__navbar .tool-link';
@@ -204,6 +229,11 @@ class BrowserTree extends ViewWidget {
                 }
             }.bind(this));
         }
+    }
+
+    getSelectedPath() {
+        const node = this.getSelectedNode();
+        return node && node.original && node.original.path ? node.original.path : undefined;
     }
 
     getSelectedNode() {
@@ -461,6 +491,15 @@ CPM.widgets.register(BrowserView);
 class BrowserPage extends ViewWidget {
 
     static selector = '.dashboard-browser__page-body';
+
+    constructor(element) {
+        super(element);
+        this.tree = Widgets.getView(this.$(BrowserTree.selector), BrowserTree);
+    }
+
+    getCurrentPath() {
+        return this.tree.getSelectedPath();
+    }
 }
 
 CPM.widgets.register(BrowserPage);

@@ -69,7 +69,7 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet {
         int rank() default 5000;
 
         @AttributeDefinition(name = "Label")
-        String label() default "JSON";
+        String label() default "Logfiles";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();

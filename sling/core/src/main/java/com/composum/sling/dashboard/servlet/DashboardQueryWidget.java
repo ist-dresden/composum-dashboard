@@ -232,7 +232,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet {
                 .replaceAll("&quot;", "\"")
                 .replaceAll("\"(.*)&amp;(.*)\"", "\"$1&$2\"");
         final JcrQuery query = StringUtils.isNotBlank(pattern) ? new JcrQuery(pattern) : null;
-        writer.append("<table class=\"table table-sm table-striped\"><thead><tr><th scope=\"col\" colspan=\"3\">")
+        writer.append("<table class=\"table table-sm table-striped\"><thead><tr class=\"query\"><th scope=\"col\" colspan=\"3\">")
                 .append(xssapi.encodeForHTML(query != null ? query.getQuery() : ""))
                 .append("</th></tr></thead><tbody>\n");
         if (query != null) {
@@ -259,7 +259,8 @@ public class DashboardQueryWidget extends AbstractWidgetServlet {
                         writer.append("</td></tr>\n");
                     }
                 }
-                writer.append("<tr class\"more\"><th class=\"message\" colspan=\"3\">");
+                writer.append("<tr class=\"").append(count > maxResults ? "more" : "total")
+                        .append("\"><th class=\"message\" colspan=\"3\">");
                 if (count > maxResults) {
                     writer.append("More than 'max results' (").append(String.valueOf(maxResults)).append(") resources found.");
                 } else {
@@ -267,7 +268,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet {
                 }
                 writer.append("</th></tr>");
             } catch (RuntimeException ex) {
-                writer.append("<tr class\"error\"><th class=\"message\" colspan=\"3\">Exception thrown: '")
+                writer.append("<tr class=\"error\"><th class=\"message\" colspan=\"3\">Exception thrown: '")
                         .append(xssapi.encodeForHTML(ex.getMessage())).append("'</th></tr>");
             }
         }

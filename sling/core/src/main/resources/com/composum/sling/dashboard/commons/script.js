@@ -115,12 +115,12 @@ class Widgets {
     }
 
     static getView(element, widgetClass) {
-        const el = $(element)[0];
+        const el = element ? $(element)[0] : {};
         return el.view ? (widgetClass ? el.view[widgetClass.name] : Widgets.getFirstView(element)) : undefined;
     }
 
     static getFirstView(element) {
-        const el = $(element)[0];
+        const el = element ? $(element)[0] : {};
         if (el.view) {
             const keys = Object.getOwnPropertyNames(el.view);
             return keys.length > 0 ? el.view[keys[0]] : undefined;

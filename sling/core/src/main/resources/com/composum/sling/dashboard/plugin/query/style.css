@@ -53,16 +53,44 @@
     overflow: auto;
 }
 
+.dashboard-widget__query-result .table {
+    margin: 0;
+}
+
 .dashboard-widget__query-result .table td {
     border: none;
 }
 
-.dashboard-widget__query-result .table-sm th,
-.dashboard-widget__query-result .table-sm td {
+.dashboard-widget__query-result .table th,
+.dashboard-widget__query-result .table td {
     border-top: none;
-    padding: 0.3rem 0.6rem;
+    padding: 0.25rem 0.6rem;
     font-weight: normal;
     white-space: nowrap;
+}
+
+.dashboard-widget__query-result .table .query th,
+.dashboard-widget__query-result .table .query td {
+    color: #0c5460;
+    background-color: #d1ecf1;
+}
+
+.dashboard-widget__query-result .table .total th,
+.dashboard-widget__query-result .table .total td {
+    color: #155724;
+    background-color: #d4edda;
+}
+
+.dashboard-widget__query-result .table .more th,
+.dashboard-widget__query-result .table .more td {
+    color: #856404;
+    background-color: #fff3cd;
+}
+
+.dashboard-widget__query-result .table .error th,
+.dashboard-widget__query-result .table .error td {
+    color: #721c24;
+    background-color: #f8d7da;
 }
 
 .dashboard-widget__query-result .table .btn {

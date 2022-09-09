@@ -89,6 +89,11 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         @AttributeDefinition(name = "Home Url")
         String homeUrl() default "https://www.composum.com";
 
+        @AttributeDefinition(name = "Toolbar")
+        String[] toolbar() default {
+                "Open:television:_blank:${path}[.html]"
+        };
+
         @AttributeDefinition(name = "Servlet Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
@@ -129,6 +134,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected DashboardManager dashboardManager;
 
     protected String homeUrl;
+    protected List<String> toolbar;
 
     protected final Map<String, DashboardWidget> viewWidgets = new HashMap<>();
     protected final Map<String, DashboardWidget> toolWidgets = new HashMap<>();
@@ -193,6 +199,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.homeUrl = config.homeUrl();
+        this.toolbar = Arrays.asList(config.toolbar());
     }
 
     @Override
@@ -242,6 +249,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("home-url", xssapi.encodeForHTMLAttr(homeUrl));
             properties.put("browser-label", xssapi.encodeForHTML(getLabel()));
             properties.put("status-line", xssapi.encodeForHTML(targetPath));
+            properties.put("browser-toolbar-elements", toolbar(request));
             properties.put("browser-tool-nav-elements", toolNavigation(request));
             properties.put("target-path", xssapi.encodeForHTMLAttr(targetPath));
             properties.put("browser-path", xssapi.encodeForHTMLAttr(browser.getPath()));
@@ -262,6 +270,22 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             }
             copyResource(getClass(), PAGE_TAIL, writer, properties);
         }
+    }
+
+    protected @NotNull String toolbar(@NotNull final SlingHttpServletRequest request) {
+        final StringWriter writer = new StringWriter();
+        for (final String item : toolbar) {
+            final String[] parts = StringUtils.split(item, ":", 4);
+            if (parts.length == 4) {
+                writer.append("<li class=\"nav-item\"><a class=\"path-link nav-link\" href=\"#\" data-path-uri=\"")
+                        .append(xssapi.encodeForHTMLAttr(request.getContextPath() + parts[3]))
+                        .append("\" title=\"").append(xssapi.encodeForHTMLAttr(parts[0]))
+                        .append("\" data-target=\"").append(xssapi.encodeForHTMLAttr(parts[2]))
+                        .append("\"><i class=\"nav-icon fa fa-").append(xssapi.encodeForHTMLAttr(parts[1]))
+                        .append("\"></i></a></li>\n");
+            }
+        }
+        return writer.toString();
     }
 
     protected @NotNull String toolNavigation(@NotNull final SlingHttpServletRequest request) {

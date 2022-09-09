@@ -17,6 +17,7 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
@@ -92,7 +93,12 @@ public class DefaultTraceService implements TraceService {
 
         @Override
         public @NotNull String getMessage() {
-            return String.format(message, args);
+            try {
+                return args.length > 1 || (args.length == 1 && !(args[0] instanceof Map))
+                        ? String.format(message, args) : message;
+            } catch (RuntimeException ex) {
+                return ex + " (" + message + ")[" + Arrays.toString(args) + "]";
+            }
         }
 
         @Override

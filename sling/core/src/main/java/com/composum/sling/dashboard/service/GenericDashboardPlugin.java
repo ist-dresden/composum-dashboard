@@ -10,6 +10,9 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
@@ -22,6 +25,7 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import javax.jcr.query.Query;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.util.Arrays;
@@ -60,7 +64,7 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         String webconsole_configurationFactory_nameHint() default "'{resourceType}' @ '{searchRoot}'";
     }
 
-    protected static class Widget implements DashboardWidget, Serializable {
+    protected class Widget implements DashboardWidget, Serializable {
 
         protected final String name;
         protected final String path;
@@ -70,13 +74,12 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         public Widget(@NotNull final Resource resource) {
             name = resource.getName();
             path = resource.getPath();
-            resourceType = resource.getResourceType();
             properties = new ValueMapDecorator(new HashMap<>(resource.getValueMap()));
+            resourceType = properties.get("widgetResourceType", String.class);
         }
 
         @Override
         public @NotNull Resource getWidgetResource(@NotNull final SlingHttpServletRequest request) {
-            final String resourceType = properties.get("widgetResourceType", String.class);
             final ResourceResolver resolver = request.getResourceResolver();
             Resource resource = resolver.getResource(path);
             if (resource != null) {
@@ -139,7 +142,24 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
-        public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+        public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode)
+                throws IOException {
+            DashboardWidget widget = getServlet();
+            if (widget != null) {
+                widget.embedScript(writer, mode);
+            }
+        }
+
+        protected @Nullable DashboardWidget getServlet() {
+            try {
+                final Collection<ServiceReference<DashboardWidget>> candidates = bundleContext
+                        .getServiceReferences(DashboardWidget.class, "(sling.servlet.resourceTypes=" + resourceType + ")");
+                if (!candidates.isEmpty()) {
+                    return bundleContext.getService(candidates.iterator().next());
+                }
+            } catch (InvalidSyntaxException ignore) {
+            }
+            return null;
         }
     }
 
@@ -185,9 +205,12 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         return false;
     }
 
+    protected transient BundleContext bundleContext;
+
     @Activate
     @Modified
-    protected void activate(Config config) {
+    protected void activate(final BundleContext bundleContext, final Config config) {
+        this.bundleContext = bundleContext;
         resourceType = config.resourceType();
         searchRoot = config.searchRoot();
         widgetContext = Arrays.asList(Optional.ofNullable(config.widgetContext()).orElse(new String[0]));

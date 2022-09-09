@@ -20,9 +20,9 @@
         ${resource:/com/composum/sling/dashboard/plugin/browser/style.css}
     </style>
 </head>
-<body>
+<body class="dashboard-browser__page-body">
 <nav class="composum-dashboard__navbar navbar navbar-dark bg-dark justify-content-between">
-    <span class="navbar-brand"><a href="${home-url}" class="dashboard__home-link">
+    <span class="navbar-brand"><a href="#" data-href="${home-url}" class="dashboard__home-link">
         ${resource:/com/composum/sling/dashboard/commons/logo.svg.html}<span>${browser-label}</span></a></span>
     <ul class="navbar-nav dashboard__status-bar">
         <li><input type="text" class="dashboard__status-line" value="${status-line}" readonly="readonly"/></li>
@@ -30,7 +30,7 @@
     <ul class="navbar-nav ml-auto d-flex flex-row flex-nowrap">
         ${browser-tool-nav-elements}
         <li class="nav-item">
-            <a class="dashboard__current-user nav-link" href="${loginUrl}">${currentUser}</a>
+            <a class="dashboard__current-user nav-link" href="#" data-href="${loginUrl}">${currentUser}</a>
         </li>
     </ul>
 </nav>

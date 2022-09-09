@@ -139,10 +139,21 @@ class ViewWidget {
         this.$ = function (selector) {
             return this.$el.find(selector);
         }.bind(this);
+        this.attachLinkHandler();
     }
 
-    onContentLoaded(element) {
+    attachLinkHandler(event, element) {
+        $(element || this.el).find('a[data-href]').click(function (event) {
+            event.preventDefault();
+            const $link = $(event.currentTarget);
+            window.open($link.data('href'), $link.data('target') || '_self');
+            return false;
+        });
+    }
+
+    onContentLoaded(event, element) {
         CPM.widgets.initialize(element || this.el);
+        this.attachLinkHandler(event, element);
     }
 
     loadContent($element, url, callback) {
@@ -171,7 +182,7 @@ class ViewWidget {
     }
 
     formGetUrl(form) {
-        return $(form).attr("action") + '?' + ([...this.formData(form).entries()]
+        return ($(form).data("action") || $(form).attr("action")) + '?' + ([...this.formData(form).entries()]
             .map(x => encodeURIComponent(x[0]) + '=' + encodeURIComponent(x[1])).join('&'));
     }
 }

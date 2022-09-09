@@ -59,6 +59,9 @@ public class DashboardServlet extends AbstractDashboardServlet {
         @AttributeDefinition(name = "Title")
         String title() default "Dashboard";
 
+        @AttributeDefinition(name = "Home Url")
+        String homeUrl();
+
         @AttributeDefinition(name = "Servlet Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
@@ -85,12 +88,14 @@ public class DashboardServlet extends AbstractDashboardServlet {
     protected DashboardManager dashboardManager;
 
     protected String title;
+    protected String homeUrl;
 
     @Activate
     @Modified
     protected void activate(Config config) {
         super.activate(config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.title = config.title();
+        this.homeUrl = config.homeUrl();
     }
 
     protected @NotNull String defaultResourceType() {
@@ -121,7 +126,8 @@ public class DashboardServlet extends AbstractDashboardServlet {
         final ResourceResolver resolver = request.getResourceResolver();
         final Map<String, Object> properties = new HashMap<>();
         properties.put("title", xssapi.encodeForHTML(getTitle(request)));
-        properties.put("dashboardPath", getDashboardPath(request));
+        properties.put("home-url", xssapi.encodeForHTMLAttr(StringUtils.defaultString(homeUrl, getPagePath(request) + ".html")));
+        properties.put("dashboardPath", getPagePath(request));
         copyResource(getClass(), PAGE_TEMPLATES + "head.html", writer, properties);
         htmlNavigation(request, response, writer);
         if (currentWidget != null) {
@@ -166,8 +172,8 @@ public class DashboardServlet extends AbstractDashboardServlet {
             writer.append("<div class=\"composum-dashboard__content container-fluid mt-3 mb-3\">\n");
             writer.append("<div class=\"composum-dashboard__widgets row\">\n");
             for (final DashboardWidget widget : getWidgets(request)) {
-                writer.append("<div class=\"composum-dashboard__widget col-lg-4 col-md-6 col-12\"><a href=\"")
-                        .append(getDashboardPath(request)).append(".html/").append(widget.getName())
+                writer.append("<div class=\"composum-dashboard__widget col-lg-4 col-md-6 col-12\"><a href=\"#\" data-href=\"")
+                        .append(getPagePath(request)).append(".html/").append(widget.getName())
                         .append("\" style=\"text-decoration: none;\">\n");
                 includeWidget(request, response, widget, "tile");
                 writer.append("</a></div>\n");
@@ -190,7 +196,7 @@ public class DashboardServlet extends AbstractDashboardServlet {
                 final String linkUrl = linkUrl(resolver, values);
                 if (StringUtils.isNotBlank(linkUrl)) {
                     final String title = values.get("title", values.get("jcr:title", ""));
-                    writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"")
+                    writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-href=\"")
                             .append(linkUrl).append("\"");
                     if (StringUtils.isNotBlank(title)) {
                         writer.append(" title =\"").append(title).append("\"");
@@ -228,9 +234,5 @@ public class DashboardServlet extends AbstractDashboardServlet {
 
     public Collection<DashboardWidget> getWidgets(@NotNull final SlingHttpServletRequest request) {
         return dashboardManager.getWidgets(request, DASHBOARD_CONTEXT);
-    }
-
-    public @NotNull String getDashboardPath(@NotNull final SlingHttpServletRequest request) {
-        return StringUtils.substringBefore(request.getResource().getPath(), "/jcr:content");
     }
 }

@@ -302,15 +302,11 @@ class BrowserPanel extends ViewWidget {
         $(document).on('content:loaded', this.attachLinkHandler.bind(this));
     }
 
-    onContentLoaded(element) {
-        super.onContentLoaded(element)
-        this.attachLinkHandler(undefined, element);
-    }
-
     attachLinkHandler(event, element) {
+        super.attachLinkHandler(event, element)
         $(element || this.el).find('a.path').click(function (event) {
             event.preventDefault();
-            let path = $(event.currentTarget).attr('href');
+            let path = $(event.currentTarget).data('path');
             if (path) {
                 path = path.replaceAll(/\/_jcr_/g, '/jcr:');
                 $(document).trigger('path:select', [path]);
@@ -451,9 +447,9 @@ class BrowserView extends BrowserPanel {
         }
     }
 
-    onContentLoaded($element) {
-        super.onContentLoaded($element);
-        ($element || this.$el).find('.preview iframe').on('load.preview', function (event) {
+    onContentLoaded(event, element) {
+        super.onContentLoaded(element);
+        $(element || this.el).find('.preview iframe').on('load.preview', function (event) {
             var url = event.currentTarget.contentDocument.URL;
             //$(document).trigger('page:changed', [url]); // FIXME...
         }.bind(this));
@@ -461,3 +457,10 @@ class BrowserView extends BrowserPanel {
 }
 
 CPM.widgets.register(BrowserView);
+
+class BrowserPage extends ViewWidget {
+
+    static selector = '.dashboard-browser__page-body';
+}
+
+CPM.widgets.register(BrowserPage);

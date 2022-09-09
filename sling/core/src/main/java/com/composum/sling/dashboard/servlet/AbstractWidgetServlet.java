@@ -203,7 +203,9 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 path += "/" + mode;
             }
         }
-        return path;
+        return path.endsWith("/" + JCR_CONTENT)
+                ? StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT)
+                : path;
     }
 
     protected @NotNull List<String> getSelectorMode(@NotNull final SlingHttpServletRequest request,

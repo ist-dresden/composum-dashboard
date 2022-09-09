@@ -34,14 +34,14 @@ class QueryView extends ViewWidget {
         this.loadContent(this.$result, this.formGetUrl(this.$form));
     }
 
-    onContentLoaded(element) {
+    onContentLoaded(event, element) {
         const $element = $(element || this.el);
         $(document).trigger('content:loaded', [$element]);
         $element.find('[data-toggle="popover"]').popover({
             html: true
         }).on('inserted.bs.popover', function (event) {
             const $trigger = $(event.currentTarget);
-            const path = $trigger.closest('tr').find('a.path').attr('href');
+            const path = $trigger.closest('tr').find('a.path').data('path');
             if (path) {
                 this.loadContent($('.popover .popover-body pre'),
                     this.$el.data('popover-uri') + path, function () {

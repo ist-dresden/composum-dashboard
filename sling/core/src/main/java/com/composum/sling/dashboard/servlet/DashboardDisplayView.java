@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
@@ -42,14 +43,14 @@ import java.util.Optional;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
-@Component(service = {Servlet.class, DashboardWidget.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardDisplayView.Config.class)
-public class DashboardDisplayView extends AbstractWidgetServlet {
+public class DashboardDisplayView extends AbstractWidgetServlet implements ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/display";
 
@@ -197,7 +198,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet {
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass());
             if (reader != null) {
-                response.setContentType("text/html;charset=UTF-8");
+                prepareHtmlResponse(response);
                 IOUtils.copy(reader, writer);
             }
         }

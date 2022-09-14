@@ -2,6 +2,7 @@ package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -37,14 +38,14 @@ import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CO
 /**
  * a primitive viewer for the settings of a configured set of services
  */
-@Component(service = {Servlet.class, DashboardWidget.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardServiceSettingsWidget.Config.class)
-public class DashboardServiceSettingsWidget extends AbstractSettingsWidget {
+public class DashboardServiceSettingsWidget extends AbstractSettingsWidget implements ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/service/settings";
 

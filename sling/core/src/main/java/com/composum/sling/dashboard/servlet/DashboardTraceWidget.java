@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.TraceManager;
 import com.composum.sling.dashboard.service.TraceService;
 import com.composum.sling.dashboard.service.TraceService.Level;
@@ -34,14 +35,14 @@ import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CO
 /**
  * a primitive logfile viewer servlet implementation to declare a Composum Dashborad Widget for logfiles
  */
-@Component(service = {Servlet.class, DashboardWidget.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardTraceWidget.Config.class)
-public class DashboardTraceWidget extends AbstractWidgetServlet {
+public class DashboardTraceWidget extends AbstractWidgetServlet implements ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/trace";
 
@@ -153,7 +154,7 @@ public class DashboardTraceWidget extends AbstractWidgetServlet {
                     return;
                 case OPTION_PAGE:
                 default:
-                    response.setContentType("text/html;charset=UTF-8");
+                    prepareHtmlResponse(response);
                     htmlPageHead(writer);
                     htmlView(request, response, writer);
                     htmlPageTail(writer, "/com/composum/sling/dashboard/commons/script.js");

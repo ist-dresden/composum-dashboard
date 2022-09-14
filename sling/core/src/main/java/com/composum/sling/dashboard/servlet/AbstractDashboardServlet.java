@@ -1,9 +1,16 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.PersistenceException;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -26,10 +34,14 @@ import java.util.regex.Pattern;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
+    public static final String SELECTOR_CREATE_CONTENT = "create.content";
+
     public static final String JCR_CONTENT = "jcr:content";
+    public static final String JCR_TITLE = "jcr:title";
     public static final String JCR_DATA = "jcr:data";
     public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
     public static final String JCR_MIXIN_TYPES = "jcr:mixinTypes";
+    public static final String SLING_RESOURCE_TYPE = "sling:resourceType";
     public static final String NT_UNSTRUCTURED = "nt:unstructured";
     public static final String NT_RESOURCE = "nt:resource";
     public static final String NT_FILE = "nt:file";
@@ -50,8 +62,67 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
     protected abstract @NotNull String defaultResourceType();
 
-    public  @NotNull String getPagePath(@NotNull final SlingHttpServletRequest request) {
+    public @NotNull String getPagePath(@NotNull final SlingHttpServletRequest request) {
         return StringUtils.substringBefore(request.getResource().getPath(), "/jcr:content");
+    }
+
+    protected boolean createContent(@NotNull final SlingHttpServletRequest request,
+                                    @NotNull final SlingHttpServletResponse response,
+                                    @NotNull final DashboardManager dashboardManager,
+                                    @NotNull final ContentGenerator contentGenerator) {
+        final RequestPathInfo pathInfo = request.getRequestPathInfo();
+        if (SELECTOR_CREATE_CONTENT.equals(pathInfo.getSelectorString())) {
+            try {
+                final String path = pathInfo.getSuffix();
+                if (StringUtils.isNotBlank(path) &&
+                        dashboardManager.createContentPage(request, response, path, contentGenerator)) {
+                    request.getResourceResolver().commit();
+                    response.sendRedirect(request.getContextPath() + path + ".html");
+                    return true;
+                }
+            } catch (IOException ignore) {
+            }
+        }
+        return false;
+    }
+
+    protected @Nullable Resource createContent(@NotNull final Resource parent,
+                                               @NotNull final String name, @NotNull String primaryType,
+                                               @Nullable final String label, @Nullable final String resourceType,
+                                               Object... propsCollection)
+            throws PersistenceException {
+        Resource resource = null;
+        final ResourceResolver resolver = parent.getResourceResolver();
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put(JCR_PRIMARY_TYPE, primaryType);
+        if (StringUtils.isNotBlank(resourceType)) {
+            properties.put(SLING_RESOURCE_TYPE, resourceType);
+        }
+        if (StringUtils.isNotBlank(label)) {
+            properties.put(JCR_TITLE, label);
+        }
+        String key = null;
+        for (Object arg : propsCollection) {
+            if (key == null) {
+                key = arg.toString();
+            } else {
+                properties.put(key, arg);
+                key = null;
+            }
+        }
+        if (StringUtils.isNotBlank((String) properties.get(JCR_PRIMARY_TYPE))) {
+            resource = resolver.create(parent, name, properties);
+        }
+        return resource;
+    }
+
+    protected void prepareHtmlResponse(@NotNull final HttpServletResponse response) {
+        response.setHeader("Cache-Control", "no-cache");
+        response.addHeader("Cache-Control", "no-store");
+        response.addHeader("Cache-Control", "must-revalidate");
+        response.setHeader("Pragma", "no-cache");
+        response.setDateHeader("Expires", 0);
+        response.setContentType("text/html;charset=UTF-8");
     }
 
     protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
@@ -110,7 +181,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
              final Reader reader = pageContent != null ? new ValueEmbeddingReader(
                      new InputStreamReader(pageContent), properties, Locale.ENGLISH, this.getClass()) : null) {
             if (reader != null) {
-                response.setContentType("text/html;charset=UTF-8");
+                prepareHtmlResponse(response);
                 IOUtils.copy(reader, response.getWriter());
                 return;
             }

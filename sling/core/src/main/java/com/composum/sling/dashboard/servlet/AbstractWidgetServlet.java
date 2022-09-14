@@ -3,7 +3,9 @@ package com.composum.sling.dashboard.servlet;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -100,6 +102,11 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     @Override
+    public <T> @NotNull T getProperty(@NotNull String name, @NotNull T defaultValue) {
+        return defaultValue;
+    }
+
+    @Override
     public @NotNull Resource getWidgetResource(@NotNull SlingHttpServletRequest request) {
         if (StringUtils.isNotBlank(servletPath)) {
             return new SyntheticResource(request.getResourceResolver(), servletPath, resourceType);
@@ -114,9 +121,20 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         }
     }
 
-    @Override
-    public <T> @NotNull T getProperty(@NotNull String name, @NotNull T defaultValue) {
-        return defaultValue;
+    public @Nullable Resource createContent(@NotNull final SlingHttpServletRequest request,
+                                            @NotNull final Resource parent,
+                                            @NotNull final String name, @NotNull String primaryType)
+            throws PersistenceException {
+        Resource resource = createContent(parent, name, primaryType, getLabel(), resourceType);
+        if (resource != null) {
+            for (final String type : resourceTypes) {
+                if (!type.equals(resourceType)) {
+                    createContent(resource, StringUtils.substringAfterLast(type, "/"),
+                            NT_UNSTRUCTURED, null, type);
+                }
+            }
+        }
+        return resource;
     }
 
     // Helpers

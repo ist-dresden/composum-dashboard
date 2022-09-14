@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard</artifactId>
-        <version>0.9.3</version>
+        <version>1.0</version>
     </parent>
 
     <artifactId>composum-dashboard-aem-parent</artifactId>

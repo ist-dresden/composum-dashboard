@@ -3,12 +3,14 @@ package com.composum.sling.dashboard.servlet;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestDispatcherOptions;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
@@ -52,14 +54,14 @@ import java.util.TreeMap;
 /**
  * a primitive repository browser for a simple repository content visualization
  */
-@Component(service = {Servlet.class, DashboardPlugin.class},
+@Component(service = {Servlet.class, DashboardPlugin.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardBrowserServlet.Config.class)
-public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardPlugin {
+public class DashboardBrowserServlet extends AbstractWidgetServlet implements DashboardPlugin, ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/browser";
 
@@ -78,7 +80,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         String[] category();
 
         @AttributeDefinition(name = "Rank")
-        int rank() default 2000;
+        int rank() default 6000;
 
         @AttributeDefinition(name = "Label")
         String label() default "Composum Browser";
@@ -117,6 +119,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     public static final String BROWSER_CONTEXT = "browser";
+
+    public static final String VIEWS_PATH = "views";
 
     public static final String TEMPLATE_BASE = "/com/composum/sling/dashboard/plugin/browser/";
     public static final String PAGE_TEMPLATE = TEMPLATE_BASE + "page.html";
@@ -193,6 +197,31 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         return widgets;
     }
 
+    public @Nullable Resource createContent(@NotNull final SlingHttpServletRequest request,
+                                            @NotNull final Resource parent,
+                                            @NotNull final String name, @NotNull final String primaryType)
+            throws PersistenceException {
+        Resource browser = super.createContent(request, parent, name, primaryType);
+        if (browser != null) {
+            createContent(request, browser, OPTION_VIEW, viewWidgets.values());
+            createContent(request, browser, OPTION_TOOL, toolWidgets.values());
+        }
+        return browser;
+    }
+
+    protected void createContent(@NotNull final SlingHttpServletRequest request, @NotNull final Resource browser,
+                                 @NotNull final String section, Iterable<DashboardWidget> widgetSet)
+            throws PersistenceException {
+        final Resource option = browser.getChild(section);
+        if (option != null) {
+            for (final DashboardWidget widget : widgetSet) {
+                if (widget instanceof ContentGenerator) {
+                    ((ContentGenerator) widget).createContent(request, option, widget.getName(), NT_UNSTRUCTURED);
+                }
+            }
+        }
+    }
+
     @Activate
     @Modified
     protected void activate(Config config) {
@@ -229,7 +258,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                     break;
                 case OPTION_PAGE:
                 default:
-                    browserPage(request, response);
+                    if (!createContent(request, response, dashboardManager, this)) {
+                        browserPage(request, response);
+                    }
                     break;
             }
         } else {
@@ -259,7 +290,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("browser-tab", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW, "#id#")));
             properties.put("loginUrl", xssapi.encodeForHTMLAttr(dashboardManager.getLoginUri()));
             properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
-            response.setContentType("text/html;charset=UTF-8");
+            prepareHtmlResponse(response);
             PrintWriter writer = response.getWriter();
             copyResource(getClass(), PAGE_TEMPLATE, writer, properties);
             for (DashboardWidget widget : viewWidgets.values()) {
@@ -315,7 +346,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             throws ServletException, IOException {
         final Resource resource = dashboardManager.getRequestResource(request);
         if (resource != null) {
-            response.setContentType("text/html;charset=UTF-8");
+            prepareHtmlResponse(response);
             final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_VIEW));
             if (StringUtils.isNotBlank(submode)) {
                 final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;

@@ -112,7 +112,8 @@
     position: absolute;
     top: 4px;
     right: 10px;
-    width: 24px;
+    width: auto;
+    padding: 0 10px;
     line-height: 24px;
     font-size: 125%;
     text-align: center;

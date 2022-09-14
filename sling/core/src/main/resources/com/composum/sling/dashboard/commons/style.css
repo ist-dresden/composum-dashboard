@@ -48,7 +48,8 @@ body {
 }
 
 .composum-dashboard__navbar .dashboard__current-user {
-    margin-left: 15px;
+    margin-left: 20px;
+    padding: 0 10px;
 }
 
 .composum-dashboard__navbar .dashboard__home-link,

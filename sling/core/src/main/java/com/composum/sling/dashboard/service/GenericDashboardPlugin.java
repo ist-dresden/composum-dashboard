@@ -58,7 +58,7 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         String[] widgetContext();
 
         @AttributeDefinition(name = "Rank")
-        int rank() default 9000;
+        int rank() default 3000;
 
         @AttributeDefinition()
         String webconsole_configurationFactory_nameHint() default "'{resourceType}' @ '{searchRoot}'";

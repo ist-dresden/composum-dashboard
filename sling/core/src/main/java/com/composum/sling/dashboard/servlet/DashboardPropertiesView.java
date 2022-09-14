@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.Properties;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -29,14 +30,14 @@ import java.util.TreeMap;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
-@Component(service = {Servlet.class, DashboardWidget.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardPropertiesView.Config.class)
-public class DashboardPropertiesView extends AbstractWidgetServlet {
+public class DashboardPropertiesView extends AbstractWidgetServlet implements ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/properties";
 
@@ -109,7 +110,7 @@ public class DashboardPropertiesView extends AbstractWidgetServlet {
         final Resource resource = resourceFilter.getRequestResource(request);
         if (resource != null) {
             ResourceResolver resolver = resource.getResourceResolver();
-            response.setContentType("text/html;charset=UTF-8");
+            prepareHtmlResponse(response);
             final PrintWriter writer = response.getWriter();
             writer.append("<table class=\"table table-sm table-striped\"><thead><tr>\n" +
                     "      <th scope=\"col\">Name</th>\n" +

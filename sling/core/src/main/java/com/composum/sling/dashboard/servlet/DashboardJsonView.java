@@ -2,6 +2,7 @@ package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.JsonRenderer;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.Properties;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
@@ -42,18 +43,15 @@ import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
-import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.JCR_CONTENT;
-import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.JCR_MIXIN_TYPES;
-import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.JCR_PRIMARY_TYPE;
 
-@Component(service = {Servlet.class, DashboardWidget.class, JsonRenderer.class},
+@Component(service = {Servlet.class, DashboardWidget.class, JsonRenderer.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardJsonView.Config.class)
-public class DashboardJsonView extends AbstractWidgetServlet implements JsonRenderer {
+public class DashboardJsonView extends AbstractWidgetServlet implements JsonRenderer, ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/source/json";
 
@@ -183,7 +181,7 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
                         Collections.singletonMap("targetUrl",
                                 getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD)
                                         + targetResource.getPath()), Locale.ENGLISH, this.getClass());
-                response.setContentType("text/html;charset=UTF-8");
+                prepareHtmlResponse(response);
                 IOUtils.copy(reader, writer);
             }
         }
@@ -203,7 +201,7 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
                     dumpJson(jsonWriter, targetResource, 0, maxDepth);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
-                    response.setContentType("text/html;charset=UTF-8");
+                    prepareHtmlResponse(response);
                     IOUtils.copy(reader, writer);
                 }
             }

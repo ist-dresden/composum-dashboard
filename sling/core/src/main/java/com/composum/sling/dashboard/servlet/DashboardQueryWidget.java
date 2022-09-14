@@ -2,6 +2,7 @@ package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.JsonRenderer;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.JcrQuery;
 import com.google.gson.stream.JsonWriter;
@@ -38,14 +39,14 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
-@Component(service = {Servlet.class, DashboardWidget.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardQueryWidget.Config.class)
-public class DashboardQueryWidget extends AbstractWidgetServlet {
+public class DashboardQueryWidget extends AbstractWidgetServlet implements ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/query";
 
@@ -169,7 +170,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet {
                 //jsonFind(request, response, writer);
             }
         } else {
-            response.setContentType("text/html;charset=UTF-8");
+            prepareHtmlResponse(response);
             final PrintWriter writer = response.getWriter();
             switch (mode) {
                 case OPTION_FIND:

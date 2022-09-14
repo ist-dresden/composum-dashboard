@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.service;
 
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.SlingHttpServletResponse;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,4 +18,7 @@ public interface DashboardManager extends ResourceFilter {
     boolean isSortableType(@Nullable String type);
 
     @NotNull String getLoginUri();
+
+    boolean createContentPage(@NotNull SlingHttpServletRequest request, @NotNull SlingHttpServletResponse response,
+                              @NotNull String path, @Nullable ContentGenerator generator, String... jsonContent);
 }

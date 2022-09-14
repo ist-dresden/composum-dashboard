@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.service.ContentGenerator;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
@@ -40,14 +41,14 @@ import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CO
 /**
  * a primitive logfile viewer servlet implementation to declare a Composum Dashborad Widget for logfiles
  */
-@Component(service = {Servlet.class, DashboardWidget.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardLogfilesWidget.Config.class)
-public class DashboardLogfilesWidget extends AbstractWidgetServlet {
+public class DashboardLogfilesWidget extends AbstractWidgetServlet implements ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/logfiles";
 
@@ -279,7 +280,7 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet {
                 }
                 break;
             case OPTION_PAGE:
-                response.setContentType("text/html;charset=UTF-8");
+                prepareHtmlResponse(response);
                 htmlPageHead(writer);
                 htmlView(request, response, session, writer);
                 htmlPageTail(writer);

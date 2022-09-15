@@ -1,8 +1,8 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.JsonRenderer;
-import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.Properties;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
@@ -13,6 +13,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
@@ -39,7 +40,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
@@ -155,7 +158,9 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
                 response.setContentType("application/json;charset=UTF-8");
                 final JsonWriter writer = new JsonWriter(response.getWriter());
                 writer.setIndent("  ");
-                dumpJson(writer, targetResource, 0, maxDepth);
+                if (!dumpTranslations(writer, targetResource)) {
+                    dumpJson(writer, targetResource, 0, maxDepth);
+                }
             } else {
                 final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                 if (StringUtils.isNotBlank(widgetUri)) {
@@ -206,6 +211,48 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
                 }
             }
         }
+    }
+
+    protected boolean dumpTranslations(@NotNull final JsonWriter writer, @NotNull final Resource resource)
+            throws IOException {
+        final ValueMap values = resource.getValueMap();
+        if (!NT_FILE.equals(values.get(JCR_PRIMARY_TYPE, String.class))
+                && Arrays.asList(values.get(JCR_MIXIN_TYPES, new String[0])).contains("mix:language")) {
+            dumpTranslationFolder(writer, resource);
+            return true;
+        }
+        return false;
+    }
+
+    protected void dumpTranslationFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
+            throws IOException {
+        final Set<String> entryKeys = new TreeSet<>();
+        final Set<String> folderKeys = new TreeSet<>();
+        for (final Resource item : folder.getChildren()) {
+            final ValueMap values = item.getValueMap();
+            if ("sling:MessageEntry".equals(values.get(JCR_PRIMARY_TYPE, String.class))) {
+                entryKeys.add(item.getName());
+            } else {
+                folderKeys.add(item.getName());
+            }
+        }
+        writer.beginObject();
+        for (final String key : entryKeys) {
+            final Resource item = folder.getChild(key);
+            if (item != null) {
+                final ValueMap values = item.getValueMap();
+                writer.name(values.get("sling:key", key))
+                        .value(values.get("sling:message", ""));
+            }
+        }
+        for (final String key : folderKeys) {
+            final Resource item = folder.getChild(key);
+            if (item != null) {
+                writer.name(item.getName());
+                dumpTranslationFolder(writer, item);
+            }
+        }
+        writer.endObject();
     }
 
     @Override

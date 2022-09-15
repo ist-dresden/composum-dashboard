@@ -49,6 +49,7 @@ body {
 
 .composum-dashboard__navbar .dashboard__current-user {
     margin-left: 20px;
+    margin-right: -5px;
     padding: 0 10px;
 }
 

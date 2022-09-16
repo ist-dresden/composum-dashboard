@@ -69,8 +69,6 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         @AttributeDefinition(name = "Name")
         String name() default "dashboard";
 
-        String[] category();
-
         @AttributeDefinition(name = "Rank")
         int rank() default 9000;
 
@@ -305,7 +303,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         final String linkPath = values.get("linkPath", String.class);
         return (StringUtils.isNotBlank(linkUrl) || StringUtils.isNotBlank(linkPath))
                 && (StringUtils.isBlank(linkPath) || resolver.getResource(linkPath) != null)
-                && (StringUtils.isBlank(linkUrl) || linkUrl.matches("^https?//")
+                && (StringUtils.isBlank(linkUrl) || linkUrl.matches("^(https?)?//.*$")
                 || !ResourceUtil.isNonExistingResource(resolver.resolve(linkUrl)))
                 ? StringUtils.isNotBlank(linkUrl) ? linkUrl : (linkPath + ".html") : null;
     }
@@ -344,7 +342,8 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
                                 final String itemName = matcher.group("name");
                                 createContent(navigation, itemName, NT_UNSTRUCTURED,
                                         StringUtils.defaultString(matcher.group("label"), itemName), null,
-                                        itemLink.startsWith("/") && !itemLink.contains(".") ? "linkPath" : "linkUrl", itemLink);
+                                        itemLink.startsWith("/") && !itemLink.startsWith("//") && !itemLink.contains(".")
+                                                ? "linkPath" : "linkUrl", itemLink);
                             }
                         }
                     }

@@ -322,7 +322,9 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
 
     protected static final Map<String, Type> TYPETABLE = new HashMap<>() {{
         put("application/pdf", Type.DOCUMENT);
+        put("pdf", Type.DOCUMENT);
         put("application/json", Type.DOCUMENT);
+        put("json", Type.DOCUMENT);
         put("text/html", Type.CODE);
         put("html", Type.CODE);
         put("htm", Type.CODE);
@@ -382,7 +384,6 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
         put("javascript", Type.CODE);
         put("js", Type.CODE);
         put("jsf", Type.CODE);
-        put("json", Type.DOCUMENT);
         put("jsp", Type.CODE);
         put("jspf", Type.CODE);
         put("jspx", Type.CODE);

@@ -23,8 +23,13 @@
     <ul>
     <li>[cq:PageContent]/content/my/site *likepattern*</li>
     <li>/content/my/site -[jcr:title]*likepattern*</li>
-    <li>/content/my/site [jcr:title]=&quot;property value&quot; +&quot;alternative value&quot;</li>
+    <li>/content/my/site [jcr:title]=&quot;property value&quot; +&quot;alternative like pattern&quot;</li>
     </ul>
+    XPATH search examples...
+    <ul>
+    <li>/conf//en[jcr:mixinTypes='mix:language']</li>
+    </ul>
+    Try it!
     </div>">
         submit a SQL2 or a XPATH query or use an optional path and some text patterns, e.g.
         '/content/path/for/search starting* "some words" -ignoreIt +"or these words" and this'...

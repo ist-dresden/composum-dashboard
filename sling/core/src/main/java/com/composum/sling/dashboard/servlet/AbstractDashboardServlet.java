@@ -47,6 +47,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
     public static final String NT_FILE = "nt:file";
 
     public static final String JSON_DATE_FORMAT = "yyyy-MM-dd MM:mm:ss.SSSZ";
+    public static final String XML_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
     protected String resourceType;
     protected List<String> resourceTypes;

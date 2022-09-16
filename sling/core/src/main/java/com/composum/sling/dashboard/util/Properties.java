@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collection;
@@ -22,48 +23,7 @@ import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_
 
 public class Properties {
 
-    public static void toJson(@NotNull final JsonWriter writer, @Nullable final Object value,
-                              @NotNull final String dateFormat)
-            throws IOException {
-        if (value == null) {
-            writer.nullValue();
-        } else if (value instanceof Object[]) {
-            writer.beginArray();
-            for (Object item : (Object[]) value) {
-                toJson(writer, item, dateFormat);
-            }
-            writer.endArray();
-        } else if (value instanceof Collection) {
-            writer.beginArray();
-            for (Object item : (Collection<?>) value) {
-                toJson(writer, item, dateFormat);
-            }
-            writer.endArray();
-        } else if (value instanceof Map) {
-            writer.beginObject();
-            for (Map.Entry<?, ?> item : ((Map<?, ?>) value).entrySet()) {
-                writer.name(item.getKey().toString());
-                toJson(writer, item.getValue(), dateFormat);
-            }
-            writer.endObject();
-        } else if (value instanceof Calendar) {
-            writer.value(new SimpleDateFormat(dateFormat).format(((Calendar) value).getTime()));
-        } else if (value instanceof Date) {
-            writer.value(new SimpleDateFormat(dateFormat).format((Date) value));
-        } else if (value instanceof Boolean) {
-            writer.value((Boolean) value);
-        } else if (value instanceof Long) {
-            writer.value((Long) value);
-        } else if (value instanceof Integer) {
-            writer.value((Integer) value);
-        } else if (value instanceof Double) {
-            writer.value((Double) value);
-        } else if (value instanceof Number) {
-            writer.value((Number) value);
-        } else {
-            writer.value(value.toString());
-        }
-    }
+    // HTML (table)
 
     public static String toHtml(@NotNull final PrintWriter writer, @NotNull final Resource resource,
                                 @NotNull final String name, @Nullable final Object value,
@@ -142,6 +102,120 @@ public class Properties {
             }
         }
         return null;
+    }
+
+    // JSON
+
+    public static void toJson(@NotNull final JsonWriter writer, @Nullable final Object value,
+                              @NotNull final String dateFormat)
+            throws IOException {
+        if (value == null) {
+            writer.nullValue();
+        } else if (value instanceof Object[]) {
+            writer.beginArray();
+            for (Object item : (Object[]) value) {
+                toJson(writer, item, dateFormat);
+            }
+            writer.endArray();
+        } else if (value instanceof Collection) {
+            writer.beginArray();
+            for (Object item : (Collection<?>) value) {
+                toJson(writer, item, dateFormat);
+            }
+            writer.endArray();
+        } else if (value instanceof Map) {
+            writer.beginObject();
+            for (Map.Entry<?, ?> item : ((Map<?, ?>) value).entrySet()) {
+                writer.name(item.getKey().toString());
+                toJson(writer, item.getValue(), dateFormat);
+            }
+            writer.endObject();
+        } else if (value instanceof Calendar) {
+            writer.value(new SimpleDateFormat(dateFormat).format(((Calendar) value).getTime()));
+        } else if (value instanceof Date) {
+            writer.value(new SimpleDateFormat(dateFormat).format((Date) value));
+        } else if (value instanceof Boolean) {
+            writer.value((Boolean) value);
+        } else if (value instanceof Long) {
+            writer.value((Long) value);
+        } else if (value instanceof Integer) {
+            writer.value((Integer) value);
+        } else if (value instanceof Double) {
+            writer.value((Double) value);
+        } else if (value instanceof Number) {
+            writer.value((Number) value);
+        } else {
+            writer.value(value.toString());
+        }
+    }
+
+    // XML
+
+    public static void toXml(@NotNull final PrintWriter writer,
+                             @Nullable final Object value, @NotNull final String dateFormat) {
+        if (value != null) {
+            if (value instanceof Object[]) {
+                toXmlArray(writer, (Object[]) value, dateFormat);
+            } else if (value instanceof Collection) {
+                toXmlArray(writer, ((Collection<?>) value).toArray(), dateFormat);
+            } else {
+                writer.append(xmlString(xmlString(value, dateFormat)));
+            }
+        }
+    }
+
+    public static void toXmlArray(@NotNull final PrintWriter writer,
+                                  @NotNull final Object[] values, @NotNull final String dateFormat) {
+        writer.append("[");
+        for (int i = 0; i < values.length; ) {
+            final String string = xmlString(values[i], dateFormat);
+            writer.append(string.replace(",", "\\,"));
+            if (++i < values.length) {
+                writer.append(",");
+            }
+        }
+        writer.append("]");
+    }
+
+    public static @NotNull String xmlType(@Nullable final Object value) {
+        if (value instanceof Object[]) {
+            Object[] values = (Object[]) value;
+            return xmlType(values.length > 0 ? values[0] : null);
+        } else if (value instanceof Collection) {
+            Collection<?> values = (Collection<?>) value;
+            return xmlType(values.isEmpty() ? null : values.iterator().next());
+        } else if (value instanceof Calendar || value instanceof Date) {
+            return "{Date}";
+        } else if (value instanceof Boolean) {
+            return "{Boolean}";
+        } else if (value instanceof Long || value instanceof Integer) {
+            return "{Long}";
+        } else if (value instanceof Double || value instanceof Float) {
+            return "{Double}";
+        } else if (value instanceof BigDecimal) {
+            return "{Decimal}";
+        }
+        return "";
+    }
+
+    public static @NotNull String xmlString(@Nullable final Object value, @NotNull final String dateFormat) {
+        if (value instanceof Calendar) {
+            return new SimpleDateFormat(dateFormat).format(((Calendar) value).getTime());
+        } else if (value instanceof Date) {
+            return new SimpleDateFormat(dateFormat).format((Date) value);
+        } else {
+            return value != null ? value.toString() : "";
+        }
+    }
+
+    public static @NotNull String xmlString(@NotNull final String value) {
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace("\"", "&quot;")
+                .replace("\t", "&#x9;")
+                .replace("\n", "&#xa;")
+                .replace("\r", "&#xd;")
+                .replace("\\", "\\\\");
     }
 
     private Properties() {

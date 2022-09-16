@@ -105,6 +105,7 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
     protected static final Pattern CONTENT_TYPE = Pattern.compile("^(?<name>[^\\[]+)?\\[(?<type>.+)]$");
 
     public static final String[] DATE_FORMATS = new String[]{
+            "yyyy-MM-dd'T'HH:mm:ss.SSSXXX",
             "yyyy-MM-dd HH:mm:ss.SSS Z",
             "yyyy-MM-dd HH:mm:ss.SSSZ",
             "yyyy-MM-dd HH:mm:ss.SSS",

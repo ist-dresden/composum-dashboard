@@ -1,0 +1,9 @@
+{
+  "maxDepth": 0,
+  "sourceMode": true,
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/xml",
+    "/apps/cpm/browser/view/xml/view",
+    "/apps/cpm/browser/view/xml/load"
+  ]
+}

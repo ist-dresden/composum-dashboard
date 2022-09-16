@@ -2,18 +2,16 @@ package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardWidget;
-import com.composum.sling.dashboard.service.JsonRenderer;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.Properties;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
-import com.google.gson.stream.JsonWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.jackrabbit.util.ISO9075;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
@@ -27,14 +25,16 @@ import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
+import javax.jcr.RepositoryException;
+import javax.jcr.Session;
 import javax.servlet.Servlet;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -43,22 +43,22 @@ import java.util.TreeSet;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
-@Component(service = {Servlet.class, DashboardWidget.class, JsonRenderer.class, ContentGenerator.class},
+@Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
                 ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
-@Designate(ocd = DashboardJsonView.Config.class)
-public class DashboardJsonView extends AbstractSourceView implements JsonRenderer, ContentGenerator {
+@Designate(ocd = DashboardXmlView.Config.class)
+public class DashboardXmlView extends AbstractSourceView implements ContentGenerator {
 
-    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/source/json";
+    public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/source/xml";
 
-    @ObjectClassDefinition(name = "Composum Dashboard Json Source View")
+    @ObjectClassDefinition(name = "Composum Dashboard XML Source View")
     public @interface Config {
 
         @AttributeDefinition(name = "Name")
-        String name() default "json";
+        String name() default "xml";
 
         @AttributeDefinition(name = "Context")
         String[] context() default {
@@ -69,10 +69,10 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         String[] category();
 
         @AttributeDefinition(name = "Rank")
-        int rank() default 2000;
+        int rank() default 2200;
 
         @AttributeDefinition(name = "Label")
-        String label() default "JSON";
+        String label() default "XML";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
@@ -95,13 +95,15 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 description = "the possible extensions supported by this servlet")
         String[] sling_servlet_extensions() default {
                 "html",
-                "json"
+                "xml"
         };
 
         @AttributeDefinition(name = "Servlet Paths",
                 description = "the servletd paths if this configuration variant should be supported")
         String[] sling_servlet_paths();
     }
+
+    public static final String BASIC_INDENT = "    ";
 
     @Reference
     protected ResourceFilter resourceFilter;
@@ -132,19 +134,22 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         final Resource targetResource = resourceFilter.getRequestResource(request);
         if (targetResource != null) {
             final String mode = getHtmlMode(request, HTML_MODES);
-            if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
-                response.setContentType("application/json;charset=UTF-8");
-                final JsonWriter writer = new JsonWriter(response.getWriter());
-                writer.setIndent("  ");
-                if (!dumpTranslations(writer, targetResource)) {
-                    dumpJson(writer, targetResource, 0, maxDepth);
+            if (OPTION_LOAD.equals(mode) || "xml".equals(pathInfo.getExtension())) {
+                response.setContentType("text/plain;charset=UTF-8");
+                if (sourceMode) {
+                    response.setHeader("Content-Disposition", "inline; filename=.content.xml");
+                }
+                final PrintWriter writer = new PrintWriter(response.getWriter());
+                try {
+                    dumpXml(request, writer, "", targetResource, 0, maxDepth);
+                } catch (RepositoryException ignore) {
                 }
             } else {
                 final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                 if (StringUtils.isNotBlank(widgetUri)) {
                     preview(request, response, targetResource);
                 } else {
-                    jsonCode(request, response, targetResource);
+                    xmlCode(request, response, targetResource);
                 }
             }
         } else {
@@ -152,83 +157,50 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         }
     }
 
-    protected void jsonCode(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
-                            @NotNull final Resource targetResource)
+    protected void xmlCode(@NotNull final SlingHttpServletRequest request,
+                           @NotNull final SlingHttpServletResponse response,
+                           @NotNull final Resource targetResource)
             throws IOException {
         try (final InputStream pageContent = getClass().getClassLoader()
                 .getResourceAsStream("/com/composum/sling/dashboard/plugin/display/code.html");
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             if (reader != null) {
                 try (final StringWriter content = new StringWriter();
-                     final JsonWriter jsonWriter = new JsonWriter(content)) {
-                    jsonWriter.setIndent("  ");
-                    dumpJson(jsonWriter, targetResource, 0, maxDepth);
+                     final PrintWriter xmlWriter = new PrintWriter(content)) {
+                    dumpXml(request, xmlWriter, "", targetResource, 0, maxDepth);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareHtmlResponse(response);
                     IOUtils.copy(reader, writer);
+                } catch (RepositoryException ignore) {
                 }
             }
         }
     }
 
-    protected boolean dumpTranslations(@NotNull final JsonWriter writer, @NotNull final Resource resource)
-            throws IOException {
-        final ValueMap values = resource.getValueMap();
-        if (sourceMode && !NT_FILE.equals(values.get(JCR_PRIMARY_TYPE, String.class))
-                && Arrays.asList(values.get(JCR_MIXIN_TYPES, new String[0])).contains("mix:language")) {
-            dumpTranslationFolder(writer, resource);
-            return true;
-        }
-        return false;
-    }
-
-    protected void dumpTranslationFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
-            throws IOException {
-        final Set<String> entryKeys = new TreeSet<>();
-        final Set<String> folderKeys = new TreeSet<>();
-        for (final Resource item : folder.getChildren()) {
-            final ValueMap values = item.getValueMap();
-            if ("sling:MessageEntry".equals(values.get(JCR_PRIMARY_TYPE, String.class))) {
-                entryKeys.add(item.getName());
-            } else {
-                folderKeys.add(item.getName());
-            }
-        }
-        writer.beginObject();
-        for (final String key : entryKeys) {
-            final Resource item = folder.getChild(key);
-            if (item != null) {
-                final ValueMap values = item.getValueMap();
-                writer.name(values.get("sling:key", key))
-                        .value(values.get("sling:message", ""));
-            }
-        }
-        for (final String key : folderKeys) {
-            final Resource item = folder.getChild(key);
-            if (item != null) {
-                writer.name(item.getName());
-                dumpTranslationFolder(writer, item);
-            }
-        }
-        writer.endObject();
-    }
-
-    @Override
-    public void dumpJson(@NotNull final JsonWriter writer, @NotNull final Resource resource,
-                         int depth, @Nullable Integer maxDepth)
-            throws IOException {
-        writer.beginObject();
-        jsonProperties(writer, resource);
+    public void dumpXml(@NotNull final SlingHttpServletRequest request,
+                        @NotNull final PrintWriter writer, @Nullable final String indent,
+                        @NotNull final Resource resource, int depth, @Nullable Integer maxDepth)
+            throws RepositoryException {
         final String name = resource.getName();
+        if (depth == 0) {
+            Set<String> namespaces = new TreeSet<>();
+            namespaces.add("jcr");
+            determineNamespaces(namespaces, resource, depth, maxDepth);
+            writer.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            writer.append("<jcr:root");
+            writeNamespaceAttributes(request, writer, namespaces);
+        } else {
+            writer.append(indent).append("<").append(name);
+        }
+        xmlProperties(writer, indent + BASIC_INDENT + BASIC_INDENT, resource);
+        writer.append(">\n");
         if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
             maxDepth = null;
         } else {
             final Resource content = resource.getChild(JCR_CONTENT);
             if (content != null && resourceFilter.isAllowedResource(content)) {
-                writer.name(content.getName());
-                dumpJson(writer, content, depth + 1, maxDepth);
+                dumpXml(request, writer, indent + BASIC_INDENT, content, depth + 1, maxDepth);
             }
         }
         if (maxDepth == null || depth < maxDepth) {
@@ -236,39 +208,105 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 if (resourceFilter.isAllowedResource(child)) {
                     final String childName = child.getName();
                     if (!JCR_CONTENT.equals(childName)) {
-                        writer.name(childName);
-                        dumpJson(writer, child, depth + 1, maxDepth);
+                        dumpXml(request, writer, indent + BASIC_INDENT, child, depth + 1, maxDepth);
                     }
                 }
             }
         }
-        writer.endObject();
+        if (depth == 0) {
+            writer.append("</").append("jcr:root").append(">\n");
+        } else {
+            writer.append(indent).append("</").append(name).append(">\n");
+        }
     }
 
-    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource)
-            throws IOException {
+    protected void xmResource(@NotNull final PrintWriter writer, @Nullable final String indent,
+                              @NotNull final Resource resource, int depth, @Nullable Integer maxDepth) {
+        final String name = resource.getName();
+    }
+
+    protected void xmlProperties(@NotNull final PrintWriter writer, @Nullable final String indent,
+                                 @NotNull final Resource resource) {
         final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
         for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
             final String name = property.getKey();
-            if (isAllowedProperty(name)) {
+            final Object value = property.getValue();
+            if (isAllowedProperty(name) && value != null && !(value instanceof InputStream)) {
                 if (JCR_PRIMARY_TYPE.equals(name)) {
-                    writer.name(name);
-                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+                    xmlProperty(writer, indent, name, value);
                 } else {
                     if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
-                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
+                        final Object values = filterValues(value, NON_SOURCE_MIXINS);
                         if (values instanceof String[] && ((String[]) values).length > 0) {
                             properties.put(name, values);
                         }
                     } else {
-                        properties.put(name, property.getValue());
+                        properties.put(name, value);
                     }
                 }
             }
         }
         for (final Map.Entry<String, Object> property : properties.entrySet()) {
-            writer.name(property.getKey());
-            Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+            xmlProperty(writer, indent, property.getKey(), property.getValue());
+        }
+    }
+
+    protected void xmlProperty(@NotNull final PrintWriter writer, @Nullable final String indent,
+                               @NotNull final String name, @Nullable final Object value) {
+        writer.append("\n").append(indent)
+                .append(ISO9075.encode(name)).append("=\"").append(Properties.xmlType(value));
+        Properties.toXml(writer, value, XML_DATE_FORMAT);
+        writer.append("\"");
+    }
+
+    protected void writeNamespaceAttributes(@NotNull final SlingHttpServletRequest request,
+                                            @NotNull final PrintWriter writer, @NotNull final Set<String> namespaces) {
+        final Session session = request.getResourceResolver().adaptTo(Session.class);
+        if (session != null) {
+            int index = 0;
+            for (final String ns : namespaces) {
+                try {
+                    String nsUri = session.getNamespaceURI(ns);
+                    if (StringUtils.isNotBlank(nsUri)) {
+                        writer.append(" xmlns:").append(ns).append("=\"").append(nsUri).append("\"");
+                        if (++index < namespaces.size()) {
+                            writer.append("\n         ");
+                        }
+                    }
+                } catch (RepositoryException ignore) {
+                }
+            }
+        }
+    }
+
+    protected void determineNamespaces(Set<String> keys, @NotNull final Resource resource, int depth, @Nullable Integer maxDepth) {
+        final String name = resource.getName();
+        addNamespace(keys, name);
+        for (final String propertyName : resource.getValueMap().keySet()) {
+            if (isAllowedProperty(propertyName)) {
+                addNamespace(keys, propertyName);
+            }
+        }
+        if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
+            maxDepth = null;
+        } else {
+            final Resource content = resource.getChild(JCR_CONTENT);
+            if (content != null && resourceFilter.isAllowedResource(content)) {
+                determineNamespaces(keys, content, depth + 1, maxDepth);
+            }
+        }
+        if (maxDepth == null || depth < maxDepth) {
+            for (final Resource child : resource.getChildren()) {
+                if (resourceFilter.isAllowedResource(child)) {
+                    determineNamespaces(keys, child, depth + 1, maxDepth);
+                }
+            }
+        }
+    }
+
+    protected void addNamespace(Set<String> keys, String name) {
+        if (StringUtils.isNotBlank(name) && name.contains(":")) {
+            keys.add(StringUtils.substringBefore(name, ":"));
         }
     }
 }

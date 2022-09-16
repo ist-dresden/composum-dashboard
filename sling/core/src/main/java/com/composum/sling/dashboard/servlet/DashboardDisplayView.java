@@ -192,7 +192,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                            @NotNull final Type template, @NotNull final Map<String, Object> properties)
             throws IOException {
         try (final InputStream pageContent = getClass().getClassLoader()
-                .getResourceAsStream("/com/composum/sling/dashboard/plugin/view/display/"
+                .getResourceAsStream("/com/composum/sling/dashboard/plugin/display/"
                         + template.name().toLowerCase() + ".html");
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass());

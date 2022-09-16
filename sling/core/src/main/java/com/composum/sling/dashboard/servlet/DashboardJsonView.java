@@ -216,7 +216,7 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
     protected boolean dumpTranslations(@NotNull final JsonWriter writer, @NotNull final Resource resource)
             throws IOException {
         final ValueMap values = resource.getValueMap();
-        if (!NT_FILE.equals(values.get(JCR_PRIMARY_TYPE, String.class))
+        if (sourceMode && !NT_FILE.equals(values.get(JCR_PRIMARY_TYPE, String.class))
                 && Arrays.asList(values.get(JCR_MIXIN_TYPES, new String[0])).contains("mix:language")) {
             dumpTranslationFolder(writer, resource);
             return true;

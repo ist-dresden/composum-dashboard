@@ -6,6 +6,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ValueMap;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
@@ -41,12 +42,19 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
             Comparator.comparing(name -> (name.contains(":") ? name : "zzz:" + name));
 
     protected int maxDepth = 0;
+    protected String indent = "  ";
     protected boolean sourceMode = true;
 
     protected abstract @NotNull ResourceFilter getResourceFilter();
 
     @Override
     public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    }
+
+    protected boolean isTranslationsRootFolder(@NotNull final Resource resource) {
+        final ValueMap resourceProps = resource.getValueMap();
+        return !NT_FILE.equals(resourceProps.get(JCR_PRIMARY_TYPE, String.class))
+                && Arrays.asList(resourceProps.get(JCR_MIXIN_TYPES, new String[0])).contains("mix:language");
     }
 
     protected void preview(@NotNull final SlingHttpServletRequest request,

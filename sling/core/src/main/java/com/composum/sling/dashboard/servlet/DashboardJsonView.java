@@ -80,6 +80,9 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         @AttributeDefinition(name = "Max Depth")
         int maxDepth() default 1;
 
+        @AttributeDefinition(name = "Indent")
+        int indent() default 2;
+
         @AttributeDefinition(name = "Source Mode")
         boolean sourceMode() default true;
 
@@ -117,6 +120,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         maxDepth = config.maxDepth();
+        indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
     }
 
@@ -135,10 +139,8 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
                 response.setContentType("application/json;charset=UTF-8");
                 final JsonWriter writer = new JsonWriter(response.getWriter());
-                writer.setIndent("  ");
-                if (!dumpTranslations(writer, targetResource)) {
-                    dumpJson(writer, targetResource, 0, maxDepth);
-                }
+                writer.setIndent(this.indent);
+                dumpJson(writer, targetResource, 0, maxDepth);
             } else {
                 final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                 if (StringUtils.isNotBlank(widgetUri)) {
@@ -162,7 +164,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             if (reader != null) {
                 try (final StringWriter content = new StringWriter();
                      final JsonWriter jsonWriter = new JsonWriter(content)) {
-                    jsonWriter.setIndent("  ");
+                    jsonWriter.setIndent(this.indent);
                     dumpJson(jsonWriter, targetResource, 0, maxDepth);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
@@ -173,18 +175,69 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         }
     }
 
-    protected boolean dumpTranslations(@NotNull final JsonWriter writer, @NotNull final Resource resource)
+    @Override
+    public void dumpJson(@NotNull final JsonWriter writer, @NotNull final Resource resource,
+                         int depth, @Nullable Integer maxDepth)
             throws IOException {
-        final ValueMap values = resource.getValueMap();
-        if (sourceMode && !NT_FILE.equals(values.get(JCR_PRIMARY_TYPE, String.class))
-                && Arrays.asList(values.get(JCR_MIXIN_TYPES, new String[0])).contains("mix:language")) {
-            dumpTranslationFolder(writer, resource);
-            return true;
+        if (sourceMode && isTranslationsRootFolder(resource)) {
+            dumpTranslationsFolder(writer, resource);
+        } else {
+            writer.beginObject();
+            jsonProperties(writer, resource);
+            final String name = resource.getName();
+            if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
+                maxDepth = null;
+            } else {
+                final Resource content = resource.getChild(JCR_CONTENT);
+                if (content != null && resourceFilter.isAllowedResource(content)) {
+                    writer.name(content.getName());
+                    dumpJson(writer, content, depth + 1, maxDepth);
+                }
+            }
+            if (maxDepth == null || depth < maxDepth) {
+                for (final Resource child : resource.getChildren()) {
+                    if (resourceFilter.isAllowedResource(child)) {
+                        final String childName = child.getName();
+                        if (!JCR_CONTENT.equals(childName)) {
+                            writer.name(childName);
+                            dumpJson(writer, child, depth + 1, maxDepth);
+                        }
+                    }
+                }
+            }
+            writer.endObject();
         }
-        return false;
     }
 
-    protected void dumpTranslationFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
+    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource)
+            throws IOException {
+        final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
+        for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
+            final String name = property.getKey();
+            if (isAllowedProperty(name)) {
+                if (JCR_PRIMARY_TYPE.equals(name)) {
+                    writer.name(name);
+                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+                } else {
+                    if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
+                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
+                        if (values instanceof String[] && ((String[]) values).length > 0) {
+                            Arrays.sort((String[]) values);
+                            properties.put(name, values);
+                        }
+                    } else {
+                        properties.put(name, property.getValue());
+                    }
+                }
+            }
+        }
+        for (final Map.Entry<String, Object> property : properties.entrySet()) {
+            writer.name(property.getKey());
+            Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+        }
+    }
+
+    protected void dumpTranslationsFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
             throws IOException {
         final Set<String> entryKeys = new TreeSet<>();
         final Set<String> folderKeys = new TreeSet<>();
@@ -209,66 +262,9 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             final Resource item = folder.getChild(key);
             if (item != null) {
                 writer.name(item.getName());
-                dumpTranslationFolder(writer, item);
+                dumpTranslationsFolder(writer, item);
             }
         }
         writer.endObject();
-    }
-
-    @Override
-    public void dumpJson(@NotNull final JsonWriter writer, @NotNull final Resource resource,
-                         int depth, @Nullable Integer maxDepth)
-            throws IOException {
-        writer.beginObject();
-        jsonProperties(writer, resource);
-        final String name = resource.getName();
-        if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
-            maxDepth = null;
-        } else {
-            final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && resourceFilter.isAllowedResource(content)) {
-                writer.name(content.getName());
-                dumpJson(writer, content, depth + 1, maxDepth);
-            }
-        }
-        if (maxDepth == null || depth < maxDepth) {
-            for (final Resource child : resource.getChildren()) {
-                if (resourceFilter.isAllowedResource(child)) {
-                    final String childName = child.getName();
-                    if (!JCR_CONTENT.equals(childName)) {
-                        writer.name(childName);
-                        dumpJson(writer, child, depth + 1, maxDepth);
-                    }
-                }
-            }
-        }
-        writer.endObject();
-    }
-
-    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource)
-            throws IOException {
-        final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
-        for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
-            final String name = property.getKey();
-            if (isAllowedProperty(name)) {
-                if (JCR_PRIMARY_TYPE.equals(name)) {
-                    writer.name(name);
-                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
-                } else {
-                    if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
-                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
-                        if (values instanceof String[] && ((String[]) values).length > 0) {
-                            properties.put(name, values);
-                        }
-                    } else {
-                        properties.put(name, property.getValue());
-                    }
-                }
-            }
-        }
-        for (final Map.Entry<String, Object> property : properties.entrySet()) {
-            writer.name(property.getKey());
-            Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
-        }
     }
 }

@@ -12,6 +12,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
@@ -35,6 +36,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -80,6 +82,9 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         @AttributeDefinition(name = "Max Depth")
         int maxDepth() default 1;
 
+        @AttributeDefinition(name = "Indent")
+        int indent() default 4;
+
         @AttributeDefinition(name = "Source Mode")
         boolean sourceMode() default true;
 
@@ -103,8 +108,6 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         String[] sling_servlet_paths();
     }
 
-    public static final String BASIC_INDENT = "    ";
-
     @Reference
     protected ResourceFilter resourceFilter;
 
@@ -119,6 +122,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         maxDepth = config.maxDepth();
+        indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
     }
 
@@ -193,22 +197,26 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         } else {
             writer.append(indent).append("<").append(name);
         }
-        xmlProperties(writer, indent + BASIC_INDENT + BASIC_INDENT, resource);
+        xmlProperties(writer, indent + this.indent + this.indent, resource);
         writer.append(">\n");
-        if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
-            maxDepth = null;
+        if (sourceMode && isTranslationsRootFolder(resource)) {
+            dumpTranslationsFolder(writer, indent + this.indent, resource);
         } else {
-            final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && resourceFilter.isAllowedResource(content)) {
-                dumpXml(request, writer, indent + BASIC_INDENT, content, depth + 1, maxDepth);
+            if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
+                maxDepth = null;
+            } else {
+                final Resource content = resource.getChild(JCR_CONTENT);
+                if (content != null && resourceFilter.isAllowedResource(content)) {
+                    dumpXml(request, writer, indent + this.indent, content, depth + 1, maxDepth);
+                }
             }
-        }
-        if (maxDepth == null || depth < maxDepth) {
-            for (final Resource child : resource.getChildren()) {
-                if (resourceFilter.isAllowedResource(child)) {
-                    final String childName = child.getName();
-                    if (!JCR_CONTENT.equals(childName)) {
-                        dumpXml(request, writer, indent + BASIC_INDENT, child, depth + 1, maxDepth);
+            if (maxDepth == null || depth < maxDepth) {
+                for (final Resource child : resource.getChildren()) {
+                    if (resourceFilter.isAllowedResource(child)) {
+                        final String childName = child.getName();
+                        if (!JCR_CONTENT.equals(childName)) {
+                            dumpXml(request, writer, indent + this.indent, child, depth + 1, maxDepth);
+                        }
                     }
                 }
             }
@@ -238,6 +246,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
                     if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
                         final Object values = filterValues(value, NON_SOURCE_MIXINS);
                         if (values instanceof String[] && ((String[]) values).length > 0) {
+                            Arrays.sort((String[]) values);
                             properties.put(name, values);
                         }
                     } else {
@@ -257,6 +266,46 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
                 .append(ISO9075.encode(name)).append("=\"").append(Properties.xmlType(value));
         Properties.toXml(writer, value, XML_DATE_FORMAT);
         writer.append("\"");
+    }
+
+    protected void dumpTranslationsFolder(@NotNull final PrintWriter writer, @Nullable final String indent,
+                                          @NotNull final Resource folder) {
+        final Set<String> entryKeys = new TreeSet<>();
+        final Set<String> folderKeys = new TreeSet<>();
+        for (final Resource item : folder.getChildren()) {
+            final ValueMap values = item.getValueMap();
+            if ("sling:MessageEntry".equals(values.get(JCR_PRIMARY_TYPE, String.class))) {
+                entryKeys.add(item.getName());
+            } else {
+                folderKeys.add(item.getName());
+            }
+        }
+        for (final String name : entryKeys) {
+            final Resource item = folder.getChild(name);
+            if (item != null) {
+                final ValueMap props = item.getValueMap();
+                writer.append(indent).append("<").append(name)
+                        .append(" ").append(JCR_PRIMARY_TYPE).append("=\"").append(Properties.xmlString(
+                                props.get(JCR_PRIMARY_TYPE, "sling:MessageEntry"))).append("\"\n")
+                        .append(indent).append(this.indent)
+                        .append("sling:key=\"").append(Properties.xmlString(
+                                props.get("sling:key", name))).append("\"\n")
+                        .append(indent).append(this.indent)
+                        .append("sling:message=\"").append(Properties.xmlString(
+                                props.get("sling:message", ""))).append("\"/>\n");
+            }
+        }
+        for (final String name : folderKeys) {
+            final Resource item = folder.getChild(name);
+            if (item != null) {
+                final ValueMap props = item.getValueMap();
+                writer.append(indent).append("<").append(name)
+                        .append(" ").append(JCR_PRIMARY_TYPE).append("=\"").append(Properties.xmlString(
+                                props.get(JCR_PRIMARY_TYPE, "sling:Folder"))).append("\">\n");
+                dumpTranslationsFolder(writer, indent + this.indent, item);
+                writer.append(indent).append("</").append(name).append(">\n");
+            }
+        }
     }
 
     protected void writeNamespaceAttributes(@NotNull final SlingHttpServletRequest request,
@@ -279,7 +328,8 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         }
     }
 
-    protected void determineNamespaces(Set<String> keys, @NotNull final Resource resource, int depth, @Nullable Integer maxDepth) {
+    protected void determineNamespaces(@NotNull final Set<String> keys, @NotNull final Resource resource,
+                                       int depth, @Nullable Integer maxDepth) {
         final String name = resource.getName();
         addNamespace(keys, name);
         for (final String propertyName : resource.getValueMap().keySet()) {
@@ -287,7 +337,8 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
                 addNamespace(keys, propertyName);
             }
         }
-        if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
+        if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")
+                || isTranslationsRootFolder(resource)) {
             maxDepth = null;
         } else {
             final Resource content = resource.getChild(JCR_CONTENT);

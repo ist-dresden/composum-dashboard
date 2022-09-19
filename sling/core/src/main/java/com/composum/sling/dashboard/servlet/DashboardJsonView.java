@@ -32,18 +32,14 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
@@ -54,10 +50,9 @@ import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWS
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardJsonView.Config.class)
-public class DashboardJsonView extends AbstractWidgetServlet implements JsonRenderer, ContentGenerator {
+public class DashboardJsonView extends AbstractSourceView implements JsonRenderer, ContentGenerator {
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/source/json";
-
 
     @ObjectClassDefinition(name = "Composum Dashboard Json Source View")
     public @interface Config {
@@ -85,6 +80,9 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
         @AttributeDefinition(name = "Max Depth")
         int maxDepth() default 1;
 
+        @AttributeDefinition(name = "Indent")
+        int indent() default 2;
+
         @AttributeDefinition(name = "Source Mode")
         boolean sourceMode() default true;
 
@@ -108,26 +106,13 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
         String[] sling_servlet_paths();
     }
 
-    public static final String OPTION_LOAD = "load";
-
-    public static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_LOAD);
-
-    public static final List<Pattern> NON_SOURCE_PROPS = Arrays.asList(
-            Pattern.compile("^jcr:(uuid|data)$"),
-            Pattern.compile("^jcr:(baseVersion|predecessors|versionHistory|isCheckedOut)$"),
-            Pattern.compile("^jcr:(created|lastModified).*$"),
-            Pattern.compile("^cq:last(Modified|Replicat).*$")
-    );
-
-    public static final List<Pattern> NON_SOURCE_MIXINS = List.of(
-            Pattern.compile("^rep:AccessControllable$")
-    );
-
     @Reference
     protected ResourceFilter resourceFilter;
 
-    protected int maxDepth = 1;
-    protected boolean sourceMode = true;
+    @Override
+    protected @NotNull ResourceFilter getResourceFilter() {
+        return resourceFilter;
+    }
 
     @Activate
     @Modified
@@ -135,16 +120,13 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
         super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         maxDepth = config.maxDepth();
+        indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
     }
 
     @Override
     protected @NotNull String defaultResourceType() {
         return DEFAULT_RESOURCE_TYPE;
-    }
-
-    @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     @Override
@@ -157,14 +139,12 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
             if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
                 response.setContentType("application/json;charset=UTF-8");
                 final JsonWriter writer = new JsonWriter(response.getWriter());
-                writer.setIndent("  ");
-                if (!dumpTranslations(writer, targetResource)) {
-                    dumpJson(writer, targetResource, 0, maxDepth);
-                }
+                writer.setIndent(this.indent);
+                dumpJson(writer, targetResource, 0, maxDepth);
             } else {
                 final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                 if (StringUtils.isNotBlank(widgetUri)) {
-                    jsonPreview(request, response, targetResource);
+                    preview(request, response, targetResource);
                 } else {
                     jsonCode(request, response, targetResource);
                 }
@@ -174,35 +154,17 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
         }
     }
 
-    protected void jsonPreview(@NotNull final SlingHttpServletRequest request,
-                               @NotNull final SlingHttpServletResponse response,
-                               @NotNull final Resource targetResource)
-            throws IOException {
-        try (final InputStream pageContent = getClass().getClassLoader()
-                .getResourceAsStream("/com/composum/sling/dashboard/plugin/view/display/preview.html");
-             final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
-            if (reader != null) {
-                final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
-                        Collections.singletonMap("targetUrl",
-                                getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD)
-                                        + targetResource.getPath()), Locale.ENGLISH, this.getClass());
-                prepareHtmlResponse(response);
-                IOUtils.copy(reader, writer);
-            }
-        }
-    }
-
     protected void jsonCode(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response,
                             @NotNull final Resource targetResource)
             throws IOException {
         try (final InputStream pageContent = getClass().getClassLoader()
-                .getResourceAsStream("/com/composum/sling/dashboard/plugin/view/display/code.html");
+                .getResourceAsStream("/com/composum/sling/dashboard/plugin/display/code.html");
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             if (reader != null) {
                 try (final StringWriter content = new StringWriter();
                      final JsonWriter jsonWriter = new JsonWriter(content)) {
-                    jsonWriter.setIndent("  ");
+                    jsonWriter.setIndent(this.indent);
                     dumpJson(jsonWriter, targetResource, 0, maxDepth);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
@@ -213,18 +175,69 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
         }
     }
 
-    protected boolean dumpTranslations(@NotNull final JsonWriter writer, @NotNull final Resource resource)
+    @Override
+    public void dumpJson(@NotNull final JsonWriter writer, @NotNull final Resource resource,
+                         int depth, @Nullable Integer maxDepth)
             throws IOException {
-        final ValueMap values = resource.getValueMap();
-        if (!NT_FILE.equals(values.get(JCR_PRIMARY_TYPE, String.class))
-                && Arrays.asList(values.get(JCR_MIXIN_TYPES, new String[0])).contains("mix:language")) {
-            dumpTranslationFolder(writer, resource);
-            return true;
+        if (sourceMode && isTranslationsRootFolder(resource)) {
+            dumpTranslationsFolder(writer, resource);
+        } else {
+            writer.beginObject();
+            jsonProperties(writer, resource);
+            final String name = resource.getName();
+            if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
+                maxDepth = null;
+            } else {
+                final Resource content = resource.getChild(JCR_CONTENT);
+                if (content != null && resourceFilter.isAllowedResource(content)) {
+                    writer.name(content.getName());
+                    dumpJson(writer, content, depth + 1, maxDepth);
+                }
+            }
+            if (maxDepth == null || depth < maxDepth) {
+                for (final Resource child : resource.getChildren()) {
+                    if (resourceFilter.isAllowedResource(child)) {
+                        final String childName = child.getName();
+                        if (!JCR_CONTENT.equals(childName)) {
+                            writer.name(childName);
+                            dumpJson(writer, child, depth + 1, maxDepth);
+                        }
+                    }
+                }
+            }
+            writer.endObject();
         }
-        return false;
     }
 
-    protected void dumpTranslationFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
+    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource)
+            throws IOException {
+        final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
+        for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
+            final String name = property.getKey();
+            if (isAllowedProperty(name)) {
+                if (JCR_PRIMARY_TYPE.equals(name)) {
+                    writer.name(name);
+                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+                } else {
+                    if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
+                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
+                        if (values instanceof String[] && ((String[]) values).length > 0) {
+                            Arrays.sort((String[]) values);
+                            properties.put(name, values);
+                        }
+                    } else {
+                        properties.put(name, property.getValue());
+                    }
+                }
+            }
+        }
+        for (final Map.Entry<String, Object> property : properties.entrySet()) {
+            writer.name(property.getKey());
+            Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+        }
+    }
+
+    protected void dumpTranslationsFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
             throws IOException {
         final Set<String> entryKeys = new TreeSet<>();
         final Set<String> folderKeys = new TreeSet<>();
@@ -249,80 +262,9 @@ public class DashboardJsonView extends AbstractWidgetServlet implements JsonRend
             final Resource item = folder.getChild(key);
             if (item != null) {
                 writer.name(item.getName());
-                dumpTranslationFolder(writer, item);
+                dumpTranslationsFolder(writer, item);
             }
         }
         writer.endObject();
-    }
-
-    @Override
-    public void dumpJson(@NotNull final JsonWriter writer, @NotNull final Resource resource,
-                         int depth, @Nullable Integer maxDepth)
-            throws IOException {
-        writer.beginObject();
-        jsonProperties(writer, resource);
-        final String name = resource.getName();
-        if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
-            maxDepth = null;
-        } else {
-            final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && resourceFilter.isAllowedResource(content)) {
-                writer.name(content.getName());
-                dumpJson(writer, content, depth + 1, maxDepth);
-            }
-        }
-        if (maxDepth == null || depth < maxDepth) {
-            for (final Resource child : resource.getChildren()) {
-                if (resourceFilter.isAllowedResource(child)) {
-                    final String childName = child.getName();
-                    if (!JCR_CONTENT.equals(childName)) {
-                        writer.name(childName);
-                        dumpJson(writer, child, depth + 1, maxDepth);
-                    }
-                }
-            }
-        }
-        writer.endObject();
-    }
-
-    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource)
-            throws IOException {
-        final Map<String, Object> properties = new TreeMap<>();
-        for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
-            final String name = property.getKey();
-            if (isAllowedProperty(name)) {
-                if (JCR_PRIMARY_TYPE.equals(name)) {
-                    writer.name(name);
-                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
-                } else {
-                    if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
-                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
-                        if (values instanceof String[] && ((String[]) values).length > 0) {
-                            properties.put(name, values);
-                        }
-                    } else {
-                        properties.put(name, property.getValue());
-                    }
-                }
-            }
-        }
-        for (final Map.Entry<String, Object> property : properties.entrySet()) {
-            writer.name(property.getKey());
-            Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
-        }
-    }
-
-    protected boolean isAllowedProperty(@NotNull final String name) {
-        if (resourceFilter.isAllowedProperty(name)) {
-            if (sourceMode) {
-                for (Pattern disabled : NON_SOURCE_PROPS) {
-                    if (disabled.matcher(name).matches()) {
-                        return false;
-                    }
-                }
-            }
-            return true;
-        }
-        return false;
     }
 }

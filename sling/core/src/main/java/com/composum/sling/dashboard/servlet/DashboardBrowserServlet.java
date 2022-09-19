@@ -122,7 +122,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     public static final String VIEWS_PATH = "views";
 
-    public static final String TEMPLATE_BASE = "/com/composum/sling/dashboard/plugin/browser/";
+    public static final String TEMPLATE_BASE = "/com/composum/sling/dashboard/browser/";
     public static final String PAGE_TEMPLATE = TEMPLATE_BASE + "page.html";
     public static final String PAGE_TAIL = TEMPLATE_BASE + "tail.html";
     protected static final String OPTION_TREE = "tree";

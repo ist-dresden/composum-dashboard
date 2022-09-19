@@ -7,6 +7,10 @@ dashboardManager.createContentPage(slingRequest, slingResponse, '/content/test/i
     "browser": {\
       "jcr:title": "Browser",\
       "linkPath": "/content/test/insights/browser"\
+    },\
+    "groovyconsole": {\
+      "jcr:title": "Groovy...",\
+      "linkUrl": "/groovyconsole"\
     }\
   }\
 }')

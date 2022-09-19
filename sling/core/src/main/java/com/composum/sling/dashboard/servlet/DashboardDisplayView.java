@@ -153,6 +153,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                                     getTargetUrl(resource, "html")));
                             break;
                         case DOCUMENT:
+                        default:
                             preview(request, response, displayType, Collections.singletonMap("targetUrl",
                                     (loadDocuments ? getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD) : "")
                                             + getTargetUrl(resource, null)));
@@ -175,8 +176,6 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                                 put("content", getContent(resource));
                             }});
                             break;
-                        default:
-                            break;
                     }
                 } else {
                     response.sendError(HttpServletResponse.SC_NOT_FOUND);
@@ -193,7 +192,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                            @NotNull final Type template, @NotNull final Map<String, Object> properties)
             throws IOException {
         try (final InputStream pageContent = getClass().getClassLoader()
-                .getResourceAsStream("/com/composum/sling/dashboard/plugin/view/display/"
+                .getResourceAsStream("/com/composum/sling/dashboard/plugin/display/"
                         + template.name().toLowerCase() + ".html");
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass());
@@ -323,7 +322,9 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
 
     protected static final Map<String, Type> TYPETABLE = new HashMap<>() {{
         put("application/pdf", Type.DOCUMENT);
-        put("application/json", Type.CODE);
+        put("pdf", Type.DOCUMENT);
+        put("application/json", Type.DOCUMENT);
+        put("json", Type.DOCUMENT);
         put("text/html", Type.CODE);
         put("html", Type.CODE);
         put("htm", Type.CODE);
@@ -383,7 +384,6 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
         put("javascript", Type.CODE);
         put("js", Type.CODE);
         put("jsf", Type.CODE);
-        put("json", Type.CODE);
         put("jsp", Type.CODE);
         put("jspf", Type.CODE);
         put("jspx", Type.CODE);

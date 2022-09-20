@@ -12,6 +12,7 @@ import org.apache.sling.api.resource.ModifiableValueMap;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.settings.SlingSettingsService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.service.component.annotations.Activate;
@@ -40,6 +41,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -90,6 +92,9 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
                 "nt:folder", "sling:Folder"
         };
 
+        @AttributeDefinition(name = "CSS Runmodes")
+        String[] cssRunmodes();
+
         @AttributeDefinition(name = "Content Page Type")
         String contentPageType() default "[nt:unstructured]";
 
@@ -113,11 +118,15 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
             "yyyy-MM-dd HH:mm:ss"
     };
 
+    @Reference
+    protected SlingSettingsService settingsService;
+
     protected List<Pattern> allowedPropertyPatterns;
     protected List<Pattern> disabledPropertyPatterns;
     protected List<Pattern> allowedPathPatterns;
     protected List<Pattern> disabledPathPatterns;
     protected List<String> sortableTypes;
+    protected List<String> cssRunmodes;
     protected List<String> contentPageType;
     protected List<String> pageGeneration;
     protected String loginUri;
@@ -151,6 +160,7 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         allowedPathPatterns = AbstractWidgetServlet.patternList(config.allowedPathPatterns());
         disabledPathPatterns = AbstractWidgetServlet.patternList(config.disabledPathPatterns());
         sortableTypes = Arrays.asList(Optional.ofNullable(config.sortableTypes()).orElse(new String[0]));
+        cssRunmodes = Arrays.asList(Optional.ofNullable(config.cssRunmodes()).orElse(new String[0]));
         contentPageType = Arrays.asList(StringUtils.split(config.contentPageType(), "/"));
         pageGeneration = Arrays.asList(config.pageGeneration());
         loginUri = config.loginUri();
@@ -197,6 +207,16 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
     @Override
     public boolean isSortableType(@Nullable final String type) {
         return StringUtils.isNotBlank(type) && sortableTypes.contains(type);
+    }
+
+    @Override
+    public void addRunmodeCssClasses(Set<String> cssClassSet) {
+        final Set<String> slingRunmodes = settingsService.getRunModes();
+        for (final String runmode : cssRunmodes) {
+            if (slingRunmodes.contains(runmode)) {
+                cssClassSet.add("runmode-" + runmode);
+            }
+        }
     }
 
     @Override

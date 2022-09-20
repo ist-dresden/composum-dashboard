@@ -44,6 +44,7 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
     protected int maxDepth = 0;
     protected String indent = "  ";
     protected boolean sourceMode = true;
+    protected String contentType;
 
     protected abstract @NotNull ResourceFilter getResourceFilter();
 
@@ -69,7 +70,7 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
                         Collections.singletonMap("targetUrl",
                                 getWidgetUri(request, defaultResourceType(), HTML_MODES, OPTION_LOAD)
                                         + targetResource.getPath()), Locale.ENGLISH, this.getClass());
-                prepareHtmlResponse(response);
+                prepareTextResponse(response,null);
                 IOUtils.copy(reader, writer);
             }
         }

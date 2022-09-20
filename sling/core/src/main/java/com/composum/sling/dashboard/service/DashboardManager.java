@@ -6,6 +6,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
+import java.util.Set;
 
 public interface DashboardManager extends ResourceFilter {
 
@@ -16,6 +17,8 @@ public interface DashboardManager extends ResourceFilter {
                                            @Nullable String context);
 
     boolean isSortableType(@Nullable String type);
+
+    void addRunmodeCssClasses(Set<String> cssClassSet);
 
     @NotNull String getLoginUri();
 

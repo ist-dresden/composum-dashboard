@@ -102,7 +102,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String mode = getHtmlMode(request, getHtmlModes());
         if (!OPTION_JSON.equals(mode) && !"json".equals(pathInfo.getExtension())) {
-            prepareHtmlResponse(response);
+            prepareTextResponse(response,null);
             final PrintWriter writer = response.getWriter();
             switch (mode) {
                 case OPTION_TILE:

@@ -17,6 +17,7 @@ import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -80,7 +81,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         String navTitle();
 
         @AttributeDefinition(name = "Max Depth")
-        int maxDepth() default 1;
+        int maxDepth() default 0;
 
         @AttributeDefinition(name = "Indent")
         int indent() default 4;
@@ -88,7 +89,11 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         @AttributeDefinition(name = "Source Mode")
         boolean sourceMode() default true;
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Content Type",
+                description = "the response content type for the XML content (default: 'text/plain')")
+        String contentType() default "text/plain";
+
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -118,12 +123,14 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
 
     @Activate
     @Modified
-    protected void activate(Config config) {
-        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+    protected void activate(final BundleContext bundleContext, final Config config) {
+        super.activate(bundleContext,
+                config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         maxDepth = config.maxDepth();
         indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
+        contentType = config.contentType();
     }
 
     @Override
@@ -139,7 +146,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         if (targetResource != null) {
             final String mode = getHtmlMode(request, HTML_MODES);
             if (OPTION_LOAD.equals(mode) || "xml".equals(pathInfo.getExtension())) {
-                response.setContentType("text/plain;charset=UTF-8");
+                prepareTextResponse(response, contentType);
                 if (sourceMode) {
                     response.setHeader("Content-Disposition", "inline; filename=.content.xml");
                 }
@@ -174,7 +181,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
                     dumpXml(request, xmlWriter, "", targetResource, 0, maxDepth);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
-                    prepareHtmlResponse(response);
+                    prepareTextResponse(response, null);
                     IOUtils.copy(reader, writer);
                 } catch (RepositoryException ignore) {
                 }
@@ -195,7 +202,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
             writer.append("<jcr:root");
             writeNamespaceAttributes(request, writer, namespaces);
         } else {
-            writer.append(indent).append("<").append(name);
+            writer.append(indent).append("<").append(xmlName(name));
         }
         xmlProperties(writer, indent + this.indent + this.indent, resource);
         writer.append(">\n");
@@ -228,11 +235,6 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         }
     }
 
-    protected void xmResource(@NotNull final PrintWriter writer, @Nullable final String indent,
-                              @NotNull final Resource resource, int depth, @Nullable Integer maxDepth) {
-        final String name = resource.getName();
-    }
-
     protected void xmlProperties(@NotNull final PrintWriter writer, @Nullable final String indent,
                                  @NotNull final Resource resource) {
         final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
@@ -263,9 +265,14 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
     protected void xmlProperty(@NotNull final PrintWriter writer, @Nullable final String indent,
                                @NotNull final String name, @Nullable final Object value) {
         writer.append("\n").append(indent)
-                .append(ISO9075.encode(name)).append("=\"").append(Properties.xmlType(value));
+                .append(xmlName(name))
+                .append("=\"").append(Properties.xmlType(value));
         Properties.toXml(writer, value, XML_DATE_FORMAT);
         writer.append("\"");
+    }
+
+    protected String xmlName(@NotNull final String name) {
+        return ISO9075.encode(name.replaceAll("\\s+", "_"));
     }
 
     protected void dumpTranslationsFolder(@NotNull final PrintWriter writer, @Nullable final String indent,
@@ -284,7 +291,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
             final Resource item = folder.getChild(name);
             if (item != null) {
                 final ValueMap props = item.getValueMap();
-                writer.append(indent).append("<").append(name)
+                writer.append(indent).append("<").append(xmlName(name))
                         .append(" ").append(JCR_PRIMARY_TYPE).append("=\"").append(Properties.xmlString(
                                 props.get(JCR_PRIMARY_TYPE, "sling:MessageEntry"))).append("\"\n")
                         .append(indent).append(this.indent)
@@ -299,7 +306,7 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
             final Resource item = folder.getChild(name);
             if (item != null) {
                 final ValueMap props = item.getValueMap();
-                writer.append(indent).append("<").append(name)
+                writer.append(indent).append("<").append(xmlName(name))
                         .append(" ").append(JCR_PRIMARY_TYPE).append("=\"").append(Properties.xmlString(
                                 props.get(JCR_PRIMARY_TYPE, "sling:Folder"))).append("\">\n");
                 dumpTranslationsFolder(writer, indent + this.indent, item);

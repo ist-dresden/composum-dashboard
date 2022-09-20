@@ -76,7 +76,7 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
                 description = "a set of request templates matching: 'service-type(filter)[service-properties,...]'")
         String[] inspectedSettings();
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -135,7 +135,8 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
     @Activate
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) {
-        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+        super.activate(bundleContext,
+                config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.bundleContext = bundleContext;
         configuration = new ArrayList<>();

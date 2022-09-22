@@ -4,7 +4,7 @@
 
     <groupId>com.composum.dashboard</groupId>
     <artifactId>composum-dashboard</artifactId>
-    <version>1.1.4</version>
+    <version>1.1.5-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>Composum Dashboard</name>

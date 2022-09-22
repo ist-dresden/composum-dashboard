@@ -337,10 +337,15 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
     protected void determineNamespaces(@NotNull final Set<String> keys, @NotNull final Resource resource,
                                        int depth, @Nullable Integer maxDepth) {
         final String name = resource.getName();
-        addNamespace(keys, name);
-        for (final String propertyName : resource.getValueMap().keySet()) {
+        extractNamespace(keys, name);
+        for (final Map.Entry<String, Object> entry : resource.getValueMap().entrySet()) {
+            final String propertyName = entry.getKey();
             if (isAllowedProperty(propertyName)) {
-                addNamespace(keys, propertyName);
+                extractNamespace(keys, propertyName);
+                if (JCR_PRIMARY_TYPE.equals(propertyName) ||
+                        JCR_MIXIN_TYPES.equals(propertyName)) {
+                    extractNamespace(keys, entry.getValue());
+                }
             }
         }
         if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")
@@ -361,9 +366,19 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         }
     }
 
-    protected void addNamespace(Set<String> keys, String name) {
-        if (StringUtils.isNotBlank(name) && name.contains(":")) {
-            keys.add(StringUtils.substringBefore(name, ":"));
+    protected void extractNamespace(@NotNull final Set<String> keys, Object... values) {
+        if (values != null && values.length > 0) {
+            if (values.length == 1 && values[0] instanceof Object[]) {
+                values = (Object[]) values[0];
+            }
+            for (final Object value : values) {
+                if (value instanceof String) {
+                    final String string = (String) value;
+                    if (StringUtils.isNotBlank(string) && string.contains(":")) {
+                        keys.add(StringUtils.substringBefore(string, ":"));
+                    }
+                }
+            }
         }
     }
 }

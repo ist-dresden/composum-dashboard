@@ -159,7 +159,7 @@ public class Properties {
             } else if (value instanceof Collection) {
                 toXmlArray(writer, ((Collection<?>) value).toArray(), dateFormat);
             } else {
-                writer.append(xmlString(xmlString(value, dateFormat)));
+                writer.append(xmlString(value, dateFormat));
             }
         }
     }
@@ -200,11 +200,11 @@ public class Properties {
 
     public static @NotNull String xmlString(@Nullable final Object value, @NotNull final String dateFormat) {
         if (value instanceof Calendar) {
-            return new SimpleDateFormat(dateFormat).format(((Calendar) value).getTime());
+            return xmlString(new SimpleDateFormat(dateFormat).format(((Calendar) value).getTime()));
         } else if (value instanceof Date) {
-            return new SimpleDateFormat(dateFormat).format((Date) value);
+            return xmlString(new SimpleDateFormat(dateFormat).format((Date) value));
         } else {
-            return value != null ? value.toString() : "";
+            return value != null ? xmlString(value.toString()) : "";
         }
     }
 

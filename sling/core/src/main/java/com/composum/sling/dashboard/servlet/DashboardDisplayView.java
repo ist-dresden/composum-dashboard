@@ -15,6 +15,7 @@ import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -80,7 +81,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
         @AttributeDefinition(name = "Document Loading")
         boolean loadDocuments() default true;
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -121,8 +122,9 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
 
     @Activate
     @Modified
-    protected void activate(Config config) {
-        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+    protected void activate(final BundleContext bundleContext, final Config config) {
+        super.activate(bundleContext,
+                config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         loadDocuments = config.loadDocuments();
     }
@@ -197,7 +199,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             final Writer writer = new ValueEmbeddingWriter(response.getWriter(), properties, Locale.ENGLISH, this.getClass());
             if (reader != null) {
-                prepareHtmlResponse(response);
+                prepareTextResponse(response, null);
                 IOUtils.copy(reader, writer);
             }
         }

@@ -12,6 +12,7 @@ import org.apache.sling.api.resource.ResourceWrapper;
 import org.apache.sling.api.resource.SyntheticResource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -47,15 +48,26 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     protected String label;
     protected String navTitle;
 
-    protected void activate(String name, String[] context, String[] category, int rank, String label, String navTitle,
-                            String[] resourceTypes, String[] servletPaths) {
+    protected void activate(@Nullable final BundleContext bundleContext,
+                            @NotNull final String name, @NotNull final String[] context,
+                            @NotNull final String[] category, int rank,
+                            @NotNull final String label, @Nullable final String navTitle,
+                            @Nullable String[] resourceTypes, @Nullable String[] servletPaths) {
         this.name = name;
         this.context = Arrays.asList(context);
         this.category = Arrays.asList(category);
         this.rank = rank;
         this.label = label;
         this.navTitle = navTitle;
-        super.activate(resourceTypes, servletPaths);
+        super.activate(bundleContext, resourceTypes, servletPaths);
+    }
+
+    @Deprecated(since = "1.1.2 - use activation with bundle context")
+    protected void activate(@NotNull final String name, @NotNull final String[] context,
+                            @NotNull final String[] category, int rank,
+                            @NotNull final String label, @Nullable final String navTitle,
+                            @Nullable String[] resourceTypes, @Nullable String[] servletPaths) {
+        activate(null, name, category, category, rank, label, name, resourceTypes, servletPaths);
     }
 
     // Widget
@@ -286,6 +298,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         styleSet.add(TEMPLATE_BASE + "commons/style.css");
         styleSet.addAll(Arrays.asList(styles));
         final Map<String, Object> properties = new HashMap<>();
+        properties.put("html-css-classes", getHtmlCssClasses("composum-dashboard-widget__page"));
         properties.put("widget-type", getName());
         properties.put("title", getLabel());
         copyResource(getClass(), PLUGIN_BASE + "page/head.html", writer, properties);

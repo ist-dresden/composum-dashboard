@@ -18,6 +18,7 @@ import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -86,7 +87,11 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         @AttributeDefinition(name = "Source Mode")
         boolean sourceMode() default true;
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Content Type",
+                description = "the response content type for the JSON content (default: 'application/json')")
+        String contentType() default "application/json";
+
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -116,12 +121,14 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
 
     @Activate
     @Modified
-    protected void activate(Config config) {
-        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+    protected void activate(final BundleContext bundleContext, final Config config) {
+        super.activate(bundleContext,
+                config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         maxDepth = config.maxDepth();
         indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
+        contentType = config.contentType();
     }
 
     @Override
@@ -137,7 +144,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         if (targetResource != null) {
             final String mode = getHtmlMode(request, HTML_MODES);
             if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
-                response.setContentType("application/json;charset=UTF-8");
+                prepareTextResponse(response, contentType);
                 final JsonWriter writer = new JsonWriter(response.getWriter());
                 writer.setIndent(this.indent);
                 dumpJson(writer, targetResource, 0, maxDepth);
@@ -168,7 +175,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                     dumpJson(jsonWriter, targetResource, 0, maxDepth);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
-                    prepareHtmlResponse(response);
+                    prepareTextResponse(response, null);
                     IOUtils.copy(reader, writer);
                 }
             }
@@ -187,12 +194,11 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             final String name = resource.getName();
             if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
                 maxDepth = null;
-            } else {
-                final Resource content = resource.getChild(JCR_CONTENT);
-                if (content != null && resourceFilter.isAllowedResource(content)) {
-                    writer.name(content.getName());
-                    dumpJson(writer, content, depth + 1, maxDepth);
-                }
+            }
+            final Resource content = resource.getChild(JCR_CONTENT);
+            if (content != null && resourceFilter.isAllowedResource(content)) {
+                writer.name(content.getName());
+                dumpJson(writer, content, depth + 1, maxDepth);
             }
             if (maxDepth == null || depth < maxDepth) {
                 for (final Resource child : resource.getChildren()) {

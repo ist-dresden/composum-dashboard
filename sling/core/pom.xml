@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard-sling-parent</artifactId>
-        <version>1.1.1</version>
+        <version>1.1.2</version>
     </parent>
 
     <artifactId>composum-dashboard-sling-core</artifactId>
@@ -29,9 +29,6 @@
                         <Export-Package>
                             com.composum.sling.dashboard.*
                         </Export-Package>
-                        <Sling-Model-Packages>
-                            com.composum.sling.dashboard.model
-                        </Sling-Model-Packages>
                     </instructions>
                 </configuration>
             </plugin>

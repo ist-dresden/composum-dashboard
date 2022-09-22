@@ -28,6 +28,10 @@
     "sling:Folder",
     "cq:Component"
   ],
+  "cssRunmodes": [
+    "author",
+    "publish"
+  ],
   "contentPageType": "[cq:Page]/jcr:content[cq:PageContent]",
   "loginUri": "/libs/granite/core/content/login.html"
 }

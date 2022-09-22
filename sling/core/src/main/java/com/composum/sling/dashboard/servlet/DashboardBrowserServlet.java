@@ -21,6 +21,7 @@ import org.apache.sling.xss.XSSAPI;
 import org.apache.sling.xss.XSSFilter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -96,7 +97,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                 "Open:television:_blank:${path}[.html]"
         };
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -224,8 +225,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     @Activate
     @Modified
-    protected void activate(Config config) {
-        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+    protected void activate(final BundleContext bundleContext, final Config config) {
+        super.activate(bundleContext,
+                config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.homeUrl = config.homeUrl();
         this.toolbar = Arrays.asList(config.toolbar());
@@ -277,6 +279,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             final String targetPath = Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse("");
             final ValueMap values = browser.getValueMap();
             final Map<String, Object> properties = new HashMap<>();
+            properties.put("html-css-classes", getHtmlCssClasses("dashboard-browser__page"));
             properties.put("home-url", xssapi.encodeForHTMLAttr(homeUrl));
             properties.put("browser-label", xssapi.encodeForHTML(getLabel()));
             properties.put("status-line", xssapi.encodeForHTML(targetPath));
@@ -290,7 +293,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("browser-tab", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW, "#id#")));
             properties.put("loginUrl", xssapi.encodeForHTMLAttr(dashboardManager.getLoginUri()));
             properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
-            prepareHtmlResponse(response);
+            prepareTextResponse(response, null);
             PrintWriter writer = response.getWriter();
             copyResource(getClass(), PAGE_TEMPLATE, writer, properties);
             for (DashboardWidget widget : viewWidgets.values()) {
@@ -346,7 +349,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             throws ServletException, IOException {
         final Resource resource = dashboardManager.getRequestResource(request);
         if (resource != null) {
-            prepareHtmlResponse(response);
+            prepareTextResponse(response, null);
             final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_VIEW));
             if (StringUtils.isNotBlank(submode)) {
                 final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;

@@ -14,6 +14,7 @@ import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -30,6 +31,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
 import java.util.regex.Pattern;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
@@ -54,7 +58,11 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
     protected String servletPath;
     protected List<String> servletPaths;
 
-    protected void activate(String[] resourceTypes, String[] servletPaths) {
+    protected BundleContext bundleContext;
+
+    protected void activate(@Nullable final BundleContext bundleContext,
+                            @Nullable final String[] resourceTypes, @Nullable final String[] servletPaths) {
+        this.bundleContext = bundleContext;
         this.resourceType = getFirstProperty(resourceTypes, defaultResourceType());
         this.resourceTypes = resourceTypes != null ? Arrays.asList(resourceTypes) : Collections.emptyList();
         this.servletPath = getFirstProperty(servletPaths, null);
@@ -117,13 +125,33 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return resource;
     }
 
+    protected @NotNull String getHtmlCssClasses(@NotNull final String mainHtmlClass) {
+        final Set<String> cssClasses = new TreeSet<>();
+        cssClasses.add(mainHtmlClass);
+        if (bundleContext != null) {
+            Optional.ofNullable(bundleContext.getServiceReference(DashboardManager.class))
+                    .map(serviceReference -> bundleContext.getService(serviceReference))
+                    .ifPresent(dashboardManager -> dashboardManager.addRunmodeCssClasses(cssClasses));
+        }
+        return StringUtils.join(cssClasses, " ");
+    }
+
+    @Deprecated(since = "1.1.2 - use prepareTextResponse()")
     protected void prepareHtmlResponse(@NotNull final HttpServletResponse response) {
+        prepareTextResponse(response, null);
+    }
+
+    protected void prepareTextResponse(@NotNull final HttpServletResponse response, @Nullable String contentType) {
         response.setHeader("Cache-Control", "no-cache");
         response.addHeader("Cache-Control", "no-store");
         response.addHeader("Cache-Control", "must-revalidate");
         response.setHeader("Pragma", "no-cache");
         response.setDateHeader("Expires", 0);
-        response.setContentType("text/html;charset=UTF-8");
+        contentType = StringUtils.defaultString(contentType, "text/html");
+        if (!contentType.contains("charset")) {
+            contentType += ";charset=UTF-8";
+        }
+        response.setContentType(contentType);
     }
 
     protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,
@@ -182,7 +210,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
              final Reader reader = pageContent != null ? new ValueEmbeddingReader(
                      new InputStreamReader(pageContent), properties, Locale.ENGLISH, this.getClass()) : null) {
             if (reader != null) {
-                prepareHtmlResponse(response);
+                prepareTextResponse(response, null);
                 IOUtils.copy(reader, response.getWriter());
                 return;
             }

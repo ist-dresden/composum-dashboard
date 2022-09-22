@@ -19,6 +19,7 @@ import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.xss.XSSAPI;
 import org.apache.sling.xss.XSSFilter;
 import org.jetbrains.annotations.NotNull;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -79,7 +80,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -125,8 +126,9 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
 
     @Activate
     @Modified
-    protected void activate(Config config) {
-        super.activate(config.name(), config.context(), config.category(), config.rank(), config.label(),
+    protected void activate(final BundleContext bundleContext, final Config config) {
+        super.activate(bundleContext,
+                config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.maxResults = config.maxResults();
         properties.put("icon", config.icon());
@@ -170,7 +172,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
                 //jsonFind(request, response, writer);
             }
         } else {
-            prepareHtmlResponse(response);
+            prepareTextResponse(response, null);
             final PrintWriter writer = response.getWriter();
             switch (mode) {
                 case OPTION_FIND:

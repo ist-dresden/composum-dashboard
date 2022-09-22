@@ -18,6 +18,7 @@ import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
@@ -81,7 +82,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         @AttributeDefinition(name = "Navigation")
         String[] navigation();
 
-        @AttributeDefinition(name = "Servlet Types",
+        @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE
@@ -152,8 +153,8 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
 
     @Activate
     @Modified
-    protected void activate(Config config) {
-        super.activate(config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+    protected void activate(BundleContext bundleContext, Config config) {
+        super.activate(bundleContext, config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.rank = config.rank();
         this.title = config.title();
         this.homeUrl = config.homeUrl();
@@ -189,10 +190,11 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
             throws ServletException, IOException {
         if (!createContent(request, response, dashboardManager, this)) {
             final DashboardWidget currentWidget = getCurrentWidget(request);
-            prepareHtmlResponse(response);
+            prepareTextResponse(response, null);
             final PrintWriter writer = response.getWriter();
             final ResourceResolver resolver = request.getResourceResolver();
             final Map<String, Object> properties = new HashMap<>();
+            properties.put("html-css-classes", getHtmlCssClasses("composum-dashboard__page"));
             properties.put("title", xssapi.encodeForHTML(getTitle(request)));
             properties.put("home-url", xssapi.encodeForHTMLAttr(StringUtils.defaultString(homeUrl, getPagePath(request) + ".html")));
             properties.put("dashboardPath", getPagePath(request));

@@ -218,7 +218,8 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
             }
             if (maxDepth == null || depth < maxDepth) {
                 for (final Resource child : resource.getChildren()) {
-                    if (resourceFilter.isAllowedResource(child)) {
+                    if (resourceFilter.isAllowedResource(child) &&
+                            !(sourceMode && depth > 0 && NT_FILE.equals(child.getValueMap().get(JCR_PRIMARY_TYPE)))) {
                         final String childName = child.getName();
                         if (!JCR_CONTENT.equals(childName)) {
                             dumpXml(request, writer, indent + this.indent, child, depth + 1, maxDepth);
@@ -342,24 +343,26 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
             final String propertyName = entry.getKey();
             if (isAllowedProperty(propertyName)) {
                 extractNamespace(keys, propertyName);
-                if (JCR_PRIMARY_TYPE.equals(propertyName) ||
-                        JCR_MIXIN_TYPES.equals(propertyName)) {
+                if (JCR_PRIMARY_TYPE.equals(propertyName)) {
                     extractNamespace(keys, entry.getValue());
+                } else if (JCR_MIXIN_TYPES.equals(propertyName)) {
+                    extractNamespace(keys, sourceMode
+                            ? filterValues(entry.getValue(), NON_SOURCE_MIXINS) : entry.getValue());
                 }
             }
         }
         if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")
                 || isTranslationsRootFolder(resource)) {
             maxDepth = null;
-        } else {
-            final Resource content = resource.getChild(JCR_CONTENT);
-            if (content != null && resourceFilter.isAllowedResource(content)) {
-                determineNamespaces(keys, content, depth + 1, maxDepth);
-            }
+        }
+        final Resource content = resource.getChild(JCR_CONTENT);
+        if (content != null && resourceFilter.isAllowedResource(content)) {
+            determineNamespaces(keys, content, depth + 1, maxDepth);
         }
         if (maxDepth == null || depth < maxDepth) {
             for (final Resource child : resource.getChildren()) {
-                if (resourceFilter.isAllowedResource(child)) {
+                if (resourceFilter.isAllowedResource(child) &&
+                        !(sourceMode && depth > 0 && NT_FILE.equals(child.getValueMap().get(JCR_PRIMARY_TYPE)))) {
                     determineNamespaces(keys, child, depth + 1, maxDepth);
                 }
             }

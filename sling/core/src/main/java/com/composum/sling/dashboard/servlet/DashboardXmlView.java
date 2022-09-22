@@ -211,11 +211,10 @@ public class DashboardXmlView extends AbstractSourceView implements ContentGener
         } else {
             if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
                 maxDepth = null;
-            } else {
-                final Resource content = resource.getChild(JCR_CONTENT);
-                if (content != null && resourceFilter.isAllowedResource(content)) {
-                    dumpXml(request, writer, indent + this.indent, content, depth + 1, maxDepth);
-                }
+            }
+            final Resource content = resource.getChild(JCR_CONTENT);
+            if (content != null && resourceFilter.isAllowedResource(content)) {
+                dumpXml(request, writer, indent + this.indent, content, depth + 1, maxDepth);
             }
             if (maxDepth == null || depth < maxDepth) {
                 for (final Resource child : resource.getChildren()) {

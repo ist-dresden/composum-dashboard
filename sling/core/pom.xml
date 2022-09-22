@@ -29,9 +29,6 @@
                         <Export-Package>
                             com.composum.sling.dashboard.*
                         </Export-Package>
-                        <Sling-Model-Packages>
-                            com.composum.sling.dashboard.model
-                        </Sling-Model-Packages>
                     </instructions>
                 </configuration>
             </plugin>

@@ -194,12 +194,11 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             final String name = resource.getName();
             if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
                 maxDepth = null;
-            } else {
-                final Resource content = resource.getChild(JCR_CONTENT);
-                if (content != null && resourceFilter.isAllowedResource(content)) {
-                    writer.name(content.getName());
-                    dumpJson(writer, content, depth + 1, maxDepth);
-                }
+            }
+            final Resource content = resource.getChild(JCR_CONTENT);
+            if (content != null && resourceFilter.isAllowedResource(content)) {
+                writer.name(content.getName());
+                dumpJson(writer, content, depth + 1, maxDepth);
             }
             if (maxDepth == null || depth < maxDepth) {
                 for (final Resource child : resource.getChildren()) {

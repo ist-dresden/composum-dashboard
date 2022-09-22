@@ -136,6 +136,11 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return StringUtils.join(cssClasses, " ");
     }
 
+    @Deprecated(since = "1.1.2 - use prepareTextResponse()")
+    protected void prepareHtmlResponse(@NotNull final HttpServletResponse response) {
+        prepareTextResponse(response, null);
+    }
+
     protected void prepareTextResponse(@NotNull final HttpServletResponse response, @Nullable String contentType) {
         response.setHeader("Cache-Control", "no-cache");
         response.addHeader("Cache-Control", "no-store");

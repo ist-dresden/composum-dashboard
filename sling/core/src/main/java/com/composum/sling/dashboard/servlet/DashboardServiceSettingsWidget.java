@@ -130,15 +130,12 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
 
     protected transient List<SettingsRule> configuration;
 
-    protected transient BundleContext bundleContext;
-
     @Activate
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) {
         super.activate(bundleContext,
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
-        this.bundleContext = bundleContext;
         configuration = new ArrayList<>();
         for (final String rule : config.inspectedSettings()) {
             if (StringUtils.isNotBlank(rule)) {

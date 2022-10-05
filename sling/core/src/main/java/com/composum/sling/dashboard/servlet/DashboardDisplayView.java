@@ -106,12 +106,6 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
 
     enum Type {PREVIEW, TEXT, CODE, IMAGE, VIDEO, DOCUMENT, BINARY, UNKNOWN}
 
-    public static final String JCR_MIME_TYPE = "jcr:mimeType";
-    public static final String JCR_CONTENT = "jcr:content";
-    public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
-    public static final String SLING_RESOURCE_TYPE = "sling:resourceType";
-    public static final String JCR_DATA = "jcr:data";
-
     @Reference
     protected XSSAPI xssapi;
 

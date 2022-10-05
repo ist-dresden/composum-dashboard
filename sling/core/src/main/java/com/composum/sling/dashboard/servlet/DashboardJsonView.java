@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
@@ -147,7 +148,8 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 prepareTextResponse(response, contentType);
                 final JsonWriter writer = new JsonWriter(response.getWriter());
                 writer.setIndent(this.indent);
-                dumpJson(writer, targetResource, 0, maxDepth);
+                dumpJson(writer, targetResource, 0, maxDepth,
+                        resourceFilter, this::isAllowedProperty, this::isAllowedMixin);
             } else {
                 final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                 if (StringUtils.isNotBlank(widgetUri)) {
@@ -172,7 +174,8 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 try (final StringWriter content = new StringWriter();
                      final JsonWriter jsonWriter = new JsonWriter(content)) {
                     jsonWriter.setIndent(this.indent);
-                    dumpJson(jsonWriter, targetResource, 0, maxDepth);
+                    dumpJson(jsonWriter, targetResource, 0, maxDepth,
+                            resourceFilter, this::isAllowedProperty, this::isAllowedMixin);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);
@@ -183,14 +186,17 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
     }
 
     @Override
-    public void dumpJson(@NotNull final JsonWriter writer, @NotNull final Resource resource,
-                         int depth, @Nullable Integer maxDepth)
+    public void dumpJson(@NotNull final JsonWriter writer,
+                         @NotNull final Resource resource, int depth, @Nullable Integer maxDepth,
+                         @NotNull final ResourceFilter resourceFilter,
+                         @NotNull final Function<String, Boolean> propertyFilter,
+                         @Nullable final Function<String, Boolean> mixinFilter)
             throws IOException {
         if (sourceMode && isTranslationsRootFolder(resource)) {
             dumpTranslationsFolder(writer, resource);
         } else {
             writer.beginObject();
-            jsonProperties(writer, resource);
+            jsonProperties(writer, resource, propertyFilter, mixinFilter);
             final String name = resource.getName();
             if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
                 maxDepth = null;
@@ -198,15 +204,15 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             final Resource content = resource.getChild(JCR_CONTENT);
             if (content != null && resourceFilter.isAllowedResource(content)) {
                 writer.name(content.getName());
-                dumpJson(writer, content, depth + 1, maxDepth);
+                dumpJson(writer, content, depth + 1, maxDepth, resourceFilter, propertyFilter, mixinFilter);
             }
-            if (maxDepth == null || depth < maxDepth) {
+            if (maxDepth == null || depth + 1 < maxDepth) {
                 for (final Resource child : resource.getChildren()) {
                     if (resourceFilter.isAllowedResource(child)) {
                         final String childName = child.getName();
                         if (!JCR_CONTENT.equals(childName)) {
                             writer.name(childName);
-                            dumpJson(writer, child, depth + 1, maxDepth);
+                            dumpJson(writer, child, depth + 1, maxDepth, resourceFilter, propertyFilter, mixinFilter);
                         }
                     }
                 }
@@ -215,18 +221,20 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         }
     }
 
-    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource)
+    protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource,
+                                  @NotNull final Function<String, Boolean> propertyFilter,
+                                  @Nullable final Function<String, Boolean> mixinFilter)
             throws IOException {
         final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
         for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
             final String name = property.getKey();
-            if (isAllowedProperty(name)) {
+            if (propertyFilter.apply(name)) {
                 if (JCR_PRIMARY_TYPE.equals(name)) {
                     writer.name(name);
                     Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
                 } else {
-                    if (sourceMode && JCR_MIXIN_TYPES.equals(name)) {
-                        final Object values = filterValues(property.getValue(), NON_SOURCE_MIXINS);
+                    if (mixinFilter != null && JCR_MIXIN_TYPES.equals(name)) {
+                        final Object values = filterValues(property.getValue(), mixinFilter);
                         if (values instanceof String[] && ((String[]) values).length > 0) {
                             Arrays.sort((String[]) values);
                             properties.put(name, values);

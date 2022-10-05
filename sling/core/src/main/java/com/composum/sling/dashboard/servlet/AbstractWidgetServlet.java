@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import java.util.regex.Pattern;
+import java.util.function.Function;
 
 public abstract class AbstractWidgetServlet extends AbstractDashboardServlet implements DashboardWidget {
 
@@ -319,18 +319,12 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         copyResource(getClass(), PLUGIN_BASE + "page/tail.html", writer, Collections.emptyMap());
     }
 
-    protected @Nullable Object filterValues(@Nullable Object value, @NotNull final Collection<Pattern> blacklist) {
+    protected @Nullable Object filterValues(@Nullable Object value,
+                                            @Nullable final Function<String, Boolean> mixinFilter) {
         if (value instanceof String[]) {
             List<String> values = new ArrayList<>();
             for (String string : (String[]) value) {
-                boolean skip = false;
-                for (Pattern pattern : blacklist) {
-                    if (pattern.matcher(string).matches()) {
-                        skip = true;
-                        break;
-                    }
-                }
-                if (!skip) {
+                if (mixinFilter == null || mixinFilter.apply(string)) {
                     values.add(string);
                 }
             }

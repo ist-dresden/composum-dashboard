@@ -70,13 +70,13 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
                         Collections.singletonMap("targetUrl",
                                 getWidgetUri(request, defaultResourceType(), HTML_MODES, OPTION_LOAD)
                                         + targetResource.getPath()), Locale.ENGLISH, this.getClass());
-                prepareTextResponse(response,null);
+                prepareTextResponse(response, null);
                 IOUtils.copy(reader, writer);
             }
         }
     }
 
-    protected boolean isAllowedProperty(@NotNull final String name) {
+    public boolean isAllowedProperty(@NotNull final String name) {
         if (getResourceFilter().isAllowedProperty(name)) {
             if (sourceMode) {
                 for (Pattern disabled : NON_SOURCE_PROPS) {
@@ -88,5 +88,14 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
             return true;
         }
         return false;
+    }
+
+    public boolean isAllowedMixin(@NotNull String value) {
+        for (Pattern pattern : NON_SOURCE_MIXINS) {
+            if (pattern.matcher(value).matches()) {
+                return false;
+            }
+        }
+        return true;
     }
 }

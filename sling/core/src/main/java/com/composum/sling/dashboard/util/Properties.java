@@ -159,7 +159,11 @@ public class Properties {
             } else if (value instanceof Collection) {
                 toXmlArray(writer, ((Collection<?>) value).toArray(), dateFormat);
             } else {
-                writer.append(xmlString(value, dateFormat));
+                String string = xmlString(value, dateFormat);
+                if (string.startsWith("[") || string.startsWith("{")) {
+                    string = "\\" + string;
+                }
+                writer.append(string);
             }
         }
     }

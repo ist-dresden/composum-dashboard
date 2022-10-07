@@ -156,7 +156,7 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                 final PrintWriter writer = new PrintWriter(response.getWriter());
                 try {
                     dumpXml(writer, "", targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, this::isAllowedMixin);
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
                 } catch (RepositoryException ignore) {
                 }
             } else {
@@ -183,7 +183,7 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                 try (final StringWriter content = new StringWriter();
                      final PrintWriter xmlWriter = new PrintWriter(content)) {
                     dumpXml(xmlWriter, "", targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, this::isAllowedMixin);
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);

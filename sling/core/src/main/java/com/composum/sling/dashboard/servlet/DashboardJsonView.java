@@ -149,7 +149,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 final JsonWriter writer = new JsonWriter(response.getWriter());
                 writer.setIndent(this.indent);
                 dumpJson(writer, targetResource, 0, maxDepth,
-                        resourceFilter, this::isAllowedProperty, this::isAllowedMixin);
+                        resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
             } else {
                 final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                 if (StringUtils.isNotBlank(widgetUri)) {
@@ -175,7 +175,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                      final JsonWriter jsonWriter = new JsonWriter(content)) {
                     jsonWriter.setIndent(this.indent);
                     dumpJson(jsonWriter, targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, this::isAllowedMixin);
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);

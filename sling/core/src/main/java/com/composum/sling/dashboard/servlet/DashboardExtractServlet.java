@@ -17,6 +17,7 @@ import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.api.servlets.SlingAllMethodsServlet;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.service.component.annotations.Activate;
@@ -45,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -62,6 +64,8 @@ import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_
 import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_CREATED;
 import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_DATA;
 import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_LAST_MODIFIED;
+import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_MIME_TYPE;
+import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_MIXIN_TYPES;
 import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_PRIMARY_TYPE;
 import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.NT_FILE;
 import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.NT_RESOURCE;
@@ -534,10 +538,24 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
             final String zipName = resource.getPath().replaceAll("/jcr:content(/.+)?", "/_jcr_content$1");
             ZipEntry entry;
             if (NT_FILE.equals(primaryType)) {
-                try (InputStream data = Optional.ofNullable(properties.get(JCR_DATA, InputStream.class))
-                        .orElse(Optional.ofNullable(resource.getChild(JCR_CONTENT)).map(
-                                content -> content.getValueMap().get(JCR_DATA, InputStream.class)).orElse(null))) {
+                final Resource content = resource.getChild(JCR_CONTENT);
+                final ValueMap contentProps = Optional.ofNullable(content).map(Resource::getValueMap)
+                        .orElse(new ValueMapDecorator(Collections.emptyMap()));
+                try (InputStream data = Optional.ofNullable(contentProps.get(JCR_DATA, InputStream.class))
+                        .orElse(properties.get(JCR_DATA, InputStream.class))) {
                     if (data != null) {
+                        if (properties.get(JCR_MIME_TYPE, String.class) != null
+                                || contentProps.get(JCR_MIME_TYPE, String.class) != null
+                                || properties.get(JCR_MIXIN_TYPES, new String[0]).length > 0
+                                || contentProps.get(JCR_MIXIN_TYPES, new String[0]).length > 0
+                                || !NT_RESOURCE.equals(contentProps.get(JCR_PRIMARY_TYPE, String.class))) {
+                            // 'decorated' file, not only a primitive file...
+                            entry = new ZipEntry(zipName + ".dir/.content.xml");
+                            setLastModified(entry, resource);
+                            zipStream.putNextEntry(entry);
+                            writeXmlToZip(zipStream, resource, 1);
+                            zipStream.closeEntry();
+                        }
                         entry = new ZipEntry(zipName);
                         setLastModified(entry, resource);
                         zipStream.putNextEntry(entry);
@@ -551,15 +569,20 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                 entry = new ZipEntry(zipName + "/.content.xml");
                 setLastModified(entry, resource);
                 zipStream.putNextEntry(entry);
-                try {
-                    final ExtractFilter filter = new ExtractFilter();
-                    final PrintWriter writer = new PrintWriter(zipStream);
-                    xmlRenderer.dumpXml(writer, "", resource, 0, isFolder || hasContent ? 1 : null,
-                            filter, filter::isAllowedProperty, xmlRenderer::isAllowedMixin);
-                    writer.flush();
-                } catch (RepositoryException ignore) {
-                }
+                writeXmlToZip(zipStream, resource, isFolder || hasContent ? 1 : null);
                 zipStream.closeEntry();
+            }
+        }
+
+        protected void writeXmlToZip(@NotNull ZipOutputStream zipStream,
+                                     @NotNull final Resource resource, @Nullable final Integer maxDepth) {
+            try {
+                final ExtractFilter filter = new ExtractFilter();
+                final PrintWriter writer = new PrintWriter(zipStream);
+                xmlRenderer.dumpXml(writer, "", resource, 0, maxDepth,
+                        filter, filter::isAllowedProperty, xmlRenderer::isAllowedMixin);
+                writer.flush();
+            } catch (RepositoryException ignore) {
             }
         }
 

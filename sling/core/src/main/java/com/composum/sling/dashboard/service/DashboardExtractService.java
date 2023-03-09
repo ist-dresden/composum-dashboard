@@ -125,7 +125,7 @@ public class DashboardExtractService implements ResourceExtractService {
                     = StringUtils.substringBeforeLast(targetParentPath, "/"))) {
                 extractResource(sourceParent, targetParentPath, writeParents);
             }
-            extractResource(source, targetPath, false);
+            extractResource(source, targetPath, true);
             final ValueMap properties = source.getValueMap();
             for (final Map.Entry<Pattern, List<String>> entry : additionalZipEntries.entrySet()) {
                 final Pattern pattern = entry.getKey();
@@ -444,28 +444,52 @@ public class DashboardExtractService implements ResourceExtractService {
             }
         }
 
+        /**
+         * @return the first matching path mapping rule of an already registered parent upwards in the hierarchy
+         */
+        protected @Nullable PathMappingRule getRegisteredParentRule(@NotNull final Resource source) {
+            final Resource sourceParent = source.getParent();
+            final String sourceParentPath;
+            if (sourceParent != null
+                    && sourcePathSet.contains(sourceParentPath = sourceParent.getPath())) {
+                final PathMappingRule parentMappingRule = getPathRule(sourceParentPath, sourceParent);
+                return parentMappingRule != null ? parentMappingRule : getRegisteredParentRule(sourceParent);
+            }
+            return null;
+        }
+
         protected void registerReferenceCandidate(@NotNull final String sourcePath, int level) {
             if (level < levelMax && !sourcePathSet.contains(sourcePath)) {
-                final Resource resource = resolver.getResource(sourcePath);
-                if (resource != null) {
-                    final PathMappingRule pathMappingRule = getPathRule(sourcePath, resource);
+                final Resource source = resolver.getResource(sourcePath);
+                if (source != null) {
+                    final PathMappingRule pathMappingRule = getPathRule(sourcePath, source);
                     if (pathMappingRule != null) {
-                        sourcePathSet.add(sourcePath);
+                        final PathMappingRule parentMappingRule = getRegisteredParentRule(source);
+                        // if there is a parent mapping rule of a registered parent resource that's
+                        // determining that all content should be embedded in that parent this source
+                        // should not be exported also, it's already inlcuded in the parent but maybe
+                        // found as a reference and therefore scanned separately here
+                        boolean registerPath = parentMappingRule == null || parentMappingRule.maxDepth != null;
+                        if (registerPath) {
+                            sourcePathSet.add(sourcePath);
+                        }
                         if (StringUtils.isNotBlank(pathMappingRule.targetPathPattern)) {
                             final Matcher sourceMatcher = pathMappingRule.sourcePathPattern.matcher(sourcePath);
                             if (sourceMatcher.matches()) {
                                 final String targetPath = sourceMatcher.replaceFirst(pathMappingRule.targetPathPattern);
                                 if (StringUtils.isNotBlank(targetPath) && !targetPath.equals(sourcePath)) {
                                     sourceToTarget.put(sourcePath, targetPath);
-                                    targetPathSet.add(targetPath);
+                                    if (registerPath) {
+                                        targetPathSet.add(targetPath);
+                                    }
                                 }
                             }
                         }
-                        collectNeededResources(level + 1, resource, 0, pathMappingRule.maxDepth);
+                        collectNeededResources(level + 1, source, 0, pathMappingRule.maxDepth);
                     } else {
                         outsidePaths.add(sourcePath);
                     }
-                    registerParentReferences(resource);
+                    registerParentReferences(source);
                 } else {
                     missedPaths.add(sourcePath);
                 }

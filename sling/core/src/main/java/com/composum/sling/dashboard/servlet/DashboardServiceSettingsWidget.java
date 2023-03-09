@@ -265,9 +265,12 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
                 ServiceReference<?>[] all = bundleContext.getAllServiceReferences(null,
                         StringUtils.isNotBlank(config.filter) ? config.filter : null);
                 for (ServiceReference<?> ref : all) {
+                    Object service;
                     if (config.serviceType.equals(ref.getProperty("service.pid"))
                             || (!config.serviceType.contains("~")
-                            && config.serviceType.equals(ref.getProperty("service.factoryPid")))) {
+                            && config.serviceType.equals(ref.getProperty("service.factoryPid")))
+                            || ((service = bundleContext.getService(ref)) != null
+                            && config.serviceType.equals(service.getClass().getName()))) {
                         serviceReferences.add(ref);
                         break;
                     }

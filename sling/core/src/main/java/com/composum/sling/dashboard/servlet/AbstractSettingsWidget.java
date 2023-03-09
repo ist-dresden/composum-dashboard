@@ -1,6 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.ResourceFilter;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.Properties;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
@@ -21,6 +22,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
+
+import static com.composum.sling.dashboard.DashboardConfig.JSON_DATE_FORMAT;
 
 /**
  * a primitive viewer for the settings of a configured set of services
@@ -96,32 +99,35 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
     protected abstract @NotNull List<String> getHtmlModes();
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
+                      @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        final Resource resource = Optional.ofNullable(resourceFilter().getRequestResource(request)).orElse(request.getResource());
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final String mode = getHtmlMode(request, getHtmlModes());
-        if (!OPTION_JSON.equals(mode) && !"json".equals(pathInfo.getExtension())) {
-            prepareTextResponse(response,null);
-            final PrintWriter writer = response.getWriter();
-            switch (mode) {
-                case OPTION_TILE:
-                    htmlTile(request, response, writer);
-                    break;
-                case OPTION_VIEW:
-                    htmlView(request, response, writer, resource);
-                    break;
-                case OPTION_PAGE:
-                default:
-                    htmlPageHead(writer);
-                    htmlView(request, response, writer, resource);
-                    htmlPageTail(writer);
-                    break;
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final Resource resource = Optional.ofNullable(resourceFilter().getRequestResource(request)).orElse(request.getResource());
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            final String mode = getHtmlMode(request, getHtmlModes());
+            if (!OPTION_JSON.equals(mode) && !"json".equals(pathInfo.getExtension())) {
+                prepareTextResponse(response, null);
+                final PrintWriter writer = response.getWriter();
+                switch (mode) {
+                    case OPTION_TILE:
+                        htmlTile(request, response, writer);
+                        break;
+                    case OPTION_VIEW:
+                        htmlView(request, response, writer, resource);
+                        break;
+                    case OPTION_PAGE:
+                    default:
+                        htmlPageHead(writer);
+                        htmlView(request, response, writer, resource);
+                        htmlPageTail(writer);
+                        break;
+                }
+            } else {
+                response.setContentType("application/json;charset=UTF-8");
+                final JsonWriter writer = new JsonWriter(response.getWriter());
+                dumpJson(request, response, writer);
             }
-        } else {
-            response.setContentType("application/json;charset=UTF-8");
-            final JsonWriter writer = new JsonWriter(response.getWriter());
-            dumpJson(request, response, writer);
         }
     }
 

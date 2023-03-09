@@ -5,6 +5,7 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.TraceManager;
 import com.composum.sling.dashboard.service.TraceService;
 import com.composum.sling.dashboard.service.TraceService.Level;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.google.gson.stream.JsonWriter;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
@@ -137,33 +138,35 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
     */
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request,
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        //simulateTrace();
-        final PrintWriter writer = response.getWriter();
-        final String mode = getHtmlMode(request, HTML_MODES);
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        if ("json".equals(pathInfo.getExtension())) {
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            //simulateTrace();
+            final PrintWriter writer = response.getWriter();
+            final String mode = getHtmlMode(request, HTML_MODES);
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            if ("json".equals(pathInfo.getExtension())) {
 
-        } else {
-            switch (mode) {
-                case OPTION_TILE:
-                    htmlTile(request, response, writer);
-                    return;
-                case OPTION_VIEW:
-                    htmlView(request, response, writer);
-                    return;
-                case OPTION_PAGE:
-                default:
-                    prepareTextResponse(response, null);
-                    htmlPageHead(writer);
-                    htmlView(request, response, writer);
-                    htmlPageTail(writer, "/com/composum/sling/dashboard/commons/script.js");
-                    return;
+            } else {
+                switch (mode) {
+                    case OPTION_TILE:
+                        htmlTile(request, response, writer);
+                        return;
+                    case OPTION_VIEW:
+                        htmlView(request, response, writer);
+                        return;
+                    case OPTION_PAGE:
+                    default:
+                        prepareTextResponse(response, null);
+                        htmlPageHead(writer);
+                        htmlView(request, response, writer);
+                        htmlPageTail(writer, "/com/composum/sling/dashboard/commons/script.js");
+                        return;
+                }
             }
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
-        response.sendError(HttpServletResponse.SC_NOT_FOUND);
     }
 
     protected void htmlTile(@NotNull final SlingHttpServletRequest request,

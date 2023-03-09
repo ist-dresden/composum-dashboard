@@ -24,7 +24,6 @@ import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -34,27 +33,15 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-import java.util.regex.Pattern;
+
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_TITLE;
+import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
     public static final String SELECTOR_CREATE_CONTENT = "create.content";
-
-    public static final String JCR_CONTENT = "jcr:content";
-    public static final String JCR_TITLE = "jcr:title";
-    public static final String JCR_DATA = "jcr:data";
-    public static final String JCR_PRIMARY_TYPE = "jcr:primaryType";
-    public static final String JCR_MIXIN_TYPES = "jcr:mixinTypes";
-    public static final String JCR_LAST_MODIFIED = "jcr:lastModified";
-    public static final String JCR_CREATED = "jcr:created";
-    public static final String JCR_MIME_TYPE = "jcr:mimeType";
-    public static final String SLING_RESOURCE_TYPE = "sling:resourceType";
-    public static final String NT_UNSTRUCTURED = "nt:unstructured";
-    public static final String NT_RESOURCE = "nt:resource";
-    public static final String NT_FILE = "nt:file";
-
-    public static final String JSON_DATE_FORMAT = "yyyy-MM-dd MM:mm:ss.SSSZ";
-    public static final String XML_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX";
 
     protected String resourceType;
     protected List<String> resourceTypes;
@@ -222,20 +209,6 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         if (!response.isCommitted()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
-    }
-
-    public static String getFirstProperty(@Nullable final String[] stringSet, final String defaultValue) {
-        return stringSet != null && stringSet.length > 0 ? stringSet[0] : defaultValue;
-    }
-
-    public static List<Pattern> patternList(@Nullable final String[] config) {
-        List<Pattern> patterns = new ArrayList<>();
-        for (String rule : config) {
-            if (StringUtils.isNotBlank(rule)) {
-                patterns.add(Pattern.compile(rule));
-            }
-        }
-        return patterns;
     }
 }
 

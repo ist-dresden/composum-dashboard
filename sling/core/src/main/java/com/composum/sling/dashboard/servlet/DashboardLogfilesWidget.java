@@ -2,6 +2,7 @@ package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
@@ -253,42 +254,44 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request,
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        final PrintWriter writer = response.getWriter();
-        final String mode = getHtmlMode(request, HTML_MODES);
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        String logfile = pathInfo.getSuffix();
-        if (StringUtils.isNotBlank(logfile) && !logFiles.contains(logfile)) {
-            logfile = null;
-        }
-        final LoggerSession session = !OPTION_TILE.equals(mode) && StringUtils.isNotBlank(logfile)
-                ? getLoggerSession(request, logfile, OPTION_PAGE.equals(mode) || resetTriggered(request))
-                : null;
-        switch (mode) {
-            case OPTION_TILE:
-                htmlTile(request, response, writer);
-                return;
-            case OPTION_VIEW:
-            default:
-                htmlView(request, response, session, writer);
-                return;
-            case OPTION_TAIL:
-                if (session != null) {
-                    response.setContentType("text/plain;charset=UTF-8");
-                    htmlTail(request, response, session, writer);
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final PrintWriter writer = response.getWriter();
+            final String mode = getHtmlMode(request, HTML_MODES);
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            String logfile = pathInfo.getSuffix();
+            if (StringUtils.isNotBlank(logfile) && !logFiles.contains(logfile)) {
+                logfile = null;
+            }
+            final LoggerSession session = !OPTION_TILE.equals(mode) && StringUtils.isNotBlank(logfile)
+                    ? getLoggerSession(request, logfile, OPTION_PAGE.equals(mode) || resetTriggered(request))
+                    : null;
+            switch (mode) {
+                case OPTION_TILE:
+                    htmlTile(request, response, writer);
                     return;
-                }
-                break;
-            case OPTION_PAGE:
-                prepareTextResponse(response, null);
-                htmlPageHead(writer);
-                htmlView(request, response, session, writer);
-                htmlPageTail(writer);
-                return;
+                case OPTION_VIEW:
+                default:
+                    htmlView(request, response, session, writer);
+                    return;
+                case OPTION_TAIL:
+                    if (session != null) {
+                        response.setContentType("text/plain;charset=UTF-8");
+                        htmlTail(request, response, session, writer);
+                        return;
+                    }
+                    break;
+                case OPTION_PAGE:
+                    prepareTextResponse(response, null);
+                    htmlPageHead(writer);
+                    htmlView(request, response, session, writer);
+                    htmlPageTail(writer);
+                    return;
+            }
+            response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
-        response.sendError(HttpServletResponse.SC_NOT_FOUND);
     }
 
     protected boolean resetTriggered(@NotNull final SlingHttpServletRequest request) {

@@ -30,6 +30,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
+
 public abstract class AbstractWidgetServlet extends AbstractDashboardServlet implements DashboardWidget {
 
     protected static final String OPTION_TILE = "tile";

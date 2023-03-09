@@ -1,6 +1,5 @@
 package com.composum.sling.dashboard.service;
 
-import com.composum.sling.dashboard.servlet.AbstractWidgetServlet;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -46,8 +45,10 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.NT_UNSTRUCTURED;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
+import static com.composum.sling.dashboard.DashboardConfig.patternList;
+
 
 @Component(
         service = {DashboardManager.class, ResourceFilter.class},
@@ -119,7 +120,7 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
     };
 
     @Reference
-    protected SlingSettingsService settingsService;
+    private SlingSettingsService settingsService;
 
     protected List<Pattern> allowedPropertyPatterns;
     protected List<Pattern> disabledPropertyPatterns;
@@ -155,10 +156,10 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
     @Activate
     @Modified
     protected void activate(Config config) {
-        allowedPropertyPatterns = AbstractWidgetServlet.patternList(config.allowedPropertyPatterns());
-        disabledPropertyPatterns = AbstractWidgetServlet.patternList(config.disabledPropertyPatterns());
-        allowedPathPatterns = AbstractWidgetServlet.patternList(config.allowedPathPatterns());
-        disabledPathPatterns = AbstractWidgetServlet.patternList(config.disabledPathPatterns());
+        allowedPropertyPatterns = patternList(config.allowedPropertyPatterns());
+        disabledPropertyPatterns = patternList(config.disabledPropertyPatterns());
+        allowedPathPatterns = patternList(config.allowedPathPatterns());
+        disabledPathPatterns = patternList(config.disabledPathPatterns());
         sortableTypes = Arrays.asList(Optional.ofNullable(config.sortableTypes()).orElse(new String[0]));
         cssRunmodes = Arrays.asList(Optional.ofNullable(config.cssRunmodes()).orElse(new String[0]));
         contentPageType = Arrays.asList(StringUtils.split(config.contentPageType(), "/"));

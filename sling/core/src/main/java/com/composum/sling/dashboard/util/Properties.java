@@ -19,7 +19,7 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 
-import static com.composum.sling.dashboard.servlet.AbstractDashboardServlet.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
 
 public class Properties {
 

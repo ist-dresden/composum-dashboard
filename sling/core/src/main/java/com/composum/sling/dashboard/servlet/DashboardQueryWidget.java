@@ -4,6 +4,7 @@ import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.JsonRenderer;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.JcrQuery;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
@@ -155,41 +156,44 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
+                      @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final String mode = getHtmlMode(request, HTML_MODES);
-        if (OPTION_LOAD.equals(mode) || OPTION_JSON.equals(mode) || "json".equals(pathInfo.getExtension())) {
-            if (OPTION_LOAD.equals(mode)) {
-                final Resource resource = resourceFilter.getRequestResource(request);
-                if (resource != null) {
-                    response.setContentType("text/plain;charset=UTF-8");
-                    jsonData(response.getWriter(), resource);
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            final String mode = getHtmlMode(request, HTML_MODES);
+            if (OPTION_LOAD.equals(mode) || OPTION_JSON.equals(mode) || "json".equals(pathInfo.getExtension())) {
+                if (OPTION_LOAD.equals(mode)) {
+                    final Resource resource = resourceFilter.getRequestResource(request);
+                    if (resource != null) {
+                        response.setContentType("text/plain;charset=UTF-8");
+                        jsonData(response.getWriter(), resource);
+                    }
+                } else {
+                    response.setContentType("application/json;charset=UTF-8");
+                    final JsonWriter writer = new JsonWriter(response.getWriter());
+                    //jsonFind(request, response, writer);
                 }
             } else {
-                response.setContentType("application/json;charset=UTF-8");
-                final JsonWriter writer = new JsonWriter(response.getWriter());
-                //jsonFind(request, response, writer);
-            }
-        } else {
-            prepareTextResponse(response, null);
-            final PrintWriter writer = response.getWriter();
-            switch (mode) {
-                case OPTION_FIND:
-                    htmlFind(request, response, writer);
-                    break;
-                case OPTION_TILE:
-                    htmlTile(request, response, writer);
-                    break;
-                case OPTION_VIEW:
-                    htmlView(request, response, writer);
-                    break;
-                case OPTION_PAGE:
-                default:
-                    htmlPageHead(writer);
-                    htmlView(request, response, writer);
-                    htmlPageTail(writer);
-                    break;
+                prepareTextResponse(response, null);
+                final PrintWriter writer = response.getWriter();
+                switch (mode) {
+                    case OPTION_FIND:
+                        htmlFind(request, response, writer);
+                        break;
+                    case OPTION_TILE:
+                        htmlTile(request, response, writer);
+                        break;
+                    case OPTION_VIEW:
+                        htmlView(request, response, writer);
+                        break;
+                    case OPTION_PAGE:
+                    default:
+                        htmlPageHead(writer);
+                        htmlView(request, response, writer);
+                        htmlPageTail(writer);
+                        break;
+                }
             }
         }
     }
@@ -230,10 +234,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     protected void htmlFind(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response,
                             @NotNull final PrintWriter writer) {
-        final String pattern = xssFilter.filter(StringUtils
-                        .defaultString(request.getParameter("query"), ""))
-                .replaceAll("&quot;", "\"")
-                .replaceAll("\"(.*)&amp;(.*)\"", "\"$1&$2\"");
+        final String pattern = request.getParameter("query");
         final JcrQuery query = StringUtils.isNotBlank(pattern) ? new JcrQuery(pattern) : null;
         writer.append("<table class=\"table table-sm table-striped\"><thead><tr class=\"query\"><th scope=\"col\" colspan=\"3\">")
                 .append(xssapi.encodeForHTML(query != null ? query.getQuery() : ""))

@@ -1,9 +1,10 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
-import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -51,6 +52,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 
 /**
  * a primitive repository browser for a simple repository content visualization
@@ -243,30 +248,32 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request,
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
                       @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        if ("html".equals(pathInfo.getExtension())) {
-            switch (getHtmlMode(request, HTML_MODES)) {
-                case OPTION_TREE:
-                    jsonTree(request, response);
-                    break;
-                case OPTION_VIEW:
-                    htmlView(request, response);
-                    break;
-                case OPTION_TOOL:
-                    htmlTool(request, response);
-                    break;
-                case OPTION_PAGE:
-                default:
-                    if (!createContent(request, response, dashboardManager, this)) {
-                        browserPage(request, response);
-                    }
-                    break;
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            if ("html".equals(pathInfo.getExtension())) {
+                switch (getHtmlMode(request, HTML_MODES)) {
+                    case OPTION_TREE:
+                        jsonTree(request, response);
+                        break;
+                    case OPTION_VIEW:
+                        htmlView(request, response);
+                        break;
+                    case OPTION_TOOL:
+                        htmlTool(request, response);
+                        break;
+                    case OPTION_PAGE:
+                    default:
+                        if (!createContent(request, response, dashboardManager, this)) {
+                            browserPage(request, response);
+                        }
+                        break;
+                }
+            } else {
+                jsonTree(request, response);
             }
-        } else {
-            jsonTree(request, response);
         }
     }
 

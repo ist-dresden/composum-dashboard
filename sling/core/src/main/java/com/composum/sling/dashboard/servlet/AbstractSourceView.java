@@ -21,6 +21,10 @@ import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIXIN_TYPES;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
+
 public abstract class AbstractSourceView extends AbstractWidgetServlet {
 
     public static final String OPTION_LOAD = "load";

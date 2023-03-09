@@ -4,6 +4,7 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.JsonRenderer;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.Properties;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import com.google.gson.stream.JsonWriter;
@@ -43,6 +44,10 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIXIN_TYPES;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JSON_DATE_FORMAT;
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = {Servlet.class, DashboardWidget.class, JsonRenderer.class, ContentGenerator.class},
@@ -138,28 +143,31 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
+                      @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final Resource targetResource = resourceFilter.getRequestResource(request);
-        if (targetResource != null) {
-            final String mode = getHtmlMode(request, HTML_MODES);
-            if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
-                prepareTextResponse(response, contentType);
-                final JsonWriter writer = new JsonWriter(response.getWriter());
-                writer.setIndent(this.indent);
-                dumpJson(writer, targetResource, 0, maxDepth,
-                        resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
-            } else {
-                final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
-                if (StringUtils.isNotBlank(widgetUri)) {
-                    preview(request, response, targetResource);
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            final Resource targetResource = resourceFilter.getRequestResource(request);
+            if (targetResource != null) {
+                final String mode = getHtmlMode(request, HTML_MODES);
+                if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
+                    prepareTextResponse(response, contentType);
+                    final JsonWriter writer = new JsonWriter(response.getWriter());
+                    writer.setIndent(this.indent);
+                    dumpJson(writer, targetResource, 0, maxDepth,
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
                 } else {
-                    jsonCode(request, response, targetResource);
+                    final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
+                    if (StringUtils.isNotBlank(widgetUri)) {
+                        preview(request, response, targetResource);
+                    } else {
+                        jsonCode(request, response, targetResource);
+                    }
                 }
+            } else {
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
-        } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 

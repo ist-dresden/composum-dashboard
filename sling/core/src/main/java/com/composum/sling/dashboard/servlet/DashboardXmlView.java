@@ -4,6 +4,7 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.service.XmlRenderer;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.Properties;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
@@ -47,6 +48,11 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIXIN_TYPES;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
+import static com.composum.sling.dashboard.DashboardConfig.XML_DATE_FORMAT;
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = {Servlet.class, DashboardWidget.class, XmlRenderer.class, ContentGenerator.class},
@@ -142,33 +148,37 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request, @NotNull final SlingHttpServletResponse response)
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
+                      @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final Resource targetResource = resourceFilter.getRequestResource(request);
-        if (targetResource != null) {
-            final String mode = getHtmlMode(request, HTML_MODES);
-            if (OPTION_LOAD.equals(mode) || "xml".equals(pathInfo.getExtension())) {
-                prepareTextResponse(response, contentType);
-                if (sourceMode) {
-                    response.setHeader("Content-Disposition", "inline; filename=.content.xml");
-                }
-                final PrintWriter writer = new PrintWriter(response.getWriter());
-                try {
-                    dumpXml(writer, "", targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
-                } catch (RepositoryException ignore) {
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final RequestPathInfo pathInfo = request.getRequestPathInfo();
+            final Resource targetResource = resourceFilter.getRequestResource(request);
+            if (targetResource != null) {
+                final String mode = getHtmlMode(request, HTML_MODES);
+                if (OPTION_LOAD.equals(mode) || "xml".equals(pathInfo.getExtension())) {
+                    prepareTextResponse(response, contentType);
+                    if (sourceMode) {
+                        response.setHeader("Content-Disposition", "inline; filename=.content.xml");
+                    }
+                    final PrintWriter writer = new PrintWriter(response.getWriter());
+                    try {
+                        dumpXml(writer, "", targetResource, 0, maxDepth,
+                                resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null,
+                                null);
+                    } catch (RepositoryException ignore) {
+                    }
+                } else {
+                    final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
+                    if (StringUtils.isNotBlank(widgetUri)) {
+                        preview(request, response, targetResource);
+                    } else {
+                        xmlCode(request, response, targetResource);
+                    }
                 }
             } else {
-                final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
-                if (StringUtils.isNotBlank(widgetUri)) {
-                    preview(request, response, targetResource);
-                } else {
-                    xmlCode(request, response, targetResource);
-                }
+                response.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
-        } else {
-            response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 
@@ -183,7 +193,8 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                 try (final StringWriter content = new StringWriter();
                      final PrintWriter xmlWriter = new PrintWriter(content)) {
                     dumpXml(xmlWriter, "", targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null,
+                            null);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);
@@ -199,7 +210,8 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                         @NotNull final Resource resource, int depth, @Nullable Integer maxDepth,
                         @NotNull final ResourceFilter resourceFilter,
                         @NotNull final Function<String, Boolean> propertyFilter,
-                        @Nullable final Function<String, Boolean> mixinFilter)
+                        @Nullable final Function<String, Boolean> mixinFilter,
+                        @Nullable final Function<Object, Object> transformer)
             throws RepositoryException {
         final String name = resource.getName();
         if (depth == 0) {
@@ -212,7 +224,8 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
         } else {
             writer.append(indent).append("<").append(xmlName(name));
         }
-        xmlProperties(writer, indent + this.indent + this.indent, resource, propertyFilter, mixinFilter);
+        xmlProperties(writer, indent + this.indent + this.indent, resource,
+                propertyFilter, mixinFilter, transformer);
         writer.append(">\n");
         if (sourceMode && isTranslationsRootFolder(resource)) {
             dumpTranslationsFolder(writer, indent + this.indent, resource);
@@ -223,7 +236,7 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
             final Resource content = resource.getChild(JCR_CONTENT);
             if (content != null && resourceFilter.isAllowedResource(content)) {
                 dumpXml(writer, indent + this.indent, content, depth + 1, maxDepth,
-                        resourceFilter, propertyFilter, mixinFilter);
+                        resourceFilter, propertyFilter, mixinFilter, transformer);
             }
             if (maxDepth == null || depth + 1 < maxDepth) {
                 for (final Resource child : resource.getChildren()) {
@@ -232,7 +245,7 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                         final String childName = child.getName();
                         if (!JCR_CONTENT.equals(childName)) {
                             dumpXml(writer, indent + this.indent, child, depth + 1, maxDepth,
-                                    resourceFilter, propertyFilter, mixinFilter);
+                                    resourceFilter, propertyFilter, mixinFilter, transformer);
                         }
                     }
                 }
@@ -248,7 +261,8 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
     protected void xmlProperties(@NotNull final PrintWriter writer, @Nullable final String indent,
                                  @NotNull final Resource resource,
                                  @NotNull final Function<String, Boolean> propertyFilter,
-                                 @Nullable final Function<String, Boolean> mixinFilter) {
+                                 @Nullable final Function<String, Boolean> mixinFilter,
+                                 @Nullable final Function<Object, Object> transformer) {
         final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
         for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
             final String name = property.getKey();
@@ -260,11 +274,11 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                     if (mixinFilter != null && JCR_MIXIN_TYPES.equals(name)) {
                         final Object values = filterValues(value, mixinFilter);
                         if (values instanceof String[] && ((String[]) values).length > 0) {
-                            Arrays.sort((String[]) values);
+                            Arrays.sort((String[]) (transformer != null ? transformer.apply(values) : values));
                             properties.put(name, values);
                         }
                     } else {
-                        properties.put(name, value);
+                        properties.put(name, transformer != null ? transformer.apply(value) : value);
                     }
                 }
             }

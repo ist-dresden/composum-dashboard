@@ -4,6 +4,7 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
@@ -45,6 +46,7 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_TILE;
 import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_VIEW;
 
@@ -185,35 +187,37 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request,
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
                       @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        if (!createContent(request, response, dashboardManager, this)) {
-            final DashboardWidget currentWidget = getCurrentWidget(request);
-            prepareTextResponse(response, null);
-            final PrintWriter writer = response.getWriter();
-            final ResourceResolver resolver = request.getResourceResolver();
-            final Map<String, Object> properties = new HashMap<>();
-            properties.put("html-css-classes", getHtmlCssClasses("composum-dashboard__page"));
-            properties.put("title", xssapi.encodeForHTML(getTitle(request)));
-            properties.put("home-url", xssapi.encodeForHTMLAttr(StringUtils.defaultString(homeUrl, getPagePath(request) + ".html")));
-            properties.put("dashboardPath", getPagePath(request));
-            copyResource(getClass(), PAGE_TEMPLATES + "head.html", writer, properties);
-            htmlNavigation(request, response, writer);
-            if (currentWidget != null) {
-                copyResource(getClass(), PAGE_TEMPLATES + "close.html", writer, properties);
-            }
-            writer.append("</nav>\n");
-            htmlDashboard(request, response, writer);
-            copyResource(getClass(), PAGE_TEMPLATES + "script.html", writer, properties);
-            if (currentWidget != null) {
-                currentWidget.embedScript(writer, OPTION_VIEW);
-            } else {
-                for (final DashboardWidget widget : getWidgets(request)) {
-                    widget.embedScript(writer, OPTION_TILE);
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            if (!createContent(request, response, dashboardManager, this)) {
+                final DashboardWidget currentWidget = getCurrentWidget(request);
+                prepareTextResponse(response, null);
+                final PrintWriter writer = response.getWriter();
+                final ResourceResolver resolver = request.getResourceResolver();
+                final Map<String, Object> properties = new HashMap<>();
+                properties.put("html-css-classes", getHtmlCssClasses("composum-dashboard__page"));
+                properties.put("title", xssapi.encodeForHTML(getTitle(request)));
+                properties.put("home-url", xssapi.encodeForHTMLAttr(StringUtils.defaultString(homeUrl, getPagePath(request) + ".html")));
+                properties.put("dashboardPath", getPagePath(request));
+                copyResource(getClass(), PAGE_TEMPLATES + "head.html", writer, properties);
+                htmlNavigation(request, response, writer);
+                if (currentWidget != null) {
+                    copyResource(getClass(), PAGE_TEMPLATES + "close.html", writer, properties);
                 }
+                writer.append("</nav>\n");
+                htmlDashboard(request, response, writer);
+                copyResource(getClass(), PAGE_TEMPLATES + "script.html", writer, properties);
+                if (currentWidget != null) {
+                    currentWidget.embedScript(writer, OPTION_VIEW);
+                } else {
+                    for (final DashboardWidget widget : getWidgets(request)) {
+                        widget.embedScript(writer, OPTION_TILE);
+                    }
+                }
+                copyResource(getClass(), PAGE_TEMPLATES + "tail.html", writer, properties);
             }
-            copyResource(getClass(), PAGE_TEMPLATES + "tail.html", writer, properties);
         }
     }
 

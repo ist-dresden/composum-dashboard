@@ -14,6 +14,7 @@ public interface XmlRenderer extends SourceRenderer {
                  @NotNull Resource resource, int depth, @Nullable Integer maxDepth,
                  @NotNull final ResourceFilter resourceFilter,
                  @NotNull final Function<String, Boolean> propertyFilter,
-                 @Nullable final Function<String, Boolean> mixinFilter)
+                 @Nullable final Function<String, Boolean> mixinFilter,
+                 @Nullable final Function<Object, Object> transformer)
             throws RepositoryException;
 }

@@ -1,8 +1,9 @@
 package com.composum.sling.dashboard.servlet;
 
-import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -42,6 +43,11 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIME_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
 import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
@@ -133,53 +139,55 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest request,
+    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
-        switch (getHtmlMode(request, HTML_MODES)) {
-            case OPTION_VIEW:
-            default:
-                final Resource resource = resourceFilter.getRequestResource(request);
-                if (resource != null) {
-                    final Resource target = getTargetResource(resource);
-                    final Type displayType = getDisplayType(resource);
-                    switch (displayType) {
-                        case PREVIEW:
-                            preview(request, response, displayType, Collections.singletonMap("targetUrl",
-                                    getTargetUrl(resource, "html")));
-                            break;
-                        case DOCUMENT:
-                        default:
-                            preview(request, response, displayType, Collections.singletonMap("targetUrl",
-                                    (loadDocuments ? getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD) : "")
-                                            + getTargetUrl(resource, null)));
-                            break;
-                        case IMAGE:
-                        case VIDEO:
-                        case BINARY:
-                            preview(request, response, displayType, new HashMap<>() {{
-                                put("targetUrl", getTargetUrl(resource, null));
-                                put("targetType", getExtension(target));
-                                put("filename", target.getName());
-                            }});
-                            break;
-                        case TEXT:
-                        case CODE:
-                            preview(request, response, displayType, new HashMap<>() {{
-                                put("targetUrl", getTargetUrl(resource, null));
-                                put("targetType", getExtension(target));
-                                put("filename", target.getName());
-                                put("content", getContent(resource));
-                            }});
-                            break;
+        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            switch (getHtmlMode(request, HTML_MODES)) {
+                case OPTION_VIEW:
+                default:
+                    final Resource resource = resourceFilter.getRequestResource(request);
+                    if (resource != null) {
+                        final Resource target = getTargetResource(resource);
+                        final Type displayType = getDisplayType(resource);
+                        switch (displayType) {
+                            case PREVIEW:
+                                preview(request, response, displayType, Collections.singletonMap("targetUrl",
+                                        getTargetUrl(resource, "html")));
+                                break;
+                            case DOCUMENT:
+                            default:
+                                preview(request, response, displayType, Collections.singletonMap("targetUrl",
+                                        (loadDocuments ? getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD) : "")
+                                                + getTargetUrl(resource, null)));
+                                break;
+                            case IMAGE:
+                            case VIDEO:
+                            case BINARY:
+                                preview(request, response, displayType, new HashMap<>() {{
+                                    put("targetUrl", getTargetUrl(resource, null));
+                                    put("targetType", getExtension(target));
+                                    put("filename", target.getName());
+                                }});
+                                break;
+                            case TEXT:
+                            case CODE:
+                                preview(request, response, displayType, new HashMap<>() {{
+                                    put("targetUrl", getTargetUrl(resource, null));
+                                    put("targetType", getExtension(target));
+                                    put("filename", target.getName());
+                                    put("content", getContent(resource));
+                                }});
+                                break;
+                        }
+                    } else {
+                        response.sendError(HttpServletResponse.SC_NOT_FOUND);
                     }
-                } else {
-                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
-                }
-                break;
-            case OPTION_LOAD:
-                loadContent(request, response);
-                break;
+                    break;
+                case OPTION_LOAD:
+                    loadContent(request, response);
+                    break;
+            }
         }
     }
 

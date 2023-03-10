@@ -266,15 +266,17 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
         final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
         for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
             final String name = property.getKey();
-            final Object value = property.getValue();
-            if (propertyFilter.apply(name) && value != null && !(value instanceof InputStream)) {
+            final Object value;
+            if (propertyFilter.apply(name)
+                    && (value = property.getValue()) != null
+                    && !(value instanceof InputStream)) {
                 if (JCR_PRIMARY_TYPE.equals(name)) {
                     xmlProperty(writer, indent, name, value);
                 } else {
                     if (mixinFilter != null && JCR_MIXIN_TYPES.equals(name)) {
                         final Object values = filterValues(value, mixinFilter);
                         if (values instanceof String[] && ((String[]) values).length > 0) {
-                            Arrays.sort((String[]) (transformer != null ? transformer.apply(values) : values));
+                            Arrays.sort((String[]) values);
                             properties.put(name, values);
                         }
                     } else {

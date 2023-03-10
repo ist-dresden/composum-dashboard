@@ -156,7 +156,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                     final JsonWriter writer = new JsonWriter(response.getWriter());
                     writer.setIndent(this.indent);
                     dumpJson(writer, targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null, null);
                 } else {
                     final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
                     if (StringUtils.isNotBlank(widgetUri)) {
@@ -183,7 +183,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                      final JsonWriter jsonWriter = new JsonWriter(content)) {
                     jsonWriter.setIndent(this.indent);
                     dumpJson(jsonWriter, targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null);
+                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null, null);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);
@@ -198,13 +198,27 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                          @NotNull final Resource resource, int depth, @Nullable Integer maxDepth,
                          @NotNull final ResourceFilter resourceFilter,
                          @NotNull final Function<String, Boolean> propertyFilter,
-                         @Nullable final Function<String, Boolean> mixinFilter)
+                         @Nullable final Function<String, Boolean> mixinFilter,
+                         @Nullable final Function<Object, Object> transformer)
+            throws IOException {
+        writer.beginObject();
+        dumpJsonContent(writer, resource, depth, maxDepth,
+                resourceFilter, propertyFilter, mixinFilter, transformer);
+        writer.endObject();
+    }
+
+    @Override
+    public void dumpJsonContent(@NotNull final JsonWriter writer,
+                                @NotNull final Resource resource, int depth, @Nullable Integer maxDepth,
+                                @NotNull final ResourceFilter resourceFilter,
+                                @NotNull final Function<String, Boolean> propertyFilter,
+                                @Nullable final Function<String, Boolean> mixinFilter,
+                                @Nullable final Function<Object, Object> transformer)
             throws IOException {
         if (sourceMode && isTranslationsRootFolder(resource)) {
-            dumpTranslationsFolder(writer, resource);
+            dumpTranslationsContent(writer, resource);
         } else {
-            writer.beginObject();
-            jsonProperties(writer, resource, propertyFilter, mixinFilter);
+            jsonProperties(writer, resource, propertyFilter, mixinFilter, transformer);
             final String name = resource.getName();
             if (JCR_CONTENT.equals(name) || resource.getPath().contains("/" + JCR_CONTENT + "/")) {
                 maxDepth = null;
@@ -212,7 +226,8 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
             final Resource content = resource.getChild(JCR_CONTENT);
             if (content != null && resourceFilter.isAllowedResource(content)) {
                 writer.name(content.getName());
-                dumpJson(writer, content, depth + 1, maxDepth, resourceFilter, propertyFilter, mixinFilter);
+                dumpJson(writer, content, depth + 1, maxDepth,
+                        resourceFilter, propertyFilter, mixinFilter, transformer);
             }
             if (maxDepth == null || depth + 1 < maxDepth) {
                 for (final Resource child : resource.getChildren()) {
@@ -220,35 +235,37 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                         final String childName = child.getName();
                         if (!JCR_CONTENT.equals(childName)) {
                             writer.name(childName);
-                            dumpJson(writer, child, depth + 1, maxDepth, resourceFilter, propertyFilter, mixinFilter);
+                            dumpJson(writer, child, depth + 1, maxDepth,
+                                    resourceFilter, propertyFilter, mixinFilter, transformer);
                         }
                     }
                 }
             }
-            writer.endObject();
         }
     }
 
     protected void jsonProperties(@NotNull final JsonWriter writer, @NotNull final Resource resource,
                                   @NotNull final Function<String, Boolean> propertyFilter,
-                                  @Nullable final Function<String, Boolean> mixinFilter)
+                                  @Nullable final Function<String, Boolean> mixinFilter,
+                                  @Nullable final Function<Object, Object> transformer)
             throws IOException {
         final Map<String, Object> properties = new TreeMap<>(PROPERTY_NAME_COMPARATOR);
         for (final Map.Entry<String, Object> property : resource.getValueMap().entrySet()) {
             final String name = property.getKey();
             if (propertyFilter.apply(name)) {
+                final Object value = property.getValue();
                 if (JCR_PRIMARY_TYPE.equals(name)) {
                     writer.name(name);
-                    Properties.toJson(writer, property.getValue(), JSON_DATE_FORMAT);
+                    Properties.toJson(writer, value, JSON_DATE_FORMAT);
                 } else {
                     if (mixinFilter != null && JCR_MIXIN_TYPES.equals(name)) {
-                        final Object values = filterValues(property.getValue(), mixinFilter);
+                        final Object values = filterValues(value, mixinFilter);
                         if (values instanceof String[] && ((String[]) values).length > 0) {
                             Arrays.sort((String[]) values);
                             properties.put(name, values);
                         }
                     } else {
-                        properties.put(name, property.getValue());
+                        properties.put(name, transformer != null ? transformer.apply(value) : value);
                     }
                 }
             }
@@ -261,6 +278,13 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
 
     protected void dumpTranslationsFolder(@NotNull final JsonWriter writer, @NotNull final Resource folder)
             throws IOException {
+        writer.beginObject();
+        dumpTranslationsContent(writer, folder);
+        writer.endObject();
+    }
+
+    protected void dumpTranslationsContent(@NotNull final JsonWriter writer, @NotNull final Resource folder)
+            throws IOException {
         final Set<String> entryKeys = new TreeSet<>();
         final Set<String> folderKeys = new TreeSet<>();
         for (final Resource item : folder.getChildren()) {
@@ -271,7 +295,6 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 folderKeys.add(item.getName());
             }
         }
-        writer.beginObject();
         for (final String key : entryKeys) {
             final Resource item = folder.getChild(key);
             if (item != null) {
@@ -287,6 +310,5 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 dumpTranslationsFolder(writer, item);
             }
         }
-        writer.endObject();
     }
 }

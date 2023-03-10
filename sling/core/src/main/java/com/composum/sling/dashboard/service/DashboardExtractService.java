@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.service;
 
+import com.google.gson.stream.JsonWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -26,7 +27,9 @@ import javax.jcr.RepositoryException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.attribute.FileTime;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -38,6 +41,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -70,15 +74,21 @@ public class DashboardExtractService implements ResourceExtractService {
      */
     public class SourceZipExtractor implements Extractor {
 
-        public final DashboardExtractSession session;
+        protected final Pattern targetFilter;
+        protected final boolean mapToTarget;
+        protected final DashboardExtractSession session;
         protected final ZipOutputStream zipStream;
         protected Map<Pattern, List<String>> additionalZipEntries;
 
         private final Set<String> entryResourceSet = new TreeSet<>();
 
         public SourceZipExtractor(@NotNull final ResourceExtractConfig config,
+                                  @Nullable final Pattern targetFilter,
+                                  @Nullable final Boolean mapToTarget,
                                   @NotNull final ExtractSession session,
                                   @NotNull final OutputStream outputStream) {
+            this.targetFilter = targetFilter;
+            this.mapToTarget = mapToTarget == null || mapToTarget;
             this.session = (DashboardExtractSession) session;
             this.zipStream = new ZipOutputStream(outputStream);
             additionalZipEntries = new LinkedHashMap<>();
@@ -100,7 +110,9 @@ public class DashboardExtractService implements ResourceExtractService {
         @Override
         public void extract(@NotNull final Resource source, @NotNull final String targetPath)
                 throws IOException {
-            extract(source, targetPath, true);
+            if (xmlRenderer != null) {
+                extract(source, targetPath, true);
+            }
         }
 
         /**
@@ -109,11 +121,14 @@ public class DashboardExtractService implements ResourceExtractService {
          * @param source       the source resource to extract
          * @param targetPath   the target path to extract to (the path of the zip entry)
          * @param writeParents specifies whether the content of the parents should be written or not
-         * @throws IOException
          */
-        public void extract(@Nullable final Resource source, @NotNull final String targetPath, boolean writeParents)
+        protected void extract(@Nullable final Resource source, @NotNull String targetPath, boolean writeParents)
                 throws IOException {
-            if (source == null || ResourceUtil.isNonExistingResource(source) || !session.isAllowedResource(source)) {
+            if (!mapToTarget && source != null) {
+                targetPath = source.getPath();
+            }
+            if (source == null || ResourceUtil.isNonExistingResource(source) || !session.isAllowedResource(source)
+                    || (targetFilter != null && !targetFilter.matcher(targetPath).matches())) {
                 return;
             }
             final String sourcePath = source.getPath();
@@ -153,7 +168,6 @@ public class DashboardExtractService implements ResourceExtractService {
          * @param source       the source resource to extract
          * @param targetPath   the target path to extract to (the path of the zip entry)
          * @param writeContent if 'true' an XML content file is created and added to the ZIP stream
-         * @throws IOException
          */
         public void extractResource(@NotNull final Resource source,
                                     @NotNull final String targetPath, boolean writeContent)
@@ -195,7 +209,7 @@ public class DashboardExtractService implements ResourceExtractService {
                         zipStream.closeEntry();
                     }
                 }
-            } else if (writeContent && StringUtils.isNotBlank(primaryType) && xmlRenderer != null) {
+            } else if (writeContent && StringUtils.isNotBlank(primaryType)) {
                 final boolean isFolder = primaryType.matches("^(sling|nt):(Ordered)?[Ff]older$");
                 final boolean hasContent = source.getChild(JCR_CONTENT) != null;
                 entry = new ZipEntry(zipName + "/.content.xml");
@@ -216,7 +230,8 @@ public class DashboardExtractService implements ResourceExtractService {
             try {
                 final PrintWriter writer = new PrintWriter(zipStream);
                 xmlRenderer.dumpXml(writer, "", resource, 0, maxDepth,
-                        session, session::isAllowedProperty, xmlRenderer::isAllowedMixin, session::adjustProperty);
+                        session, session::isAllowedProperty, xmlRenderer::isAllowedMixin,
+                        mapToTarget ? session::adjustProperty : null);
                 writer.flush();
             } catch (RepositoryException ignore) {
             }
@@ -245,17 +260,125 @@ public class DashboardExtractService implements ResourceExtractService {
         }
     }
 
+    /**
+     * the extractor to generate a ZIP file containing the source resources as XML sourcecode files
+     * mapped to the target paths of the source resources
+     */
+    public class SourceJsonExtractor implements Extractor {
+
+        protected final Pattern targetFilter;
+        protected final boolean mapToTarget;
+        public final DashboardExtractSession session;
+        protected final JsonWriter jsonWriter;
+        protected final Stack<String> openPath = new Stack<>();
+
+        private final Set<String> entryResourceSet = new TreeSet<>();
+
+        public SourceJsonExtractor(@NotNull final ResourceExtractConfig config,
+                                   @Nullable final Pattern targetFilter,
+                                   @Nullable final Boolean mapToTarget,
+                                   @NotNull final ExtractSession session,
+                                   @NotNull final OutputStream outputStream) {
+            this.targetFilter = targetFilter;
+            this.mapToTarget = mapToTarget == null || mapToTarget;
+            this.session = (DashboardExtractSession) session;
+            this.jsonWriter = new JsonWriter(new OutputStreamWriter(outputStream, StandardCharsets.UTF_8));
+        }
+
+        @Override
+        public void close() throws IOException {
+            while (!openPath.isEmpty()) {
+                openPath.pop();
+                jsonWriter.endObject();
+            }
+            jsonWriter.flush();
+            jsonWriter.close();
+        }
+
+        @Override
+        public void extract(@Nullable final Resource source, @NotNull String targetPath)
+                throws IOException {
+            if (!mapToTarget && source != null) {
+                targetPath = source.getPath();
+            }
+            if (jsonRenderer == null
+                    || (source != null && (ResourceUtil.isNonExistingResource(source)
+                    || !session.isAllowedResource(source)))
+                    || (targetFilter != null && !targetFilter.matcher(targetPath).matches())) {
+                return;
+            }
+            String targetParentPath = StringUtils.substringBeforeLast(targetPath, "/");
+            while (!openPath.isEmpty() && StringUtils.isNotBlank(targetParentPath)
+                    && !targetParentPath.startsWith(openPath.peek())) {
+                jsonWriter.endObject();
+                openPath.pop();
+            }
+            if (!"/".equals(targetPath) && !entryResourceSet.contains(targetParentPath)) {
+                extract(source != null ? source.getParent() : null,
+                        StringUtils.isBlank(targetParentPath) ? "/" : targetParentPath);
+            }
+            extractResource(source, StringUtils.isBlank(targetPath) ? "/" : targetPath);
+        }
+
+        /**
+         * extract on single resource as XML source file added to the ZIP stream if not already added
+         *
+         * @param source     the source resource to extract
+         * @param targetPath the target path to extract to (the path of the zip entry)
+         */
+        public void extractResource(@Nullable final Resource source, @NotNull final String targetPath)
+                throws IOException {
+            if (entryResourceSet.contains(targetPath)) {
+                return; // skip this resource if already added to the ZIP
+            }
+            entryResourceSet.add(targetPath);
+            final String jsonName = StringUtils.substringAfterLast(targetPath, "/");
+            if (!openPath.isEmpty()) {
+                jsonWriter.name(jsonName).beginObject();
+            } else {
+                jsonWriter.beginObject();
+            }
+            openPath.push(targetPath);
+            if (source != null && !"jcr:content".equals(source.getName())) {
+                final PathMappingRule pathMappingRule = session.getPathRule(source.getPath(), source);
+                writeJsonSource(source, pathMappingRule != null ? pathMappingRule.maxDepth : (Integer) 1);
+            }
+        }
+
+        /**
+         * writes the content as JSON source content
+         *
+         * @param resource the resource to write as XML source file1
+         */
+        protected void writeJsonSource(@NotNull final Resource resource, @Nullable final Integer maxDepth) {
+            try {
+                jsonRenderer.dumpJsonContent(jsonWriter, resource, 0, maxDepth,
+                        session, session::isAllowedProperty, xmlRenderer::isAllowedMixin,
+                        mapToTarget ? session::adjustProperty : null);
+            } catch (IOException ignore) {
+            }
+        }
+    }
+
+    /**
+     * the extractor to generate an isolated cope of the source at the target destination
+     */
     protected class CopyToTargetExtractor implements Extractor {
 
+        public final Mode mode;
+        public final boolean dryRun;
         public final DashboardExtractSession session;
 
-        public CopyToTargetExtractor(@NotNull final ExtractSession session) {
+        public CopyToTargetExtractor(@Nullable final Mode mode, boolean dryRun,
+                                     @NotNull final ExtractSession session) {
+            this.mode = mode != null ? mode : Mode.MERGE;
+            this.dryRun = dryRun;
             this.session = (DashboardExtractSession) session;
         }
 
         @Override
         public void close() throws IOException {
-            if (!session.dryRun) {
+            if (!dryRun) {
                 session.resolver.commit();
             }
         }
@@ -271,7 +394,7 @@ public class DashboardExtractService implements ResourceExtractService {
                                         @NotNull final Resource parent, @NotNull final String name, final int depth)
                 throws PersistenceException {
             Resource target = parent.getChild(name);
-            if (target == null || session.mode == Mode.REPLACE) {
+            if (target == null || mode == Mode.REPLACE) {
                 if (target != null) {
                     session.resolver.delete(target);
                 }
@@ -282,7 +405,7 @@ public class DashboardExtractService implements ResourceExtractService {
                 final ModifiableValueMap targetProps = target.adaptTo(ModifiableValueMap.class);
                 if (targetProps != null) {
                     targetProps.putAll(session.copyProperties(source,
-                            session.mode == Mode.UPDATE ? null : targetProps,
+                            mode == Mode.UPDATE ? null : targetProps,
                             session::adjustProperty));
                 }
             }
@@ -333,8 +456,6 @@ public class DashboardExtractService implements ResourceExtractService {
         protected List<Pattern> ignoredProperties;
 
         public final ResourceResolver resolver;
-        public final boolean dryRun;
-        public final Mode mode;
         public final int levelMax;
         public final TreeSet<String> sourcePathSet;
         public final TreeSet<String> targetPathSet;
@@ -344,8 +465,8 @@ public class DashboardExtractService implements ResourceExtractService {
         public final Map<String, Set<String>> pathSets;
 
         private DashboardExtractSession(@NotNull final ResourceExtractConfig config,
-                                        @NotNull final ResourceResolver resolver, boolean dryRun,
-                                        @Nullable final Mode mode, final int levelMax) {
+                                        @NotNull final ResourceResolver resolver,
+                                        final int levelMax) {
             predefinedPaths = config.predefinedPaths();
             pathMappingRuleSet = new ArrayList<>();
             for (final String expression : config.pathRuleSet()) {
@@ -356,8 +477,6 @@ public class DashboardExtractService implements ResourceExtractService {
             ignoredChildren = patternList(config.ignoredChildren());
             ignoredProperties = patternList(config.ignoredProperties());
             this.resolver = resolver;
-            this.dryRun = dryRun;
-            this.mode = mode != null ? mode : Mode.MERGE;
             this.levelMax = levelMax;
             sourcePathSet = new TreeSet<>();
             targetPathSet = new TreeSet<>();
@@ -667,6 +786,9 @@ public class DashboardExtractService implements ResourceExtractService {
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
     private XmlRenderer xmlRenderer;
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
+    private JsonRenderer jsonRenderer;
+
     protected ResourceExtractConfig defaultConfig;
 
     @Activate
@@ -677,21 +799,33 @@ public class DashboardExtractService implements ResourceExtractService {
 
     @Override
     public @NotNull ExtractSession createSession(@Nullable final ResourceExtractConfig config,
-                                                 @NotNull final ResourceResolver resolver, boolean dryRun,
-                                                 @Nullable final Mode mode, final int levelMax) {
+                                                 @NotNull final ResourceResolver resolver,
+                                                 final int levelMax) {
         return new DashboardExtractSession(config != null ? config : defaultConfig,
-                resolver, dryRun, mode, levelMax);
+                resolver, levelMax);
     }
 
     public @NotNull Extractor createCopyExtractor(@Nullable final ResourceExtractConfig config,
+                                                  @Nullable final Mode mode, boolean dryRun,
                                                   @NotNull final ExtractSession session) {
-        return new CopyToTargetExtractor(session);
+        return new CopyToTargetExtractor(mode, dryRun, session);
     }
 
     public @NotNull Extractor createZipExtractor(@Nullable final ResourceExtractConfig config,
+                                                 @Nullable final Pattern targetFilter,
+                                                 @Nullable final Boolean mapToTarget,
                                                  @NotNull final ExtractSession session,
                                                  @NotNull final OutputStream outputStream) {
         return new SourceZipExtractor(config != null ? config : defaultConfig,
-                session, outputStream);
+                targetFilter, mapToTarget, session, outputStream);
+    }
+
+    public @NotNull Extractor createJsonExtractor(@Nullable final ResourceExtractConfig config,
+                                                  @Nullable final Pattern targetFilter,
+                                                  @Nullable final Boolean mapToTarget,
+                                                  @NotNull final ExtractSession session,
+                                                  @NotNull final OutputStream outputStream) {
+        return new SourceJsonExtractor(config != null ? config : defaultConfig,
+                targetFilter, mapToTarget, session, outputStream);
     }
 }

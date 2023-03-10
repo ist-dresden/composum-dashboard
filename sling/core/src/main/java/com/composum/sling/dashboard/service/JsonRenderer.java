@@ -14,6 +14,15 @@ public interface JsonRenderer extends SourceRenderer {
                   @NotNull Resource resource, int depth, @Nullable Integer maxDepth,
                   @NotNull ResourceFilter resourceFilter,
                   @NotNull Function<String, Boolean> propertyFilter,
-                  @Nullable Function<String, Boolean> mixinFilter)
+                  @Nullable Function<String, Boolean> mixinFilter,
+                  @Nullable final Function<Object, Object> transformer)
+            throws IOException;
+
+    void dumpJsonContent(@NotNull JsonWriter writer,
+                  @NotNull Resource resource, int depth, @Nullable Integer maxDepth,
+                  @NotNull ResourceFilter resourceFilter,
+                  @NotNull Function<String, Boolean> propertyFilter,
+                  @Nullable Function<String, Boolean> mixinFilter,
+                  @Nullable final Function<Object, Object> transformer)
             throws IOException;
 }

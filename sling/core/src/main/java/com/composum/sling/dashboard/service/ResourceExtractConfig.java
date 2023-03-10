@@ -14,17 +14,25 @@ public @interface ResourceExtractConfig {
     )
     String[] predefinedPaths();
 
+    /**
+     * @see com.composum.sling.dashboard.service.ResourceExtractService.PathMappingRule
+     */
     @AttributeDefinition(
             name = "Path Rule Set",
             description = "source to target mapping rules; e.g. '/content/dam(/[^/]+(/.*)),dam:Asset,1,/content/dam/test$2'"
     )
     String[] pathRuleSet();
 
+    /**
+     * a set of additional entries to embed into an extracted ZIP for specific node types
+     */
     @AttributeDefinition(
             name = "add. ZIP Entries",
-            description = "entry patterns to add to ZIP; e.g. 'dam:Asset,jcr:content/renditions/original'"
+            description = "entry patterns to add to ZIP: '{node:type},{relative/path/to/embed}'"
     )
-    String[] addZipEntries();
+    String[] addZipEntries() default {
+            "dam:Asset,jcr:content/renditions/original"
+    };
 
     @AttributeDefinition(
             name = "Ignored Children",

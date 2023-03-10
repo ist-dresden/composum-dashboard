@@ -36,6 +36,7 @@ import java.lang.annotation.Annotation;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 @Component(service = {Servlet.class},
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
@@ -186,16 +187,14 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
             final RequestPathInfo pathInfo = request.getRequestPathInfo();
             final String[] selectors = pathInfo.getSelectors();
             if (selectors.length > 1) {
-                final boolean dryRun = Boolean.parseBoolean(Optional.ofNullable(request.getParameter("dryRun")).orElse("true"));
-                final Mode mode = Mode.valueOf(Optional.ofNullable(request.getParameter("mode")).orElse("merge").toUpperCase());
                 final int levelMax = Integer.parseInt(Optional.ofNullable(request.getParameter("level")).orElse("4"));
-                final ExtractSession session = extractService.createSession(config, request.getResourceResolver(), dryRun, mode, levelMax);
+                final ExtractSession session = extractService.createSession(config, request.getResourceResolver(), levelMax);
                 if (paths != null && paths.length > 0) {
                     session.scanExtractPaths(paths);
                 } else {
                     session.scanExtractPaths(request.getResource());
                 }
-                switch (selectors[1]) {
+                switch (selectors[1].toLowerCase()) {
                     case "paths": {
                         pathsResponse(response, Optional.ofNullable(pathInfo.getExtension()).orElse("txt"), session, "source");
                     }
@@ -205,21 +204,48 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                     }
                     return;
                     case "copy": {
-                        try (final Extractor extractor = extractService.createCopyExtractor(config, session)) {
+                        final boolean dryRun = Boolean.parseBoolean(Optional.ofNullable(
+                                request.getParameter("dryRun")).orElse("true"));
+                        final Mode mode = Mode.valueOf(Optional.ofNullable(
+                                request.getParameter("mode")).orElse("merge").toUpperCase());
+                        try (final Extractor extractor = extractService
+                                .createCopyExtractor(config, mode, dryRun, session)) {
                             session.extract(extractor);
                         }
-                        pathsResponse(response, Optional.ofNullable(pathInfo.getExtension()).orElse("txt"), session);
+                        pathsResponse(response, Optional.ofNullable(
+                                pathInfo.getExtension()).orElse("txt"), session);
                     }
                     return;
                     case "src": {
-                        response.setContentType("application/zip");
-                        response.addHeader("Content-Disposition", "attachment; filename="
-                                + request.getResource().getName() + "-extract.zip");
-                        try (final Extractor extractor = extractService.createZipExtractor(config, session, response.getOutputStream())) {
-                            session.extract(extractor);
+                        final Pattern targetFilter = Optional.ofNullable(request.getParameter("filter"))
+                                .map(Pattern::compile).orElse(null);
+                        final Boolean mapToTarget = Optional.ofNullable(request.getParameter("map"))
+                                .map(Boolean::parseBoolean).orElse(null);
+                        switch (Optional.ofNullable(pathInfo.getExtension()).orElse("txt").toLowerCase()) {
+                            case "zip":
+                                response.setContentType("application/zip");
+                                response.addHeader("Content-Disposition", "attachment; filename="
+                                        + request.getResource().getName() + "-extract.zip");
+                                try (final Extractor extractor = extractService
+                                        .createZipExtractor(config, targetFilter, mapToTarget,
+                                                session, response.getOutputStream())) {
+                                    session.extract(extractor);
+                                }
+                                return;
+                            case "json":
+                                response.setContentType("application/json;charset=UTF-8");
+                                try (final Extractor extractor = extractService
+                                        .createJsonExtractor(config, targetFilter, mapToTarget,
+                                                session, response.getOutputStream())) {
+                                    session.extract(extractor);
+                                }
+                                return;
+                            case "txt": {
+                                pathsResponse(response, "txt", session);
+                                return;
+                            }
                         }
                     }
-                    return;
                 }
             }
         } catch (Exception ex) {

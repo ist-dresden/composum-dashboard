@@ -300,7 +300,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
             JsonWriter jsonWriter = new JsonWriter(writer);
             jsonWriter.setIndent("  ");
             jsonRenderer.dumpJson(jsonWriter, resource, 0, 0,
-                    resourceFilter, jsonRenderer::isAllowedProperty, jsonRenderer::isAllowedMixin);
+                    resourceFilter, jsonRenderer::isAllowedProperty, jsonRenderer::isAllowedMixin, null);
         }
     }
 }

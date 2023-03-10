@@ -103,14 +103,14 @@ public interface ResourceExtractService {
      * the mapping configuration to map source paths to target paths during the content extraction,
      * a set of up to four mapping entries separated by ',' according to:
      * <ol>
-     *     <li>a regex pattern to determine which source paths this rule should be applied to, e.g.<br/>
+     *     <li>a regex pattern to determine which source paths this rule should be applied to, e.g.
      *     '^/content/site/source(/.*)?$'
      *     </li>
      *     <li>a node type pattern as a second filter criteria, '' or '*' for each node type</li>
-     *     <li>the max depth of the content copy for that rule, e.g.<br/>
+     *     <li>the max depth of the content copy for that rule, e.g.
      *     '1' for the resource itself and the whole 'jcr:content' child if present (pages or assets);
      *     '*' or '' for the whole content of the matching resource (unstructured data)</li>
-     *     <li>the optional replace pattern to build the target path of the source path pattern, e.g.<br/>
+     *     <li>the optional replace pattern to build the target path of the source path pattern, e.g.
      *     '/content/site/target$1' to map each '/content/site/source/...' to ''/content/site/target/...'
      *     </li>
      * </ol>

@@ -302,13 +302,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         statusProps.put(EXECUTIONS, executions.subList(0, Math.min(10, executions.size())).toArray());
     }
 
-    /**
-     * the Groovy script execution
-     *
-     * @param scriptReader the groovy script text
-     * @param binding      the provided objects
-     * @param name         the nam of the script
-     */
+    @Override
     public void runGroovyScript(@NotNull final ResourceResolver resolver,
                                 @NotNull final Reader scriptReader,
                                 @NotNull final Map<String, Object> variables,
@@ -375,6 +369,15 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
      * @param scriptResource the file resource in the repository
      * @param output         the writer for the script output
      * @return the map of bound objects
+     */
+    /**
+     *
+     * @param resolver       the resolver to use for execution
+     * @param classLoader
+     * @param variables
+     * @param output
+     * @param logger
+     * @return
      */
     protected @NotNull Map<String, Object> getBinding(@NotNull final ResourceResolver resolver,
                                                       @NotNull final ClassLoader classLoader,

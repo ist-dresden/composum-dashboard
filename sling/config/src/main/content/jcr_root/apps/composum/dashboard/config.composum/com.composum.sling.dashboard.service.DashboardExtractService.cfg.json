@@ -1,0 +1,17 @@
+{
+  "predefinedPaths": [
+  ],
+  "pathRuleSet": [
+    "/content/(site)/[^/]+(/.+),*,1,/content/test$2"
+  ],
+  "addZipEntries": [
+  ],
+  "ignoredChildren": [
+    "^.+/rep:.+(/.*)?$"
+  ],
+  "ignoredProperties": [
+    "^jcr:(uuid)$",
+    "^jcr:(baseVersion|predecessors|versionHistory|isCheckedOut)$",
+    "^jcr:(created|lastModified).*$"
+  ]
+}

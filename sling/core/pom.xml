@@ -91,6 +91,13 @@
             <artifactId>javax.servlet-api</artifactId>
         </dependency>
 
+        <!-- Groovy -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- JSON -->
         <dependency>
             <groupId>com.google.code.gson</groupId>

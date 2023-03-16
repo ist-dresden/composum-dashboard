@@ -65,6 +65,17 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return StringUtils.substringBefore(request.getResource().getPath(), "/jcr:content");
     }
 
+    // generic content creation to create dashboard content elements
+
+    /**
+     * the generator implementation to generate a content element that represents the servlet itself
+     *
+     * @param request          the incommong request for content creation
+     * @param response         the outgoing response for content creation
+     * @param dashboardManager the dashboard manager instace to execute the content creation
+     * @param contentGenerator the content generator implementation to use
+     * @return 'true' if the content creation was successful
+     */
     protected boolean createContent(@NotNull final SlingHttpServletRequest request,
                                     @NotNull final SlingHttpServletResponse response,
                                     @NotNull final DashboardManager dashboardManager,
@@ -85,6 +96,17 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return false;
     }
 
+    /**
+     * the content creator function to crteate a single resource
+     *
+     * @param parent          the parent resource of the resource to create
+     * @param name            the repository name of the resource to create
+     * @param primaryType     the primary node type of the new resource
+     * @param label           an optional label (title) of the new resource
+     * @param resourceType    the optional Sling resource type
+     * @param propsCollection a optional custom properties stream of key value pairs
+     * @return the created resource
+     */
     protected @Nullable Resource createContent(@NotNull final Resource parent,
                                                @NotNull final String name, @NotNull String primaryType,
                                                @Nullable final String label, @Nullable final String resourceType,
@@ -125,6 +147,10 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         }
         return StringUtils.join(cssClasses, " ");
     }
+
+    //
+    // generic HTML page / element rendering...
+    //
 
     @Deprecated(since = "1.1.2 - use prepareTextResponse()")
     protected void prepareHtmlResponse(@NotNull final HttpServletResponse response) {

@@ -96,11 +96,14 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         @AttributeDefinition(name = "CSS Runmodes")
         String[] cssRunmodes();
 
-        @AttributeDefinition(name = "Content Page Type")
+        @AttributeDefinition(
+                name = "Content Page Type",
+                description = "the structure and type(s) to create a new content page resource"
+        )
         String contentPageType() default "[nt:unstructured]";
 
-        @AttributeDefinition(name = "Content Page Type")
-        String[] pageGeneration();
+        @AttributeDefinition(name = "Page Generation Set")
+        String[] pageGeneration();  // TODO not used currently - complete or remove
 
         @AttributeDefinition(name = "Login URI")
         String loginUri() default "/system/sling/form/login.html";
@@ -248,6 +251,17 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         return widgets;
     }
 
+    /**
+     * the generator feature for creating dashboard content using an implemented content generator that can be used to
+     * create the dashboard elements itself, without the need to provide these content elements in a deployment package
+     *
+     * @param request     the incommong request for content creation
+     * @param response    the outgoing response for content creation
+     * @param path        the path of the content resource to create (target path)
+     * @param generator   the generator implementation to use
+     * @param jsonContent the optional content templates to use
+     * @return 'true' if the content creation was successful
+     */
     @Override
     public boolean createContentPage(@NotNull final SlingHttpServletRequest request,
                                      @NotNull final SlingHttpServletResponse response,

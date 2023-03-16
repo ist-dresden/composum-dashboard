@@ -118,7 +118,7 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
         };
 
         @AttributeDefinition(name = "Servlet Paths",
-                description = "the servletd paths if this configuration variant should be supported")
+                description = "the servlet paths if this configuration variant should be supported")
         String[] sling_servlet_paths();
     }
 

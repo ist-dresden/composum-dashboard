@@ -121,6 +121,7 @@ public class DashboardExtractService implements ResourceExtractService {
          * @param source       the source resource to extract
          * @param targetPath   the target path to extract to (the path of the zip entry)
          * @param writeParents specifies whether the content of the parents should be written or not
+         * @throws IOException if an error occurs
          */
         protected void extract(@Nullable final Resource source, @NotNull String targetPath, boolean writeParents)
                 throws IOException {
@@ -168,6 +169,7 @@ public class DashboardExtractService implements ResourceExtractService {
          * @param source       the source resource to extract
          * @param targetPath   the target path to extract to (the path of the zip entry)
          * @param writeContent if 'true' an XML content file is created and added to the ZIP stream
+         * @throws IOException if an error occurs
          */
         public void extractResource(@NotNull final Resource source,
                                     @NotNull final String targetPath, boolean writeContent)
@@ -325,6 +327,7 @@ public class DashboardExtractService implements ResourceExtractService {
          *
          * @param source     the source resource to extract
          * @param targetPath the target path to extract to (the path of the zip entry)
+         * @throws IOException if an error occurs
          */
         public void extractResource(@Nullable final Resource source, @NotNull final String targetPath)
                 throws IOException {
@@ -349,6 +352,7 @@ public class DashboardExtractService implements ResourceExtractService {
          * writes the content as JSON source content
          *
          * @param resource the resource to write as XML source file1
+         * @param maxDepth the maximum depth if the json output, 'null': infinite
          */
         protected void writeJsonSource(@NotNull final Resource resource, @Nullable final Integer maxDepth) {
             try {

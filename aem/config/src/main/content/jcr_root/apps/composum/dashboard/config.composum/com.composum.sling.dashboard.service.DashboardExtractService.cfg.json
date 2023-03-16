@@ -1,0 +1,26 @@
+{
+  "predefinedPaths": [
+  ],
+  "pathRuleSet": [
+    "/content/(site)/[^/]+(/.+),cq:Page,1,/content/test$2",
+    "/content/dam(/[^/]+(/.+)),dam:Asset,1,/content/dam/test$1"
+  ],
+  "addZipEntries": [
+    "dam:Asset,jcr:content/renditions/original"
+  ],
+  "ignoredChildren": [
+    "^.+/rep:.+(/.*)?$",
+    "^.+/jcr:content/dam:failedRenditions$",
+    "^.+/jcr:content/renditions/cq5dam\\..+$",
+    "^.+/metadata/dam:colorDistribution$",
+    "^.+/metadata/creatorAtom:.+(/.*)?$",
+    "^.+/metadata/xmpMM:.+(/.*)?$"
+  ],
+  "ignoredProperties": [
+    "^dam:(extracted|assetState|asyncJobId|processing.*|run.*)$",
+    "^jcr:(uuid)$",
+    "^jcr:(baseVersion|predecessors|versionHistory|isCheckedOut)$",
+    "^jcr:(created|lastModified).*$",
+    "^cq:last(Modified|Replicat|Rolledout).*$"
+  ]
+}

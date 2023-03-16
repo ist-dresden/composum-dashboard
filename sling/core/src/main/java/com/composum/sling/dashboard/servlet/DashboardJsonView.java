@@ -113,7 +113,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         };
 
         @AttributeDefinition(name = "Servlet Paths",
-                description = "the servletd paths if this configuration variant should be supported")
+                description = "the servlet paths if this configuration variant should be supported")
         String[] sling_servlet_paths();
     }
 

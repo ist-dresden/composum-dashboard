@@ -25,6 +25,13 @@ public interface ResourceExtractService {
      */
     interface Extractor extends Closeable {
 
+        /**
+         * extract one resource mapped to the given target path
+         *
+         * @param source     the resource to extract
+         * @param targetPath the path of the target of the extraction
+         * @throws Exception if an error occurs
+         */
         void extract(@NotNull Resource source, @NotNull String targetPath) throws Exception;
     }
 
@@ -32,16 +39,23 @@ public interface ResourceExtractService {
 
         /**
          * scans the given set of paths and refereced resources for a following extraction
+         *
+         * @param paths the paths set to scan
          */
         void scanExtractPaths(@NotNull String... paths);
 
         /**
          * scans the given set of resources and refereced resources for a following extraction
+         *
+         * @param resources the resource set to scan
          */
         void scanExtractPaths(@NotNull Resource... resources);
 
         /**
          * perfomrs the extraction of the previously scanned paths using the given extractor
+         *
+         * @param extractor the extrator implementation to use
+         * @throws Exception if an error occurs
          */
         void extract(@NotNull Extractor extractor) throws Exception;
 
@@ -62,6 +76,7 @@ public interface ResourceExtractService {
      * @param mode    the mode to control how properties copy to existing target resources are handled
      * @param dryRun  if 'true' nothing is persistent changed, the affected paths are logged
      * @param session the extract session to control the execution
+     * @return the copy extractor
      */
     @NotNull Extractor createCopyExtractor(@Nullable ResourceExtractConfig config,
                                            @Nullable Mode mode, boolean dryRun,
@@ -76,6 +91,7 @@ public interface ResourceExtractService {
      * @param mapToTarget  if 'false' the sources are not mapped to the configured target paths
      * @param session      the extract session to control the execution
      * @param outputStream the output stream to store the generated ZIP file
+     * @return the zip extractor
      */
     @NotNull Extractor createZipExtractor(@Nullable ResourceExtractConfig config,
                                           @Nullable Pattern targetFilter,
@@ -92,6 +108,7 @@ public interface ResourceExtractService {
      * @param mapToTarget  if 'false' the sources are not mapped to the configured target paths
      * @param session      the extract session to control the execution
      * @param outputStream the output stream to store the generated JSON output
+     * @return the JSON extractor
      */
     @NotNull Extractor createJsonExtractor(@Nullable ResourceExtractConfig config,
                                            @Nullable Pattern targetFilter,

@@ -1,0 +1,24 @@
+{
+  "runOnce": [
+    "resource:/com/composum/sling/dashboard/script/testSetup.groovy"
+  ],
+  "scriptPathPattern": [
+    "^/conf/global/scripts/startup(/.+)$=/var/global/scripts/startup$1",
+    "^resource:/com/composum/sling/dashboard/script(/.+)$=/var/global/scripts/predefined$1"
+  ],
+  "starImports": [
+    "javax.jcr",
+    "org.apache.sling.api",
+    "org.apache.sling.api.resource",
+    "com.day.cq.search",
+    "com.day.cq.tagging",
+    "com.day.cq.wcm.api",
+    "com.day.cq.replication"
+  ],
+  "setupScripts": [
+    "resource:/com/composum/sling/dashboard/script/aemSetup.groovy"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/startup/run"
+  ]
+}

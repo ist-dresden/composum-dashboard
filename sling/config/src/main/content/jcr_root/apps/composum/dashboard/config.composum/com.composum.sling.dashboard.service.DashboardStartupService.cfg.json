@@ -1,0 +1,21 @@
+{
+  "runOnce": [
+    "resource:/com/composum/sling/dashboard/script/testSetup.groovy"
+  ],
+  "scriptPathPattern": [
+    "^/conf/global/scripts/startup(/.+)$=/var/global/scripts/startup$1",
+    "^resource:/com/composum/sling/dashboard/script(/.+)$=/var/global/scripts/predefined$1"
+  ],
+  "starImports": [
+    "javax.jcr",
+    "javax.jcr.query",
+    "org.apache.sling.api",
+    "org.apache.sling.api.resource"
+  ],
+  "setupScripts": [
+    "resource:/com/composum/sling/dashboard/script/slingSetup.groovy"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/startup/run"
+  ]
+}

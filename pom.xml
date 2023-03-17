@@ -38,12 +38,11 @@
         <release.repository.id>ossrh</release.repository.id>
         <release.repository.url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</release.repository.url>
         <install.path>/apps/composum/dashboard/install</install.path>
-        <node.version>v12.18.3</node.version>
         <java.source>11</java.source>
         <java.target>11</java.target>
         <maven.compiler.source>${java.source}</maven.compiler.source>
         <maven.compiler.target>${java.target}</maven.compiler.target>
-        <sling.pckgmgr.url>/bin/cpm/package.service.html</sling.pckgmgr.url>
+        <sling.pckgmgr.uri>/bin/cpm/package.service.html</sling.pckgmgr.uri>
         <groovy.version>4.0.0</groovy.version>
     </properties>
 
@@ -184,7 +183,7 @@
                     <version>2.0.4</version>
                     <extensions>true</extensions>
                     <configuration>
-                        <serviceURL>http://${sling.host}:${sling.port}${sling.pckgmgr.url}</serviceURL>
+                        <serviceURL>http://${sling.host}:${sling.port}${sling.pckgmgr.uri}</serviceURL>
                         <userId>${sling.user}</userId>
                         <password>${sling.password}</password>
                         <bundleStatusURL>-</bundleStatusURL>

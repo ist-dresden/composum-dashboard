@@ -50,7 +50,7 @@ public interface StartupRunnerService {
 
     /**
      * runs a grooy script provided by a reader in the context of the startup service configuration
-     * this script mustn't match the satrup script patterns, its execution is not registered
+     * this script mustn't match the startup script patterns, its execution is not registered
      *
      * @param resolver     the resolver to use for script execution
      * @param scriptReader the script content

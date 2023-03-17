@@ -254,13 +254,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
             throws PersistenceException {
         final Resource statusResource = provideResource(resolver, statusPath);
         if (statusResource != null) {
-            final Resource scriptResource = resolver.getResource(scriptPath);
-            final ValueMap scriptProps = scriptResource != null ? scriptResource.getValueMap()
-                    : new ValueMapDecorator(Collections.emptyMap());
-            final ValueMap statusProps = statusResource.getValueMap();
-            final Calendar lastModified = scriptProps.get(FILE_MODIFIED, Calendar.class);
-            final Calendar lastExecuted = statusProps.get(LAST_EXECUTED, Calendar.class);
-            if (force || (lastModified != null && (lastExecuted == null || lastExecuted.before(lastModified)))) {
+            if (force || shouldBeExecuted(resolver, resolver.getResource(scriptPath), statusResource)) {
                 LOG.debug("loading script '{}'...", scriptPath);
                 try (final Reader scriptReader = openScript(resolver, getClass().getClassLoader(), scriptPath)) {
                     if (scriptReader != null) {
@@ -291,6 +285,17 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         } else {
             LOG.error("can't access status resource '{}'", statusPath);
         }
+    }
+
+    protected boolean shouldBeExecuted(@NotNull final ResourceResolver resolver,
+                                       @Nullable final Resource scriptResource,
+                                       @NotNull final Resource statusResource) {
+        final ValueMap scriptProps = scriptResource != null ? scriptResource.getValueMap()
+                : new ValueMapDecorator(Collections.emptyMap());
+        final ValueMap statusProps = statusResource.getValueMap();
+        final Calendar lastModified = scriptProps.get(FILE_MODIFIED, Calendar.class);
+        final Calendar lastExecuted = statusProps.get(LAST_EXECUTED, Calendar.class);
+        return lastModified != null && (lastExecuted == null || lastExecuted.before(lastModified));
     }
 
     protected void registerExceution(@NotNull final ModifiableValueMap statusProps) {
@@ -365,19 +370,12 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
     /**
      * prepare bindings compatible to the well known 'groovyconsole' if possible
      *
-     * @param resolver       the resolver to use for execution
-     * @param scriptResource the file resource in the repository
-     * @param output         the writer for the script output
+     * @param resolver    the resolver to use for execution
+     * @param classLoader the classloader used to retrieve classess for objects to bind
+     * @param variables   a set of additional, most recently added variables (which may override the default bindings)
+     * @param output      the writer to bind for the script output
+     * @param logger      the logger to bind
      * @return the map of bound objects
-     */
-    /**
-     *
-     * @param resolver       the resolver to use for execution
-     * @param classLoader
-     * @param variables
-     * @param output
-     * @param logger
-     * @return
      */
     protected @NotNull Map<String, Object> getBinding(@NotNull final ResourceResolver resolver,
                                                       @NotNull final ClassLoader classLoader,
@@ -449,6 +447,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         return null;
     }
 
+    @Override
     public @Nullable Reader openScript(@NotNull final ResourceResolver resolver,
                                        @NotNull final ClassLoader classLoader,
                                        @Nullable final String scriptPath) {
@@ -466,6 +465,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         return reader;
     }
 
+    @Override
     public @Nullable Reader openScript(@NotNull final ResourceResolver resolver,
                                        @Nullable final Resource resource) {
         if (resource != null && resource.isResourceType(NT_FILE)) {

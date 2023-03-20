@@ -57,6 +57,8 @@ script.metaClass.copy = { String src ->
     }]
 }
 
+// AEM...
+
 script.metaClass.getPage = { String path ->
     pageManager.getPage(path)
 }
@@ -102,6 +104,6 @@ script.metaClass.getServices << { String serviceClass, String filter ->
     serviceRefs.collect { bundleContext.getService(it) }
 }
 
-// the result
+// the result, a map of custom bindings
 
 [:]

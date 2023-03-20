@@ -166,6 +166,6 @@ script.metaClass.getServices << { String serviceClass, String filter ->
     serviceRefs.collect { bundleContext.getService(it) }
 }
 
-// the result
+// the result, a map of custom bindings
 
 [:]

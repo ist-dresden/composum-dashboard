@@ -83,6 +83,9 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
     public static final Map<String, Object> SERVICE_AUTH
             = Collections.singletonMap(ResourceResolverFactory.SUBSERVICE, "startup");
 
+    public static final String _NODE_BUILDER = ".aem.groovy.extension.builders.NodeBuilder";
+    public static final String _PAGE_BUILDER = ".aem.groovy.extension.builders.PageBuilder";
+
     @ObjectClassDefinition(name = "Composum Sling Dashboard Startup Service")
     public @interface Config {
 
@@ -403,18 +406,28 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         bind(bindings, resolver, "pageManager", classLoader, "com.day.cq.wcm.api.PageManager");
         bind(bindings, resolver, "tagManager", classLoader, "com.day.cq.tagging.TagManager");
         bind(bindings, resolver, "queryBuilder", classLoader, "com.day.cq.search.QueryBuilder");
-        bind(bindings, session, "nodeBuilder", classLoader, "com.icfolson.aem.groovy.extension.builders.NodeBuilder");
-        bind(bindings, session, "pageBuilder", classLoader, "com.icfolson.aem.groovy.extension.builders.PageBuilder");
+        bind(bindings, session, "nodeBuilder", classLoader,
+                "com.icfolson" + _NODE_BUILDER,
+                "be.orbinson" + _NODE_BUILDER);
+        bind(bindings, session, "pageBuilder", classLoader,
+                "com.icfolson" + _PAGE_BUILDER,
+                "be.orbinson" + _PAGE_BUILDER);
         bindings.putAll(variables);
         return bindings;
     }
 
     protected void bind(@NotNull final Map<String, Object> bindings,
                         @NotNull final Object adaptable, @NotNull final String name,
-                        @NotNull final ClassLoader classLoader, @NotNull final String className) {
-        final Object value = adaptTo(adaptable, getClass(classLoader, className));
-        if (value != null) {
-            bindings.put(name, value);
+                        @NotNull final ClassLoader classLoader, @NotNull final String... classNames) {
+        for (final String className : classNames) {
+            final Class<?> type = getClass(classLoader, className);
+            if (type != null) {
+                final Object value = adaptTo(adaptable, type);
+                if (value != null) {
+                    bindings.put(name, value);
+                    break; // for
+                }
+            }
         }
     }
 

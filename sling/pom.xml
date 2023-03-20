@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard</artifactId>
-        <version>1.2.5</version>
+        <version>1.2.6</version>
     </parent>
 
     <artifactId>composum-dashboard-sling-parent</artifactId>
@@ -13,10 +13,6 @@
 
     <name>Composum Dashboard - Sling - reactor</name>
     <description>the Sling implementation base of the dashboard toolset framework</description>
-
-    <properties>
-        <sling.pckgmgr.url>/bin/cpm/package.service.html</sling.pckgmgr.url>
-    </properties>
 
     <modules>
         <module>core</module>

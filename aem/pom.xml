@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard</artifactId>
-        <version>1.2.5</version>
+        <version>1.2.6</version>
     </parent>
 
     <artifactId>composum-dashboard-aem-parent</artifactId>
@@ -15,9 +15,7 @@
     <description>the AEM implementation of the dashboard toolset framework</description>
 
     <properties>
-        <sling.pckgmgr.url>/crx/packmgr/service.jsp</sling.pckgmgr.url>
-        <sling.host>localhost</sling.host>
-        <sling.port>6500</sling.port>
+        <sling.pckgmgr.uri>/crx/packmgr/service.jsp</sling.pckgmgr.uri>
     </properties>
 
     <modules>

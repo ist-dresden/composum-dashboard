@@ -18,6 +18,10 @@ import java.util.regex.Pattern;
  */
 public interface ResourceExtractService {
 
+    String PATH_UNEXPECTED = "<>";
+    Pattern PATH_PATTERN = Pattern.compile("^/[^" + PATH_UNEXPECTED + "]+$");
+    Pattern PATH_EMBEDDED = Pattern.compile("\"(?<path>/[^" + PATH_UNEXPECTED + "\"]+)\"");
+
     enum Mode {MERGE, UPDATE, REPLACE}
 
     /**

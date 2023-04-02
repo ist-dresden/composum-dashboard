@@ -4,6 +4,7 @@
   "sling.servlet.paths": [
     "/apps/cpm/browser/view/json",
     "/apps/cpm/browser/view/json/view",
+    "/apps/cpm/browser/view/json/form",
     "/apps/cpm/browser/view/json/load"
   ]
 }

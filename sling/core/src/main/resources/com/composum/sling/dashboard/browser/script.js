@@ -46,21 +46,28 @@ class ToolLink extends ViewWidget {
 
 CPM.widgets.register(ToolLink);
 
-class StatusLine extends ViewWidget {
+class BrowserPathField extends ViewWidget {
 
-    static selector = '.dashboard__status-line';
+    static selector = '.dashboard__path-field';
 
     constructor(element) {
         super(element);
+        this.$el.on('change', this.onPathChanged.bind(this));
         $(document).on('path:selected', this.onPathSelected.bind(this));
     }
 
+    onPathChanged(event) {
+        window.setTimeout(function () {
+            $(document).trigger('path:select', [this.$el.val()]);
+        }.bind(this), 300);
+    }
+
     onPathSelected(event, path) {
-        this.$el.attr('value', path);
+        this.$el.val(path);
     }
 }
 
-CPM.widgets.register(StatusLine);
+CPM.widgets.register(BrowserPathField);
 
 class BrowserTree extends ViewWidget {
 
@@ -394,6 +401,64 @@ class BrowserTool extends BrowserPanel {
 
 CPM.widgets.register(BrowserTool);
 
+class BrowserViewParameters extends ViewWidget {
+
+    static selector = '.dashboard-browser__parameters .form-inline';
+
+    constructor(element) {
+        super(element);
+        this.profile = new Profile('browser.parameters');
+    }
+
+    getUrlQuery(tabId) {
+        if (tabId) {
+            const formData = new FormData(this.el);
+            const queryParams = new URLSearchParams(formData).toString();
+            return queryParams ? '?' + queryParams : '';
+        } else {
+            return '';
+        }
+    }
+
+    storeProfile(tabId) {
+        if (tabId) {
+            const formData = new FormData(this.el);
+            const profileData = {};
+            formData.forEach((value, key) => (profileData[key] = value));
+            this.profile.set(tabId, profileData);
+        }
+    }
+
+    contentUrl(tabId) {
+        return this.$el.closest(BrowserView.selector).data('tab-form').replaceAll('#id#', tabId);
+    }
+
+    loadForm(tabId) {
+        $.ajax({
+            type: 'GET',
+            url: this.contentUrl(tabId),
+            success: function (content) {
+                this.$el.html(content);
+                const profileData = this.profile.get(tabId);
+                if (profileData) {
+                    Object.keys(profileData).forEach(key => {
+                        this.$el.find('select[name="' + key + '"] option[value="' + profileData[key] + '"]').attr('selected', true);
+                        this.$el.find('input[type="checkbox"][name="' + key + '"]').prop('checked', true);
+                        this.$el.find('input[type="text"][name="' + key + '"]').val(profileData[key]);
+                    });
+                }
+            }.bind(this),
+            error: function () {
+                this.$el.html('');
+            }.bind(this),
+            async: true,
+            cache: false
+        });
+    }
+}
+
+CPM.widgets.register(BrowserViewParameters);
+
 class BrowserView extends BrowserPanel {
 
     static selector = '.dashboard-browser__view';
@@ -403,13 +468,25 @@ class BrowserView extends BrowserPanel {
         this.loadContent(undefined, function () {
             this.$el.find('.dashboard-browser__action-reload').click(this.reload.bind(this));
             this.$el.find('.dashboard-browser__tabs a[data-toggle="tab"]').on('shown.bs.tab', this.onTabShown.bind(this));
+            this.parameters = Widgets.getView(BrowserViewParameters.selector, BrowserViewParameters);
+            if (this.parameters) {
+                this.parameters.$el.on('submit', this.reload.bind(this));
+            }
             this.showTab(this.profile.get('currentTab'), true);
         }.bind(this))
         $(document).on('path:selected', this.onPathSelected.bind(this));
     }
 
     reload(event) {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        if (this.parameters) {
+            this.parameters.storeProfile(this.activeTabId());
+        }
         this.onPathSelected(event, this.currentPath, true);
+        return false;
     }
 
     onPathSelected(event, path, force) {
@@ -433,6 +510,7 @@ class BrowserView extends BrowserPanel {
         const tabId = $(event.target).attr('aria-controls');
         this.profile.set('currentTab', tabId);
         const $tab = this.$tabPane(tabId);
+        this.parameters.loadForm(tabId);
         if ($tab.data('loaded') !== 'true') {
             this.loadContent(tabId);
         }
@@ -447,33 +525,35 @@ class BrowserView extends BrowserPanel {
         }
     }
 
-    dataUrl(tabId, path) {
-        return (tabId ? this.$el.data('view-tab').replaceAll('#id#', tabId) : this.$el.data('view-url'))
-            + (path ? path : '');
+    contentUrl(contentId, tabId, path) {
+        return (this.$el.data(contentId).replaceAll('#id#', tabId) + (path ? path : ''))
+            + (this.parameters ? this.parameters.getUrlQuery(tabId) : '');
     }
 
     loadContent(tabId, callback) {
         if (!tabId || this.currentPath) {
-            $.ajax({
-                type: 'GET',
-                url: this.dataUrl(tabId, this.currentPath),
-                success: function (content) {
-                    if (tabId) {
-                        const $tab = this.$tabPane(tabId);
-                        $tab.html(content);
-                        $tab.data('loaded', 'true');
-                        this.onContentLoaded($tab);
-                    } else {
-                        this.$el.html(content);
-                        this.onContentLoaded();
-                    }
-                    if (callback) {
-                        callback();
-                    }
-                }.bind(this),
-                async: true,
-                cache: false
-            });
+            window.setTimeout(function () {
+                $.ajax({
+                    type: 'GET',
+                    url: this.contentUrl(tabId ? 'tab-view' : 'view-url', tabId, this.currentPath),
+                    success: function (content) {
+                        if (tabId) {
+                            const $tab = this.$tabPane(tabId);
+                            $tab.html(content);
+                            $tab.data('loaded', 'true');
+                            this.onContentLoaded($tab);
+                        } else {
+                            this.$el.html(content);
+                            this.onContentLoaded();
+                        }
+                        if (callback) {
+                            callback();
+                        }
+                    }.bind(this),
+                    async: true,
+                    cache: false
+                });
+            }.bind(this), 100);
         }
     }
 

@@ -1,8 +1,12 @@
 {
   "loadDocuments": true,
+  "parameterFields": [
+    "name=wcmmode,label=wcmmode,type=select,options=:--|disabled|edit|preview"
+  ],
   "sling.servlet.paths": [
     "/apps/cpm/browser/view/display",
     "/apps/cpm/browser/view/display/view",
+    "/apps/cpm/browser/view/display/form",
     "/apps/cpm/browser/view/display/load"
   ]
 }

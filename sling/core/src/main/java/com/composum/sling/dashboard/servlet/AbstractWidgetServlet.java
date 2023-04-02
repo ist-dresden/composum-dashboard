@@ -37,12 +37,13 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
 
     protected static final String OPTION_TILE = "tile";
     protected static final String OPTION_VIEW = "view";
+    protected static final String OPTION_FORM = "form";
     protected static final String OPTION_PAGE = "page";
 
     public static final String TEMPLATE_BASE = "/com/composum/sling/dashboard/";
     public static final String PLUGIN_BASE = TEMPLATE_BASE + "plugin/";
 
-    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TILE);
+    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_FORM, OPTION_TILE);
 
     protected String name;
     protected List<String> context;
@@ -173,7 +174,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     protected @Nullable String getHtmlSubmode(@NotNull final SlingHttpServletRequest request,
-                                              @NotNull final List<String> options) {
+                                              @NotNull final Collection<String> options) {
         final List<String> selectorMode = getSelectorMode(request, options);
         if (selectorMode.size() > 1) {
             return selectorMode.get(1);
@@ -241,7 +242,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     protected @NotNull List<String> getSelectorMode(@NotNull final SlingHttpServletRequest request,
-                                                    @NotNull final List<String> options) {
+                                                    @NotNull final Collection<String> options) {
         List<String> result = new ArrayList<>();
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String[] selectors = pathInfo.getSelectors();
@@ -256,7 +257,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     protected @NotNull List<String> getSuffixMode(@NotNull final SlingHttpServletRequest request,
-                                                  @NotNull final List<String> options) {
+                                                  @NotNull final Collection<String> options) {
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String suffix = Optional.ofNullable(pathInfo.getSuffix())
                 .map(s -> s.startsWith("/") ? s.substring(1) : s)

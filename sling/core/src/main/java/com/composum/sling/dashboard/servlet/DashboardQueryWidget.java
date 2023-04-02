@@ -36,10 +36,13 @@ import javax.servlet.Servlet;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 @Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
@@ -57,6 +60,10 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
 
         @AttributeDefinition(name = "Max Results")
         int maxResults() default 500;
+
+        @AttributeDefinition(name = "Query Templates",
+                description = "a set of predefined query templates offered in the query fields drop down menu")
+        String[] queryTemplates();
 
         @AttributeDefinition(name = "Name")
         String name() default "query";
@@ -123,6 +130,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     protected JsonRenderer jsonRenderer;
 
     protected int maxResults;
+    protected List<String> queryTemplates = new ArrayList<>();
     protected ValueMap properties = new ValueMapDecorator(new HashMap<>());
 
     @Activate
@@ -132,6 +140,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.maxResults = config.maxResults();
+        this.queryTemplates = List.of(Optional.ofNullable(config.queryTemplates()).orElse(new String[0]));
         properties.put("icon", config.icon());
     }
 
@@ -217,12 +226,19 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
                             @NotNull final PrintWriter writer)
             throws IOException {
         final String pattern = StringUtils.defaultString(request.getParameter("query"), "");
+        final StringBuilder templates = new StringBuilder();
+        for (String template : queryTemplates) {
+            templates.append("<a class=\"dropdown-item\" href=\"#\">").append(template).append("</a>");
+        }
         writer.append("<style>\n");
         copyResource(this.getClass(), TEMPLATE_BASE + "style.css", writer);
         writer.append("</style>\n");
         writer.append("<div class=\"dashboard-widget__query\" data-popover-uri=\"")
                 .append(getWidgetUri(request, resourceType, HTML_MODES, OPTION_LOAD)).append("\">");
         copyResource(getClass(), TEMPLATE_BASE + "form.html", writer, new HashMap<>() {{
+            put("templates", templates.length() > 0
+                    ? loadTemplate("plugin/query/templates.html",
+                    Collections.singletonMap("templates", templates.toString())) : "");
             put("action", getWidgetUri(request, resourceType, HTML_MODES, OPTION_FIND));
             put("pattern", xssapi.encodeForHTMLAttr(pattern));
         }});
@@ -231,10 +247,19 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         writer.append("</div></div>\n");
     }
 
+    protected String buildQuery(@NotNull final SlingHttpServletRequest request) {
+        String pattern = StringUtils.defaultString(request.getParameter("query"), "");
+        for (int i = 1; i <= 3; i++) {
+            pattern = pattern.replaceAll("[$]" + i, Optional.ofNullable(
+                    request.getParameter("arg" + i)).orElse(""));
+        }
+        return pattern;
+    }
+
     protected void htmlFind(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response,
                             @NotNull final PrintWriter writer) {
-        final String pattern = request.getParameter("query");
+        final String pattern = buildQuery(request);
         final JcrQuery query = StringUtils.isNotBlank(pattern) ? new JcrQuery(pattern) : null;
         writer.append("<table class=\"table table-sm table-striped\"><thead><tr class=\"query\"><th scope=\"col\" colspan=\"3\">")
                 .append(xssapi.encodeForHTML(query != null ? query.getQuery() : ""))

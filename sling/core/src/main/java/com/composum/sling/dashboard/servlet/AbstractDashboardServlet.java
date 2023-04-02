@@ -3,6 +3,7 @@ package com.composum.sling.dashboard.servlet;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
+import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -23,6 +24,7 @@ import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.io.Reader;
 import java.io.Writer;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Collections;
@@ -148,6 +150,37 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return StringUtils.join(cssClasses, " ");
     }
 
+    protected @NotNull String getRequestParameters(@NotNull final SlingHttpServletRequest request, boolean dropEmptyValues) {
+        final StringBuilder parameters = new StringBuilder();
+        for (final Map.Entry<String, String[]> entry : request.getParameterMap().entrySet()) {
+            final String name = URLEncoder.encode(entry.getKey(), StandardCharsets.UTF_8);
+            for (final String value : entry.getValue()) {
+                if (!dropEmptyValues || StringUtils.isNotBlank(value)) {
+                    parameters.append(parameters.length() == 0 ? '?' : '&')
+                            .append(name).append('=').append(URLEncoder.encode(value, StandardCharsets.UTF_8));
+                }
+            }
+        }
+        return parameters.toString();
+    }
+
+    protected int getIntParameter(@NotNull final SlingHttpServletRequest request,
+                                  @NotNull final String name, int defaultValue) {
+        final String value = request.getParameter(name);
+        if (StringUtils.isNotBlank(value))
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException ignore) {
+            }
+        return defaultValue;
+    }
+
+    protected boolean getBooleanParameter(@NotNull final SlingHttpServletRequest request,
+                                          @NotNull final String name, boolean defaultValue) {
+        final String value = request.getParameter(name);
+        return value != null ? List.of("true", "on", "").contains(value.toLowerCase()) : defaultValue;
+    }
+
     //
     // generic HTML page / element rendering...
     //
@@ -168,6 +201,59 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
             contentType += ";charset=UTF-8";
         }
         response.setContentType(contentType);
+    }
+
+    protected void sendFormFields(@NotNull final SlingHttpServletResponse response, List<String> formFields)
+            throws IOException {
+        prepareTextResponse(response, null);
+        final PrintWriter writer = response.getWriter();
+        for (final String field : formFields) {
+            final Map<String, Object> properties = new HashMap<>();
+            for (final String term : StringUtils.split(field, ',')) {
+                final String[] keyValue = StringUtils.split(term, "=", 2);
+                final String value = keyValue.length > 1 ? keyValue[1] : "";
+                if (value.contains("|")) {
+                    final StringBuilder options = new StringBuilder();
+                    for (final String option : StringUtils.split(value, '|')) {
+                        final String[] valLabel = StringUtils.splitPreserveAllTokens(option, ":", 2);
+                        options.append("<option value=\"").append(valLabel[0]).append("\">")
+                                .append(valLabel.length > 1 ? valLabel[1] : valLabel[0]).append("</option>");
+                    }
+                    properties.put(keyValue[0], options.toString());
+                } else {
+                    properties.put(keyValue[0], value);
+                }
+            }
+            embedTemplate(writer, "form/" + properties.get("type") + ".html", properties);
+        }
+    }
+
+    protected void embedTemplate(@NotNull final Writer responseWriter,
+                                 @NotNull final String scriptResource,
+                                 @NotNull final Map<String, Object> properties)
+            throws IOException {
+        try (final InputStream pageContent = getClass().getClassLoader()
+                .getResourceAsStream("/com/composum/sling/dashboard/" + scriptResource);
+             final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
+            if (reader != null) {
+                final Writer writer = new ValueEmbeddingWriter(responseWriter, properties,
+                        Locale.ENGLISH, this.getClass());
+                IOUtils.copy(reader, writer);
+            }
+        }
+    }
+
+    protected @Nullable String loadTemplate(@NotNull final String scriptResource,
+                                            @NotNull final Map<String, Object> properties)
+            throws IOException {
+        try (final InputStream pageContent = getClass().getClassLoader()
+                .getResourceAsStream("/com/composum/sling/dashboard/" + scriptResource);
+             final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
+            if (reader != null) {
+                return IOUtils.toString(new ValueEmbeddingReader(reader, properties, Locale.ENGLISH, this.getClass()));
+            }
+        }
+        return null;
     }
 
     protected void copyResource(@NotNull final Class<?> context, @NotNull final String resourcePath,

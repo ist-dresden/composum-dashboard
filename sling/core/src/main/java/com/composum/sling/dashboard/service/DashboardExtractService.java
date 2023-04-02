@@ -662,10 +662,10 @@ public class DashboardExtractService implements ResourceExtractService {
 
         protected void findPathReferences(int level, @Nullable final String value) {
             if (StringUtils.isNotBlank(value)) {
-                if (value.startsWith("/")) {
+                if (PATH_PATTERN.matcher(value).matches()) {
                     registerReferenceCandidate(value, level);
                 } else {
-                    final Matcher matcher = Pattern.compile("\"(?<path>/[^\"]+)\"").matcher(value);
+                    final Matcher matcher = PATH_EMBEDDED.matcher(value);
                     final int length = value.length();
                     int pos = 0;
                     while (pos < length && matcher.find(pos)) {

@@ -42,6 +42,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -102,11 +103,19 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                 description = "the response content type for the XML content (default: 'text/plain')")
         String contentType() default "text/plain";
 
+        @AttributeDefinition(name = "Parameter Fields",
+                description = "the set of form fields to add content URL parameters")
+        String[] parameterFields() default {
+                "name=depth,label=depth,type=text,size=1",
+                "name=raw,type=checkbox,label=source 'off'"
+        };
+
         @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/form",
                 DEFAULT_RESOURCE_TYPE + "/load"
         };
 
@@ -125,6 +134,8 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
     @Reference
     protected ResourceFilter resourceFilter;
 
+    protected List<String> parameterFields;
+
     @Override
     protected @NotNull ResourceFilter getResourceFilter() {
         return resourceFilter;
@@ -140,6 +151,7 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
         indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
         contentType = config.contentType();
+        parameterFields = List.of(config.parameterFields());
     }
 
     @Override
@@ -152,39 +164,44 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
         try (DashboardRequest request = new DashboardRequest(slingRequest)) {
-            final RequestPathInfo pathInfo = request.getRequestPathInfo();
-            final Resource targetResource = resourceFilter.getRequestResource(request);
-            if (targetResource != null) {
-                final String mode = getHtmlMode(request, HTML_MODES);
-                if (OPTION_LOAD.equals(mode) || "xml".equals(pathInfo.getExtension())) {
-                    prepareTextResponse(response, contentType);
-                    if (sourceMode) {
-                        response.setHeader("Content-Disposition", "inline; filename=.content.xml");
-                    }
-                    final PrintWriter writer = new PrintWriter(response.getWriter());
-                    try {
-                        dumpXml(writer, "", targetResource, 0, maxDepth,
-                                resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null,
-                                null);
-                    } catch (RepositoryException ignore) {
+            final String mode = getHtmlMode(request, HTML_MODES);
+            if (OPTION_FORM.equals(mode)) {
+                sendFormFields(response, parameterFields);
+            } else {
+                final Resource targetResource = resourceFilter.getRequestResource(request);
+                if (targetResource != null) {
+                    final RequestPathInfo pathInfo = request.getRequestPathInfo();
+                    final int depth = getIntParameter(request, "depth", maxDepth);
+                    final boolean source = isSourceMode(request);
+                    if (OPTION_LOAD.equals(mode) || "xml".equals(pathInfo.getExtension())) {
+                        prepareTextResponse(response, contentType);
+                        if (sourceMode) {
+                            response.setHeader("Content-Disposition", "inline; filename=.content.xml");
+                        }
+                        final PrintWriter writer = new PrintWriter(response.getWriter());
+                        try {
+                            dumpXml(writer, "", targetResource, 0, depth, resourceFilter,
+                                    source ? this::isAllowedProperty : resourceFilter::isAllowedProperty,
+                                    source ? this::isAllowedMixin : null, null);
+                        } catch (RepositoryException ignore) {
+                        }
+                    } else {
+                        final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
+                        if (StringUtils.isNotBlank(widgetUri)) {
+                            preview(request, response, targetResource);
+                        } else {
+                            xmlCode(response, targetResource, depth, source);
+                        }
                     }
                 } else {
-                    final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
-                    if (StringUtils.isNotBlank(widgetUri)) {
-                        preview(request, response, targetResource);
-                    } else {
-                        xmlCode(request, response, targetResource);
-                    }
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 }
-            } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
             }
         }
     }
 
-    protected void xmlCode(@NotNull final SlingHttpServletRequest request,
-                           @NotNull final SlingHttpServletResponse response,
-                           @NotNull final Resource targetResource)
+    protected void xmlCode(@NotNull final SlingHttpServletResponse response,
+                           @NotNull final Resource targetResource, int depth, boolean source)
             throws IOException {
         try (final InputStream pageContent = getClass().getClassLoader()
                 .getResourceAsStream("/com/composum/sling/dashboard/plugin/display/code.html");
@@ -192,9 +209,9 @@ public class DashboardXmlView extends AbstractSourceView implements XmlRenderer,
             if (reader != null) {
                 try (final StringWriter content = new StringWriter();
                      final PrintWriter xmlWriter = new PrintWriter(content)) {
-                    dumpXml(xmlWriter, "", targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null,
-                            null);
+                    dumpXml(xmlWriter, "", targetResource, 0, depth, resourceFilter,
+                            source ? this::isAllowedProperty : resourceFilter::isAllowedProperty,
+                            source ? this::isAllowedMixin : null, null);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);

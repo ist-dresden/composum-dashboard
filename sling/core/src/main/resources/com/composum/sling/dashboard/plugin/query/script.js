@@ -5,7 +5,10 @@ class QueryView extends ViewWidget {
     constructor(element) {
         super(element);
         this.$form = this.$('.dashboard-widget__query-form');
+        this.$query = this.$form.find('input[name="query"]');
         this.$result = this.$('.dashboard-widget__query-result');
+        this.$form.find('.query-templates .dropdown-item').click(this.applyTemplate.bind(this));
+        this.$query.on('keyup', this.scanQueryField.bind(this));
         this.$form.on('submit', this.onSubmit.bind(this));
         $(document).on('query:change', this.onQueryChange.bind(this));
         this.onContentLoaded();
@@ -13,10 +16,30 @@ class QueryView extends ViewWidget {
         this.changeQuery(url.parameters.query);
     }
 
+    applyTemplate(event) {
+        event.preventDefault();
+        this.changeQuery($(event.currentTarget).text());
+    }
+
+    scanQueryField() {
+        const value = this.$query.val();
+        this.adjustArgumentStatus(value, 1);
+        this.adjustArgumentStatus(value, 2);
+        this.adjustArgumentStatus(value, 3);
+    }
+
+    adjustArgumentStatus(value, index) {
+        if (new RegExp('[$]' + index).exec(value)) {
+            this.$form.find('input[name="arg' + index + '"]').removeClass('hidden')
+        } else {
+            this.$form.find('input[name="arg' + index + '"]').addClass('hidden')
+        }
+    }
+
     changeQuery(query) {
         if (query) {
-            this.$form.find('input[name="query"]').val(query);
-            this.submitQuery();
+            this.$query.val(query);
+            this.scanQueryField();
         }
     }
 

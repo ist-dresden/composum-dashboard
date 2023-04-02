@@ -38,6 +38,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
@@ -97,11 +98,19 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 description = "the response content type for the JSON content (default: 'application/json')")
         String contentType() default "application/json";
 
+        @AttributeDefinition(name = "Parameter Fields",
+                description = "the set of form fields to add content URL parameters")
+        String[] parameterFields() default {
+                "name=depth,label=depth,type=text,size=1",
+                "name=raw,type=checkbox,label=source 'off'"
+        };
+
         @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/form",
                 DEFAULT_RESOURCE_TYPE + "/load"
         };
 
@@ -120,6 +129,8 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
     @Reference
     protected ResourceFilter resourceFilter;
 
+    protected List<String> parameterFields;
+
     @Override
     protected @NotNull ResourceFilter getResourceFilter() {
         return resourceFilter;
@@ -135,6 +146,7 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
         indent = StringUtils.repeat(" ", config.indent());
         sourceMode = config.sourceMode();
         contentType = config.contentType();
+        parameterFields = List.of(config.parameterFields());
     }
 
     @Override
@@ -147,33 +159,39 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
         try (DashboardRequest request = new DashboardRequest(slingRequest)) {
-            final RequestPathInfo pathInfo = request.getRequestPathInfo();
-            final Resource targetResource = resourceFilter.getRequestResource(request);
-            if (targetResource != null) {
-                final String mode = getHtmlMode(request, HTML_MODES);
-                if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
-                    prepareTextResponse(response, contentType);
-                    final JsonWriter writer = new JsonWriter(response.getWriter());
-                    writer.setIndent(this.indent);
-                    dumpJson(writer, targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null, null);
-                } else {
-                    final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
-                    if (StringUtils.isNotBlank(widgetUri)) {
-                        preview(request, response, targetResource);
-                    } else {
-                        jsonCode(request, response, targetResource);
-                    }
-                }
+            final String mode = getHtmlMode(request, HTML_MODES);
+            if (OPTION_FORM.equals(mode)) {
+                sendFormFields(response, parameterFields);
             } else {
-                response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                final Resource targetResource = resourceFilter.getRequestResource(request);
+                if (targetResource != null) {
+                    final RequestPathInfo pathInfo = request.getRequestPathInfo();
+                    final int depth = getIntParameter(request, "depth", maxDepth);
+                    final boolean source = isSourceMode(request);
+                    if (OPTION_LOAD.equals(mode) || "json".equals(pathInfo.getExtension())) {
+                        prepareTextResponse(response, contentType);
+                        final JsonWriter writer = new JsonWriter(response.getWriter());
+                        writer.setIndent(this.indent);
+                        dumpJson(writer, targetResource, 0, depth, resourceFilter,
+                                source ? this::isAllowedProperty : resourceFilter::isAllowedProperty,
+                                source ? this::isAllowedMixin : null, null);
+                    } else {
+                        final String widgetUri = getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD);
+                        if (StringUtils.isNotBlank(widgetUri)) {
+                            preview(request, response, targetResource);
+                        } else {
+                            jsonCode(response, targetResource, depth, source);
+                        }
+                    }
+                } else {
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND);
+                }
             }
         }
     }
 
-    protected void jsonCode(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
-                            @NotNull final Resource targetResource)
+    protected void jsonCode(@NotNull final SlingHttpServletResponse response,
+                            @NotNull final Resource targetResource, int depth, boolean source)
             throws IOException {
         try (final InputStream pageContent = getClass().getClassLoader()
                 .getResourceAsStream("/com/composum/sling/dashboard/plugin/display/code.html");
@@ -182,8 +200,9 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 try (final StringWriter content = new StringWriter();
                      final JsonWriter jsonWriter = new JsonWriter(content)) {
                     jsonWriter.setIndent(this.indent);
-                    dumpJson(jsonWriter, targetResource, 0, maxDepth,
-                            resourceFilter, this::isAllowedProperty, sourceMode ? this::isAllowedMixin : null, null);
+                    dumpJson(jsonWriter, targetResource, 0, depth, resourceFilter,
+                            source ? this::isAllowedProperty : resourceFilter::isAllowedProperty,
+                            source ? this::isAllowedMixin : null, null);
                     final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                             Collections.singletonMap("content", content.toString()));
                     prepareTextResponse(response, null);

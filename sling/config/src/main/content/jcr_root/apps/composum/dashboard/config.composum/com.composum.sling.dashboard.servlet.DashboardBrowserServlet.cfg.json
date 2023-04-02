@@ -3,6 +3,7 @@
     "/apps/cpm/browser",
     "/apps/cpm/browser/page",
     "/apps/cpm/browser/view",
+    "/apps/cpm/browser/form",
     "/apps/cpm/browser/tool",
     "/apps/cpm/browser/tree"
   ]

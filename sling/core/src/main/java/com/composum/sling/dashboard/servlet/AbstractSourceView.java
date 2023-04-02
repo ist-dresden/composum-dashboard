@@ -29,7 +29,7 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
 
     public static final String OPTION_LOAD = "load";
 
-    public static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_LOAD);
+    public static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_FORM, OPTION_LOAD);
 
     public static final List<Pattern> NON_SOURCE_PROPS = Arrays.asList(
             Pattern.compile("^jcr:(uuid|data)$"),
@@ -56,6 +56,11 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
     public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
+    protected boolean isSourceMode(@NotNull final SlingHttpServletRequest request) {
+        return getBooleanParameter(request, "source", sourceMode)
+                && !getBooleanParameter(request, "raw", !sourceMode);
+    }
+
     protected boolean isTranslationsRootFolder(@NotNull final Resource resource) {
         final ValueMap resourceProps = resource.getValueMap();
         return !NT_FILE.equals(resourceProps.get(JCR_PRIMARY_TYPE, String.class))
@@ -73,7 +78,8 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
                 final Writer writer = new ValueEmbeddingWriter(response.getWriter(),
                         Collections.singletonMap("targetUrl",
                                 getWidgetUri(request, defaultResourceType(), HTML_MODES, OPTION_LOAD)
-                                        + targetResource.getPath()), Locale.ENGLISH, this.getClass());
+                                        + targetResource.getPath() + getRequestParameters(request, false)),
+                        Locale.ENGLISH, this.getClass());
                 prepareTextResponse(response, null);
                 IOUtils.copy(reader, writer);
             }

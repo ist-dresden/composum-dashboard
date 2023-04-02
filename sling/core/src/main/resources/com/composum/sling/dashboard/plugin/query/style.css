@@ -18,15 +18,31 @@
     padding: 0.3rem 0.6rem;
 }
 
+.dashboard-widget__query-form .dashboard-widget__query-argument {
+    width: 12%;
+    margin-left: 0.3rem;
+}
+
 .dashboard-widget__query-field {
     height: 32px;
-    margin-right: 0.6rem;
     padding: 0.3rem 0.6rem;
+}
+
+.dashboard-widget__query-form .hidden {
+    display: none;
 }
 
 .dashboard-widget__query-form .btn {
     height: 32px;
     padding: 0.2rem 0.6rem;
+}
+
+.dashboard-widget__query-form .query-templates {
+    margin-right: 0.3rem;
+}
+
+.dashboard-widget__query-form .query-submit {
+    margin-left: 0.6rem;
 }
 
 .dashboard-widget__query-form_hint {

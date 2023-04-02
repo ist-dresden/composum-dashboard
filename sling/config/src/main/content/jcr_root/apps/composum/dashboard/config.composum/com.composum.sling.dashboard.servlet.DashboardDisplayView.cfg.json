@@ -3,6 +3,7 @@
   "sling.servlet.paths": [
     "/apps/cpm/browser/view/display",
     "/apps/cpm/browser/view/display/view",
+    "/apps/cpm/browser/view/display/form",
     "/apps/cpm/browser/view/display/load"
   ]
 }

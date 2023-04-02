@@ -1,14 +1,13 @@
 package com.composum.sling.dashboard.servlet;
 
-import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.Properties;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
-import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -27,6 +26,7 @@ import javax.servlet.Servlet;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -112,9 +112,9 @@ public class DashboardPropertiesView extends AbstractWidgetServlet implements Co
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
         try (DashboardRequest request = new DashboardRequest(slingRequest)) {
+            final String mode = getHtmlMode(request, HTML_MODES);
             final Resource resource = resourceFilter.getRequestResource(request);
-            if (resource != null) {
-                ResourceResolver resolver = resource.getResourceResolver();
+            if (resource != null && List.of(OPTION_PAGE, OPTION_VIEW, "").contains(mode)) {
                 prepareTextResponse(response, null);
                 final PrintWriter writer = response.getWriter();
                 writer.append("<table class=\"table table-sm table-striped\"><thead><tr>\n" +

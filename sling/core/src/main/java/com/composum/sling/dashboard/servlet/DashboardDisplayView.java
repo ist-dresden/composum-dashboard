@@ -87,11 +87,16 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
         @AttributeDefinition(name = "Document Loading")
         boolean loadDocuments() default true;
 
+        @AttributeDefinition(name = "Parameter Fields",
+                description = "the set of form fields to add content URL parameters")
+        String[] parameterFields();
+
         @AttributeDefinition(name = "Resource Types",
                 description = "the resource types implemented by this servlet")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/form",
                 DEFAULT_RESOURCE_TYPE + "/load"
         };
 
@@ -108,7 +113,8 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
 
     protected static final String OPTION_LOAD = "load";
 
-    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_VIEW, OPTION_LOAD);
+    protected static final List<String> HTML_MODES =
+            Arrays.asList(OPTION_VIEW, OPTION_FORM, OPTION_LOAD);
 
     enum Type {PREVIEW, TEXT, CODE, IMAGE, VIDEO, DOCUMENT, BINARY, UNKNOWN}
 
@@ -120,6 +126,8 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
 
     protected boolean loadDocuments = true;
 
+    protected List<String> parameterFields;
+
     @Activate
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) {
@@ -127,6 +135,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         loadDocuments = config.loadDocuments();
+        parameterFields = List.of(config.parameterFields());
     }
 
     @Override
@@ -153,7 +162,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                         switch (displayType) {
                             case PREVIEW:
                                 preview(request, response, displayType, Collections.singletonMap("targetUrl",
-                                        getTargetUrl(resource, "html")));
+                                        getTargetUrl(resource, "html") + getRequestParameters(request, true)));
                                 break;
                             case DOCUMENT:
                             default:
@@ -183,6 +192,9 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                     } else {
                         response.sendError(HttpServletResponse.SC_NOT_FOUND);
                     }
+                    break;
+                case OPTION_FORM:
+                    sendFormFields(response, parameterFields);
                     break;
                 case OPTION_LOAD:
                     loadContent(request, response);

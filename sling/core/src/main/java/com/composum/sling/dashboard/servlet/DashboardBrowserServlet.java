@@ -89,7 +89,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         int rank() default 6000;
 
         @AttributeDefinition(name = "Label")
-        String label() default "Composum Browser";
+        String label() default "Browser";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle() default "Browser";
@@ -108,6 +108,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/page",
                 DEFAULT_RESOURCE_TYPE + "/view",
+                DEFAULT_RESOURCE_TYPE + "/form",
                 DEFAULT_RESOURCE_TYPE + "/tool",
                 DEFAULT_RESOURCE_TYPE + "/tree"
         };
@@ -126,14 +127,13 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     public static final String BROWSER_CONTEXT = "browser";
 
-    public static final String VIEWS_PATH = "views";
-
     public static final String TEMPLATE_BASE = "/com/composum/sling/dashboard/browser/";
     public static final String PAGE_TEMPLATE = TEMPLATE_BASE + "page.html";
     public static final String PAGE_TAIL = TEMPLATE_BASE + "tail.html";
     protected static final String OPTION_TREE = "tree";
     protected static final String OPTION_TOOL = "tool";
-    protected static final List<String> HTML_MODES = Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_TOOL, OPTION_TREE);
+    protected static final List<String> HTML_MODES =
+            Arrays.asList(OPTION_PAGE, OPTION_VIEW, OPTION_FORM, OPTION_TOOL, OPTION_TREE);
 
     @Reference
     protected XSSAPI xssapi;
@@ -254,12 +254,16 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         try (DashboardRequest request = new DashboardRequest(slingRequest)) {
             final RequestPathInfo pathInfo = request.getRequestPathInfo();
             if ("html".equals(pathInfo.getExtension())) {
-                switch (getHtmlMode(request, HTML_MODES)) {
+                final String mode = getHtmlMode(request, HTML_MODES);
+                switch (mode) {
                     case OPTION_TREE:
                         jsonTree(request, response);
                         break;
                     case OPTION_VIEW:
                         htmlView(request, response);
+                        break;
+                    case OPTION_FORM:
+                        htmlForm(request, response);
                         break;
                     case OPTION_TOOL:
                         htmlTool(request, response);
@@ -297,7 +301,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, null)));
             properties.put("browser-tree", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_TREE)));
             properties.put("browser-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW)));
-            properties.put("browser-tab", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW, "#id#")));
+            properties.put("browser-tab-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW, "#id#")));
+            properties.put("browser-tab-form", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW, "#id#", OPTION_FORM)));
             properties.put("loginUrl", xssapi.encodeForHTMLAttr(dashboardManager.getLoginUri()));
             properties.put("currentUser", xssapi.encodeForHTML(resolver.getUserID()));
             prepareTextResponse(response, null);
@@ -350,6 +355,18 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         htmlView(request, response, toolWidgets);
     }
 
+    protected void htmlForm(@NotNull final SlingHttpServletRequest request,
+                            @NotNull final SlingHttpServletResponse response)
+            throws ServletException, IOException {
+        final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_FORM));
+        if (StringUtils.isNotBlank(submode)) {
+            final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? viewWidgets.get(submode) : null;
+            if (selectedView != null) {
+                htmlView(request, response, selectedView);
+            }
+        }
+    }
+
     protected boolean htmlView(@NotNull final SlingHttpServletRequest request,
                                @NotNull final SlingHttpServletResponse response,
                                @NotNull final Map<String, DashboardWidget> widgets)
@@ -386,7 +403,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                             .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(view.getLabel()))
                             .append("</a></li>\n");
                 }
-                writer.append("</ul><div class=\"dashboard-browser__action-reload fa fa-refresh\"></div>\n");
+                writer.append("</ul></div>\n");
+                writer.append("<div class=\"dashboard-browser__parameters\"><form class=\"form-inline\">\n");
+                writer.append("</form></div>\n");
+                writer.append("<div class=\"dashboard-browser__action-reload fa fa-refresh\"></div>\n");
                 writer.append("<div class=\"dashboard-browser__tabs-content tab-content\">\n");
                 for (final DashboardWidget view : widgets) {
                     final String viewId = view.getName();

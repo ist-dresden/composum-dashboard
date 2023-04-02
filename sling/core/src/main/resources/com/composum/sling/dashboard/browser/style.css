@@ -1,12 +1,12 @@
 
 .dashboard__status-bar {
     flex-grow: 1;
-    margin: 0 20px 0 15px;
+    margin: 0 20px 0 0;
     overflow: auto;
 }
 
-.dashboard__status-line,
-.dashboard__status-line:focus {
+.dashboard__path-field,
+.dashboard__path-field:focus {
     width: 100%;
     border: none;
     background: #1e1e1e;
@@ -16,7 +16,7 @@
 
 .dashboard-browser {
     position: absolute;
-    top: 44px;
+    top: 40px;
     left: 0;
     right: 0;
     bottom: 0;
@@ -41,8 +41,8 @@
 }
 
 .dashboard-browser__tree-panel {
-    width: 40%;
-    min-width: 25%;
+    width: 35%;
+    min-width: 22%;
     max-width: 500px;
     border-right: 1px solid #777;
     padding: 5px;
@@ -107,6 +107,38 @@
     background: #fff;
 }
 
+.dashboard-browser__view .dashboard-browser__parameters {
+    position: absolute;
+    top: 0;
+    right: 60px;
+    height: 33px;
+}
+
+.dashboard-browser__view .dashboard-browser__parameters .form-check-label,
+.dashboard-browser__view .dashboard-browser__parameters .form-control-label {
+    color: #f8f8f8
+}
+
+.dashboard-browser__view .dashboard-browser__parameters .form-control-label {
+    margin: 4px -10px 4px 15px;
+}
+
+.dashboard-browser__view .dashboard-browser__parameters .form-control,
+.dashboard-browser__view .dashboard-browser__parameters .form-check {
+    margin: 4px 0 4px 15px;
+}
+
+.dashboard-browser__view .dashboard-browser__parameters .form-control {
+    padding: 1px 4px;
+    line-height: 18px;
+    height: auto;
+}
+
+.dashboard-browser__view .dashboard-browser__parameters .form-check-input {
+    width: 17px;
+    height: 17px;
+}
+
 .dashboard-browser__view .dashboard-browser__action-reload {
     cursor: pointer;
     position: absolute;
@@ -169,7 +201,7 @@
     border: none;
     padding: 4px 8px 8px;
     font-family: monospace;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 100;
     white-space: pre;
 }

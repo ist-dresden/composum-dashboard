@@ -1,9 +1,13 @@
 <div class="dashboard-widget__query-head">
     <form class="dashboard-widget__query-form d-flex align-items-stretch" data-action="${action}" method="GET">
         <input type="hidden" name="_charset_" value="UTF-8"/>
+        ${templates}
         <input class="dashboard-widget__query-field" style="flex-grow:1;"
                name="query" value="${pattern}" type="text"/>
-        <button type="submit" class="btn btn-dark">Search</button>
+        <input class="dashboard-widget__query-argument hidden" name="arg1" type="text"/>
+        <input class="dashboard-widget__query-argument hidden" name="arg2" type="text"/>
+        <input class="dashboard-widget__query-argument hidden" name="arg3" type="text"/>
+        <button type="submit" class="query-submit btn btn-dark">Search</button>
     </form>
     <button class="dashboard-widget__query-form_hint" data-toggle="popover" data-trigger="focus" data-placement="bottom"
             data-content="

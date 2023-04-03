@@ -50,6 +50,9 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
                 "Content=^/content(/.*)$"
         };
 
+        @AttributeDefinition(name = "max History Items")
+        int historyMax() default 100;
+
         @AttributeDefinition(name = "Name")
         String name() default "favorites";
 
@@ -101,6 +104,7 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
     protected XSSAPI xssapi;
 
     protected Map<String, String> favoriteGroups = new LinkedHashMap<>();
+    protected int historyMax;
     protected ValueMap properties = new ValueMapDecorator(new HashMap<>());
 
     @Activate
@@ -117,6 +121,7 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
                 favoriteGroups.put(matcher.group("label"), matcher.group("pattern"));
             }
         }
+        historyMax = config.historyMax();
         properties.put("icon", config.icon());
     }
 
@@ -159,16 +164,13 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
         writer.append("<style>\n");
         copyResource(this.getClass(), TEMPLATE_BASE + "style.css", writer);
         writer.append("</style>\n");
-        writer.append("<div class=\"dashboard-widget__favorites\">");
+        writer.append("<div class=\"dashboard-widget__favorites\" data-history-max=\"")
+                .append(String.valueOf(historyMax)).append("\">");
         writer.append("<div><ul class=\"dashboard-widget__favorites-groups nav nav-tabs\" role=\"tablist\">\n");
         for (final Map.Entry<String, String> entry : favoriteGroups.entrySet()) {
-            final String label = entry.getKey();
-            writer.append("<li class=\"nav-item\"><a class=\"nav-link\" id=\"").append(xssapi.encodeForHTMLAttr(label))
-                    .append("\" data-toggle=\"tab\" href=\"#").append(xssapi.encodeForHTMLAttr(label))
-                    .append("\" role=\"tab\" data-pattern=\"").append(xssapi.encodeForHTMLAttr(entry.getValue()))
-                    .append("\" aria-selected=\"false\">").append(xssapi.encodeForHTML(label))
-                    .append("</a></li>\n");
+            writeTab(writer, "favorites-group", entry.getKey(), entry.getKey(), entry.getValue());
         }
+        writeTab(writer, "favorites-history fa fa-history", "history", "", "");
         writer.append("</ul>");
         writer.append("<div class=\"dashboard-widget__favorites-clear fa fa-trash\"></div>\n");
         writer.append("</div>\n");
@@ -177,5 +179,21 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
                 + "<tbody class=\"dashboard-widget__favorites-content\"></tbody>"
                 + "</table></div>\n");
         writer.append("</div>");
+    }
+
+    protected void writeTab(@NotNull final PrintWriter writer, @NotNull final String linkCssClasses,
+                            @NotNull String id, @NotNull String label, @NotNull String pattern) {
+        id = xssapi.encodeForHTMLAttr(id.replaceAll("[\\s]+", "").toLowerCase());
+        label = xssapi.encodeForHTMLAttr(label);
+        writer.append("<li class=\"nav-item favorite-group-").append(id)
+                .append("\"><a class=\"nav-link ").append(linkCssClasses)
+                .append("\" id=\"").append(id);
+        if ("history".equals(id)) {
+            writer.append("\" title=\"").append("History");
+        }
+        writer.append("\" data-toggle=\"tab\" href=\"#").append(label)
+                .append("\" role=\"tab\" data-pattern=\"").append(xssapi.encodeForHTMLAttr(pattern))
+                .append("\" aria-selected=\"false\">").append(label)
+                .append("</a></li>\n");
     }
 }

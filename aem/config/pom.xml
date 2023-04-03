@@ -30,6 +30,7 @@
                                 <include>.*/.*\.dashboard\..*\.GenericDashboardPlugin.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Service.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Servlet.*</include>
+                                <include>.*/.*\.dashboard\..*\.Dashboard.*Tool.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*View.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Widget.*</include>
                                 <include>.*/.*\.dashboard\..*\.DefaultTrace.*</include>

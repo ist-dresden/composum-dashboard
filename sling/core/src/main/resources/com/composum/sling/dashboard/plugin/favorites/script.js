@@ -6,7 +6,9 @@ class FavoritesView extends ViewWidget {
         super(element);
         this.$content = this.$el.find('.dashboard-widget__favorites-content');
         this.profile = new Profile('favorites');
-        this.favorites = this.profile.get('items') || [];
+        this.selection = this.profile.get('selection') || [];
+        this.history = this.profile.get('history') || [];
+        this.historyMax = parseInt(this.$el.data('history-max') || '100');
         this.showTab(this.profile.get('currentTab'), true);
         this.$el.find('.dashboard-widget__favorites-clear').click(this.clearFavorites.bind(this));
         this.$el.find('.dashboard-widget__favorites-groups a[data-toggle="tab"]').click(this.onTabSelected.bind(this));
@@ -31,13 +33,20 @@ class FavoritesView extends ViewWidget {
     }
 
     renderFavorites() {
-        let pattern = this.$currentTab && this.$currentTab.length > 0
-            ? new RegExp(this.$currentTab.data('pattern')) : undefined;
         let content = '';
-        for (let i = 0; i < this.favorites.length; i++) {
-            if (!pattern || pattern.exec(this.favorites[i]) !== null) {
+        if (this.$currentTab.attr('id') === 'history') {
+            for (let i = this.history.length; --i >= 0;) {
                 content += '<tr><td class="path"><a href="#" data-path="'
-                    + this.favorites[i] + '">' + this.favorites[i] + '</a></td></tr>';
+                    + this.history[i] + '">' + this.history[i] + '</a></td></tr>';
+            }
+        } else {
+            let pattern = this.$currentTab && this.$currentTab.length > 0
+                ? new RegExp(this.$currentTab.data('pattern')) : undefined;
+            for (let i = 0; i < this.selection.length; i++) {
+                if (!pattern || pattern.exec(this.selection[i]) !== null) {
+                    content += '<tr><td class="path"><a href="#" data-path="'
+                        + this.selection[i] + '">' + this.selection[i] + '</a></td></tr>';
+                }
             }
         }
         this.$content.html(content);
@@ -58,13 +67,23 @@ class FavoritesView extends ViewWidget {
             $toggle.removeClass('is-favorite');
         }
         $toggle.off('click').click(this.toggleFavorite.bind(this));
+        if (this.history.length < 1 || this.history[this.history.length - 1] !== path) {
+            this.history.push(path);
+            if (this.history.length > this.historyMax) {
+                this.history.splice(0, this.history.length - this.historyMax);
+            }
+            this.profile.set('history', this.history);
+            if (this.$currentTab.attr('id') === 'history') {
+                this.renderFavorites();
+            }
+        }
     }
 
     toggleFavorite(event) {
         event.preventDefault();
         if (this.currentPath) {
             this.isFavorite(this.currentPath, true);
-            this.profile.set('items', this.favorites);
+            this.profile.set('selection', this.selection);
             this.renderFavorites();
             this.onPathSelected(undefined, this.currentPath);
         }
@@ -72,10 +91,10 @@ class FavoritesView extends ViewWidget {
 
     isFavorite(path, toggle) {
         let result = undefined;
-        for (let i = 0; i < this.favorites.length; i++) {
-            if (path === this.favorites[i]) {
+        for (let i = 0; i < this.selection.length; i++) {
+            if (path === this.selection[i]) {
                 if (toggle) {
-                    this.favorites.splice(i, 1);
+                    this.selection.splice(i, 1);
                     result = false;
                 } else {
                     result = true;
@@ -85,8 +104,8 @@ class FavoritesView extends ViewWidget {
         }
         if (result === undefined) {
             if (toggle) {
-                this.favorites.push(path);
-                this.favorites.sort();
+                this.selection.push(path);
+                this.selection.sort();
                 return true;
             }
             return false;
@@ -96,8 +115,10 @@ class FavoritesView extends ViewWidget {
 
     clearFavorites(event) {
         event.preventDefault();
-        this.favorites = [];
-        this.profile.set('items', this.favorites);
+        this.selection = [];
+        this.history = [];
+        this.profile.set('selection', this.selection);
+        this.profile.set('history', this.history);
         this.renderFavorites();
     }
 }

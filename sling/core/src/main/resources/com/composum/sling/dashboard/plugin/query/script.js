@@ -7,6 +7,7 @@ class QueryView extends ViewWidget {
         this.$form = this.$('.dashboard-widget__query-form');
         this.$query = this.$form.find('input[name="query"]');
         this.$result = this.$('.dashboard-widget__query-result');
+        this.$spinner = this.$('.dashboard-widget__query-spinner');
         this.$form.find('.query-templates .dropdown-item').click(this.applyTemplate.bind(this));
         this.$query.on('keyup', this.scanQueryField.bind(this));
         this.$form.on('submit', this.onSubmit.bind(this));
@@ -54,14 +55,19 @@ class QueryView extends ViewWidget {
     }
 
     submitQuery() {
-        this.loadContent(this.$result, this.formGetUrl(this.$form));
+        this.$spinner.addClass('shown');
+        this.loadContent(this.$result, this.formGetUrl(this.$form), function ($element) {
+            this.onContentLoaded(undefined, $element);
+            this.$spinner.removeClass('shown');
+        }.bind(this));
     }
 
     onContentLoaded(event, element) {
         const $element = $(element || this.el);
         $(document).trigger('content:loaded', [$element]);
         $element.find('[data-toggle="popover"]').popover({
-            html: true
+            html: true,
+            boundary: 'viewport'
         }).on('inserted.bs.popover', function (event) {
             const $trigger = $(event.currentTarget);
             const path = $trigger.closest('tr').find('a.path').data('path');

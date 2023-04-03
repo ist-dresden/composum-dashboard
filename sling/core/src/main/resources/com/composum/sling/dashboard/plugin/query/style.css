@@ -60,13 +60,31 @@
     overflow: auto;
 }
 
-.dashboard-widget__query-result {
+.dashboard-widget__query-result,
+.dashboard-widget__query-spinner {
     position: absolute;
     top: 63px;
     left: 0;
     right: 0;
     bottom: 0;
     overflow: auto;
+}
+
+.dashboard-widget__query-spinner {
+    display: none;
+    background-color: rgba(0,0,0,0.3);
+    color: #eee;
+}
+
+.dashboard-widget__query-spinner.shown {
+    display: block;
+}
+
+.dashboard-widget__query-spinner i {
+    position: absolute;
+    top: 30%;
+    left: 46%;
+    transform: translate(-50%, -50%);
 }
 
 .dashboard-widget__query-result .table {

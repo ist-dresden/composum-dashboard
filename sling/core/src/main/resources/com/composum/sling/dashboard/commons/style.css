@@ -39,7 +39,7 @@ body {
 }
 
 .composum-dashboard__navbar .nav-link {
-    padding: 0 15px;
+    padding: 0 10px;
     line-height: 36px;
 }
 
@@ -55,7 +55,14 @@ body {
 
 .composum-dashboard__navbar .dashboard__home-link,
 .composum-dashboard__navbar .nav-item {
+    height: 36px;
     line-height: 36px;
+}
+
+.composum-dashboard__navbar .browser-tool-favorites {
+    height: 35px;
+    padding-top: 1px;
+    line-height: 34px;
 }
 
 .composum-dashboard__navbar .nav-item,

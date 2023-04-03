@@ -51,6 +51,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.TreeMap;
 
 import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
@@ -157,7 +158,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     )
     protected void addDashboardWidget(@NotNull final DashboardWidget widget) {
         if (widget.getContext().contains(BROWSER_CONTEXT)) {
-            if (widget.getCategory().contains("search")) {
+            if (widget.getCategory().contains("tool")) {
                 synchronized (toolWidgets) {
                     toolWidgets.put(widget.getName(), widget);
                 }
@@ -281,6 +282,21 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         }
     }
 
+    protected boolean isFavoritesSupported() {
+        for (DashboardWidget widget : toolWidgets.values()) {
+            if (widget.getCategory().contains("favorites")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    protected void collectHtmlCssClasses(@NotNull final Set<String> cssClasses) {
+        if (isFavoritesSupported()) {
+            cssClasses.add("browser-favorites");
+        }
+    }
+
     protected void browserPage(@NotNull final SlingHttpServletRequest request,
                                @NotNull final SlingHttpServletResponse response)
             throws IOException {
@@ -340,7 +356,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             final String toolUri = getWidgetUri(tool.getWidgetResource(request),
                     Collections.singletonList(OPTION_VIEW), OPTION_VIEW);
             final String toolIcon = tool.getProperty("icon", "ellipsis-h");
-            writer.append("<li class=\"nav-item\"><a class=\"tool-link nav-link\" href=\"#\" data-tool-uri=\"")
+            writer.append("<li class=\"nav-item browser-tool-").append(tool.getName())
+                    .append("\"><a class=\"tool-link nav-link\" href=\"#\" data-tool-uri=\"")
                     .append(xssapi.encodeForHTMLAttr(toolUri))
                     .append("\" title=\"").append(xssapi.encodeForHTMLAttr(tool.getLabel()))
                     .append("\"><i class=\"nav-icon fa fa-").append(xssapi.encodeForHTMLAttr(toolIcon))
@@ -394,6 +411,9 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             if (!htmlView(request, response, viewWidgets)) {
                 final Iterable<DashboardWidget> widgets = getWidgets(viewWidgets);
                 final PrintWriter writer = response.getWriter();
+                if (isFavoritesSupported()) {
+                    writer.append("<div class=\"dashboard-browser__favorite-toggle fa fa-star-o\"></div>\n");
+                }
                 writer.append("<ul class=\"dashboard-browser__tabs nav nav-tabs\" role=\"tablist\">\n");
                 for (final DashboardWidget view : widgets) {
                     final String viewId = view.getName();

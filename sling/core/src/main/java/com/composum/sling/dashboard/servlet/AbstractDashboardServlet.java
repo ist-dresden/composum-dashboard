@@ -147,7 +147,11 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
                     .map(serviceReference -> bundleContext.getService(serviceReference))
                     .ifPresent(dashboardManager -> dashboardManager.addRunmodeCssClasses(cssClasses));
         }
+        collectHtmlCssClasses(cssClasses);
         return StringUtils.join(cssClasses, " ");
+    }
+
+    protected void collectHtmlCssClasses(@NotNull final Set<String> cssClasses) {
     }
 
     protected @NotNull String getRequestParameters(@NotNull final SlingHttpServletRequest request, boolean dropEmptyValues) {

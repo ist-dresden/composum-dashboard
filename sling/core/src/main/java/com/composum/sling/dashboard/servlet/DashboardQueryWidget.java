@@ -74,7 +74,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         };
 
         @AttributeDefinition(name = "Category")
-        String[] category() default {"search"};
+        String[] category() default {"search", "tool"};
 
         @AttributeDefinition(name = "Rank")
         int rank() default 5000;
@@ -244,7 +244,8 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         }});
         writer.append("<div class=\"dashboard-widget__query-result\">\n");
         htmlFind(request, response, writer);
-        writer.append("</div></div>\n");
+        writer.append("</div><div class=\"dashboard-widget__query-spinner hidden\"><i class=\"fa fa-spinner fa-pulse fa-5x fa-fw\"></i></div>\n");
+        writer.append("</div>\n");
     }
 
     protected String buildQuery(@NotNull final SlingHttpServletRequest request) {

@@ -5,7 +5,7 @@
     <parent>
         <groupId>com.composum.dashboard</groupId>
         <artifactId>composum-dashboard-sling-parent</artifactId>
-        <version>1.2.7</version>
+        <version>1.2.8</version>
     </parent>
 
     <artifactId>composum-dashboard-sling-osgi-config</artifactId>
@@ -30,6 +30,7 @@
                                 <include>.*/.*\.dashboard\..*\.GenericDashboardPlugin.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Service.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Servlet.*</include>
+                                <include>.*/.*\.dashboard\..*\.Dashboard.*Tool.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*View.*</include>
                                 <include>.*/.*\.dashboard\..*\.Dashboard.*Widget.*</include>
                                 <include>.*/.*\.dashboard\..*\.DefaultTrace.*</include>

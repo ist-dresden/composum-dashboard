@@ -165,7 +165,7 @@ class ViewWidget {
                 if (callback) {
                     callback($element);
                 } else {
-                    this.onContentLoaded($element);
+                    this.onContentLoaded(undefined, $element);
                 }
             }.bind(this),
             async: true,

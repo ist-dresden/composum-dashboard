@@ -1,4 +1,6 @@
 {
+  "queryTemplates": [
+  ],
   "maxResults": 500,
   "sling.servlet.paths": [
     "/apps/cpm/query",

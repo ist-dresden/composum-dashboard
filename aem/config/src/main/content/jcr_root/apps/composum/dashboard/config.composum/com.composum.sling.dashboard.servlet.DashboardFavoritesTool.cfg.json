@@ -1,0 +1,10 @@
+{
+  "favoriteGroups": [
+    "Pages=^/content/(?!(dam)/.*$)",
+    "Assets=^/content/(dam)/.*$"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/favorites",
+    "/apps/cpm/browser/favorites/view"
+  ]
+}

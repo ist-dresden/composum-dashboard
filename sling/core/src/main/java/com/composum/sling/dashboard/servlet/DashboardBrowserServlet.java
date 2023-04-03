@@ -314,7 +314,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             properties.put("browser-tool-nav-elements", toolNavigation(request));
             properties.put("target-path", xssapi.encodeForHTMLAttr(targetPath));
             properties.put("browser-path", xssapi.encodeForHTMLAttr(browser.getPath()));
-            properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, null)));
+            properties.put("browser-uri", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES)));
             properties.put("browser-tree", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_TREE)));
             properties.put("browser-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW)));
             properties.put("browser-tab-view", xssapi.encodeForHTMLAttr(getWidgetUri(request, resourceType, HTML_MODES, OPTION_VIEW, "#id#")));
@@ -353,8 +353,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected @NotNull String toolNavigation(@NotNull final SlingHttpServletRequest request) {
         final StringWriter writer = new StringWriter();
         for (final DashboardWidget tool : getWidgets(toolWidgets)) {
-            final String toolUri = getWidgetUri(tool.getWidgetResource(request),
-                    Collections.singletonList(OPTION_VIEW), OPTION_VIEW);
+            final String toolUri = getWidgetUri(request, resourceType, HTML_MODES, OPTION_TOOL, tool.getName());
             final String toolIcon = tool.getProperty("icon", "ellipsis-h");
             writer.append("<li class=\"nav-item browser-tool-").append(tool.getName())
                     .append("\"><a class=\"tool-link nav-link\" href=\"#\" data-tool-uri=\"")
@@ -369,18 +368,41 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected void htmlTool(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        htmlView(request, response, toolWidgets);
+        htmlForward(request, response, toolWidgets, OPTION_VIEW);
     }
 
     protected void htmlForm(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_FORM));
+        htmlForward(request, response, viewWidgets, OPTION_FORM);
+    }
+
+    protected void htmlForward(@NotNull final SlingHttpServletRequest request,
+                               @NotNull final SlingHttpServletResponse response,
+                               @NotNull final Map<String, DashboardWidget> widgets,
+                               @NotNull final String... selectors)
+            throws ServletException, IOException {
+        final String submode = getHtmlSubmode(request, Collections.emptyList());
         if (StringUtils.isNotBlank(submode)) {
-            final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? viewWidgets.get(submode) : null;
+            final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;
             if (selectedView != null) {
-                htmlView(request, response, selectedView);
+                htmlView(request, response, selectedView, selectors);
             }
+        }
+    }
+
+    public void htmlView(@NotNull final SlingHttpServletRequest request,
+                         @NotNull final SlingHttpServletResponse response,
+                         @NotNull final DashboardWidget view, @Nullable final String... selectors)
+            throws ServletException, IOException {
+        final RequestDispatcherOptions options = new RequestDispatcherOptions();
+        if (selectors != null && selectors.length > 0) {
+            options.setReplaceSelectors(StringUtils.join(selectors, "."));
+        }
+        final Resource widgetResource = view.getWidgetResource(request);
+        final RequestDispatcher dispatcher = request.getRequestDispatcher(widgetResource, options);
+        if (dispatcher != null) {
+            dispatcher.include(request, response);
         }
     }
 
@@ -391,11 +413,11 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         final Resource resource = dashboardManager.getRequestResource(request);
         if (resource != null) {
             prepareTextResponse(response, null);
-            final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_VIEW));
+            final String submode = getHtmlSubmode(request, Collections.emptyList());
             if (StringUtils.isNotBlank(submode)) {
                 final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;
                 if (selectedView != null) {
-                    htmlView(request, response, selectedView);
+                    htmlView(request, response, selectedView, OPTION_VIEW);
                 }
                 return true;
             }
@@ -440,18 +462,6 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             }
         } else {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
-        }
-    }
-
-    public void htmlView(@NotNull final SlingHttpServletRequest request,
-                         @NotNull final SlingHttpServletResponse response,
-                         @NotNull final DashboardWidget view)
-            throws ServletException, IOException {
-        final RequestDispatcherOptions options = new RequestDispatcherOptions();
-        final Resource widgetResource = view.getWidgetResource(request);
-        final RequestDispatcher dispatcher = request.getRequestDispatcher(widgetResource, options);
-        if (dispatcher != null) {
-            dispatcher.include(request, response);
         }
     }
 

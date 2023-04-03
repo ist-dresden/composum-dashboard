@@ -176,11 +176,14 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     protected @Nullable String getHtmlSubmode(@NotNull final SlingHttpServletRequest request,
                                               @NotNull final Collection<String> options) {
         final List<String> selectorMode = getSelectorMode(request, options);
-        if (selectorMode.size() > 1) {
+        if (options.size() == 0 && selectorMode.size() > 0) {
+            return selectorMode.get(0);
+        } else if (selectorMode.size() > 1) {
             return selectorMode.get(1);
         }
         final List<String> suffixMode = getSuffixMode(request, options);
-        return suffixMode.size() > 1 ? suffixMode.get(1) : null;
+        return options.size() == 0 && selectorMode.size() > 0 ? suffixMode.get(0)
+                : (suffixMode.size() > 1 ? suffixMode.get(1) : null);
     }
 
     protected @Nullable Resource getWidgetResource(@NotNull final SlingHttpServletRequest request,
@@ -202,43 +205,31 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
 
     protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
                                            @NotNull final String resourceType, @NotNull final List<String> options,
-                                           @Nullable final String mode, String... selectors) {
-        return getWidgetUri(getWidgetResource(request, resourceType), options, mode, selectors);
+                                           @NotNull final String... selectors) {
+        return getWidgetUri(getWidgetResource(request, resourceType), options, selectors);
     }
 
     protected @NotNull String getWidgetUri(@Nullable final Resource widget, @NotNull final List<String> options,
-                                           @Nullable final String mode, String... selectors) {
+                                           @NotNull final String... selectors) {
+        String path = "";
         if (widget != null) {
-            String uri = getWidgetPath(widget, mode);
-            if (StringUtils.isNotBlank(mode) && !uri.endsWith("/" + mode)) {
-                uri += "." + mode;
-                for (String sel : selectors) {
-                    uri += "." + sel;
-                }
-            } else {
-                for (String sel : selectors) {
-                    uri += "/" + sel;
+            path = widget.getPath();
+            Resource child = selectors.length > 0 ? widget.getChild(selectors[0]) : null;
+            for (int i = 0; i < selectors.length; i++) {
+                if (i == 0 && child != null) {
+                    path = child.getPath();
+                } else if (servletPaths.contains(path + "/" + selectors[i]) || child != null) {
+                    path += "/" + selectors[i];
+                } else {
+                    path += "." + selectors[i];
                 }
             }
-            uri += ".html";
-            return uri.replaceAll("/jcr:", "/_jcr_");
-        }
-        return "";
-    }
-
-    protected @NotNull String getWidgetPath(@NotNull final Resource widget, @Nullable final String mode) {
-        String path = widget.getPath();
-        if (StringUtils.isNotBlank(mode)) {
-            Resource modeResource = widget.getChild(mode);
-            if (modeResource != null) {
-                path = modeResource.getPath();
-            } else if (servletPaths.contains(path + "/" + mode)) {
-                path += "/" + mode;
+            if (path.endsWith("/" + JCR_CONTENT)) {
+                path = StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT);
             }
+            path = path.replaceAll("/jcr:", "/_jcr_") + ".html";
         }
-        return path.endsWith("/" + JCR_CONTENT)
-                ? StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT)
-                : path;
+        return path;
     }
 
     protected @NotNull List<String> getSelectorMode(@NotNull final SlingHttpServletRequest request,
@@ -247,7 +238,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String[] selectors = pathInfo.getSelectors();
         for (int i = 0; i < selectors.length; i++) {
-            if (options.contains(selectors[i])) {
+            if (options.size() == 0 || options.contains(selectors[i])) {
                 for (; i < selectors.length; i++) {
                     result.add(selectors[i]);
                 }
@@ -264,7 +255,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 .orElse("");
         if (StringUtils.isNotBlank(suffix)) {
             List<String> keys = Arrays.asList(StringUtils.split(suffix, "/"));
-            if (options.contains(keys.get(0))) {
+            if (options.size() == 0 || options.contains(keys.get(0))) {
                 return keys;
             }
         }

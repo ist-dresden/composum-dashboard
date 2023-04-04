@@ -291,6 +291,10 @@ your set of content elements , e.g. ``/content/test/insights``...
 
 </details>
 
+With this configuration the Dashboard can be opened using th URI ``/content/test/insights.html`` and
+the Dashboards Browser will be available via the Dashboards menu and directly
+via the URI ``/content/test/insights/browser.html``
+
 ### Predefined Widgets and Tools
 
 #### The Browser
@@ -298,9 +302,11 @@ your set of content elements , e.g. ``/content/test/insights``...
 The browser implementation is a widget of type 'tool'. The browser implements a 'page' resource type and,
 for internal use, a 'tree', a 'tool' and a 'view' with a 'form' resource type.
 The tree implementation is part of the browser widget, but the view implementations are not.
+
 The available views themselves are also widgets implemented by their own servlets.
 The browser determines the available views by querying the available widgets declared for the Browser context.
 Each such widget available through the DashboardManager is displayed in the browser's view pane.
+
 In addition, the browser arranges the service implementations of the 'Tool' category in the browser's tool menu,
 which is displayed in the browser above the view pane.
 
@@ -340,6 +346,13 @@ and the tools
 * DashboardQueryWidget
 
   to search resources using SQL2, XPath or Text queries
+
+With the following configuration you can be opened the Browser using the URI ``/apps/cpm/browser.html``
+If you have prepared the browser as content as described above, both URIs can be used to open the browser.
+
+If you do not want to provide the services through servlet paths,
+you can remove all "sling.servlet.paths" from the OSGi configuration.
+In that case you must prepare appropriate content for the Dashboard views.
 
 <details>
   <summary>com.composum.sling.dashboard.servlet.DashboardBrowserServlet.cfg.json</summary>

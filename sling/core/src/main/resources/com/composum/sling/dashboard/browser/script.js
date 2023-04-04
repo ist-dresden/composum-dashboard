@@ -31,15 +31,15 @@ class ToolLink extends ViewWidget {
         super(element);
         this.$el.click(function (event) {
             event.preventDefault();
-            $(document).trigger('tool:toggle', [this.$el.data('tool-uri')]);
+            $(document).trigger('tool:toggle', [this.$el.data('tool-name')]);
             return false;
         }.bind(this));
     }
 
-    static setActive(toolUri) {
+    static setActive(toolName) {
         $(ToolLink.selector).removeClass('active');
-        if (toolUri) {
-            $(ToolLink.selector + '[data-tool-uri="' + toolUri + '"]').addClass('active');
+        if (toolName) {
+            $(ToolLink.selector + '[data-tool-name="' + toolName + '"]').addClass('active');
         }
     }
 }
@@ -361,41 +361,53 @@ class BrowserTool extends BrowserPanel {
         super(element);
         this.$parent = this.$el.closest('.dashboard-browser__right-panel');
         this.showTool(this.profile.get('currentTool'));
-        $(document).on('tool:toggle', function (event, toolUri) {
-            this.toggleTool(toolUri);
+        $(document).on('tool:toggle', function (event, toolName) {
+            this.toggleTool(toolName);
         }.bind(this));
     }
 
-    setCurrentTool(toolUri) {
-        this.currentTool = toolUri;
-        this.profile.set('currentTool', toolUri || '');
+    setCurrentTool(toolName) {
+        this.currentTool = toolName;
+        this.profile.set('currentTool', toolName || '');
     }
 
-    toggleTool(toolUri) {
-        this.showTool(this.currentTool === toolUri ? undefined : toolUri);
+    toggleTool(toolName) {
+        this.showTool(this.currentTool === toolName ? undefined : toolName);
     }
 
-    showTool(toolUri) {
+    showTool(toolName) {
         ToolLink.setActive();
-        if (toolUri) {
-            $.ajax({
-                type: 'GET',
-                url: toolUri,
-                success: function (content) {
-                    this.setCurrentTool(toolUri);
-                    this.$el.html(content);
-                    this.$parent.addClass('tool-visible');
-                    ToolLink.setActive(toolUri);
-                    this.onContentLoaded(this.$el);
-                }.bind(this),
-                async: true,
-                cache: false
-            });
+        if (toolName) {
+            const toolUri = $(ToolLink.selector + '[data-tool-name="' + toolName + '"]').data('tool-uri');
+            if (toolUri) {
+                $.ajax({
+                    type: 'GET',
+                    url: toolUri,
+                    success: function (content) {
+                        this.setCurrentTool(toolName);
+                        this.$el.html(content);
+                        this.$parent.addClass('tool-visible');
+                        ToolLink.setActive(toolName);
+                        this.onContentLoaded(this.$el);
+                    }.bind(this),
+                    error: function () {
+                        this.closeTool();
+                    }.bind(this),
+                    async: true,
+                    cache: false
+                });
+            } else {
+                this.closeTool();
+            }
         } else {
-            this.setCurrentTool();
-            this.$parent.removeClass('tool-visible');
-            this.$el.html('');
+            this.closeTool();
         }
+    }
+
+    closeTool() {
+        this.setCurrentTool();
+        this.$parent.removeClass('tool-visible');
+        this.$el.html('');
     }
 }
 

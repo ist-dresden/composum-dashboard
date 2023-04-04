@@ -301,7 +301,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
                                @NotNull final SlingHttpServletResponse response)
             throws IOException {
         final ResourceResolver resolver = request.getResourceResolver();
-        final Resource browser = getWidgetResource(request, resourceType);
+        final Resource browser = getWidgetResource(request, resourceType, Collections.emptyList());
         if (browser != null) {
             final String targetPath = Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse("");
             final ValueMap values = browser.getValueMap();
@@ -353,10 +353,12 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected @NotNull String toolNavigation(@NotNull final SlingHttpServletRequest request) {
         final StringWriter writer = new StringWriter();
         for (final DashboardWidget tool : getWidgets(toolWidgets)) {
-            final String toolUri = getWidgetUri(request, resourceType, HTML_MODES, OPTION_TOOL, tool.getName());
+            final String toolUri = getWidgetUri(request, resourceType, HTML_MODES, OPTION_TOOL, tool.getName(), OPTION_VIEW);
             final String toolIcon = tool.getProperty("icon", "ellipsis-h");
             writer.append("<li class=\"nav-item browser-tool-").append(tool.getName())
-                    .append("\"><a class=\"tool-link nav-link\" href=\"#\" data-tool-uri=\"")
+                    .append("\"><a class=\"tool-link nav-link\" href=\"#\" data-tool-name=\"")
+                    .append(xssapi.encodeForHTMLAttr(tool.getName()))
+                    .append("\" data-tool-uri=\"")
                     .append(xssapi.encodeForHTMLAttr(toolUri))
                     .append("\" title=\"").append(xssapi.encodeForHTMLAttr(tool.getLabel()))
                     .append("\"><i class=\"nav-icon fa fa-").append(xssapi.encodeForHTMLAttr(toolIcon))
@@ -368,21 +370,22 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected void htmlTool(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        htmlForward(request, response, toolWidgets, OPTION_VIEW);
+        htmlForward(request, response, toolWidgets, Collections.singletonList(OPTION_TOOL), OPTION_VIEW);
     }
 
     protected void htmlForm(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        htmlForward(request, response, viewWidgets, OPTION_FORM);
+        htmlForward(request, response, viewWidgets, Collections.singletonList(OPTION_FORM), OPTION_FORM);
     }
 
     protected void htmlForward(@NotNull final SlingHttpServletRequest request,
                                @NotNull final SlingHttpServletResponse response,
                                @NotNull final Map<String, DashboardWidget> widgets,
+                               @NotNull final Collection<String> options,
                                @NotNull final String... selectors)
             throws ServletException, IOException {
-        final String submode = getHtmlSubmode(request, Collections.emptyList());
+        final String submode = getHtmlSubmode(request, options);
         if (StringUtils.isNotBlank(submode)) {
             final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;
             if (selectedView != null) {
@@ -412,12 +415,11 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             throws ServletException, IOException {
         final Resource resource = dashboardManager.getRequestResource(request);
         if (resource != null) {
-            prepareTextResponse(response, null);
-            final String submode = getHtmlSubmode(request, Collections.emptyList());
+            final String submode = getHtmlSubmode(request, Collections.singletonList(OPTION_VIEW));
             if (StringUtils.isNotBlank(submode)) {
                 final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;
                 if (selectedView != null) {
-                    htmlView(request, response, selectedView, OPTION_VIEW);
+                    htmlView(request, response, selectedView, getHtmlViewMode(request, submode));
                 }
                 return true;
             }

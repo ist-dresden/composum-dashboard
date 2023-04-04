@@ -186,19 +186,58 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 : (suffixMode.size() > 1 ? suffixMode.get(1) : null);
     }
 
+    protected @NotNull String getHtmlViewMode(@NotNull final SlingHttpServletRequest request,
+                                              @NotNull final String submode) {
+        String viewMode = OPTION_VIEW;
+        final RequestPathInfo pathInfo = request.getRequestPathInfo();
+        final List<String> selectors = Arrays.asList(pathInfo.getSelectors());
+        final int submodeIndex = selectors.indexOf(submode);
+        if (submodeIndex >= 0 && submodeIndex + 1 < selectors.size()) {
+            viewMode = selectors.get(submodeIndex + 1);
+        }
+        return viewMode;
+    }
+
     protected @Nullable Resource getWidgetResource(@NotNull final SlingHttpServletRequest request,
-                                                   @NotNull final String resourceType) {
-        Resource widget = request.getResource();
-        if (!widget.isResourceType(resourceType) && !resourceType.equals(widget.getResourceType())) {
-            Resource parent = widget.getParent();
-            if (parent != null && (parent.isResourceType(resourceType)
-                    || resourceType.equals(parent.getResourceType()))) {
-                return parent;
+                                                   @NotNull final String resourceType,
+                                                   @NotNull final List<String> selectors) {
+        final Resource resource = request.getResource();
+        Resource widget = getWidgetResource(resource, resourceType, selectors);
+        if (widget == null) {
+            widget = getWidgetResource(resource.getParent(), resourceType, selectors);
+            if (widget == null) {
+                if (StringUtils.isNotBlank(servletPath)) {
+                    return new SyntheticResource(request.getResourceResolver(), servletPath, resourceType);
+                }
             }
-            if (StringUtils.isNotBlank(servletPath)) {
-                return new SyntheticResource(request.getResourceResolver(), servletPath, resourceType);
+        }
+        return widget;
+    }
+
+    protected @Nullable Resource getWidgetResource(@Nullable final Resource resource,
+                                                   @NotNull final String resourceType,
+                                                   @NotNull final List<String> selectors) {
+        Resource widget = null;
+        if (resource != null) {
+            if (!resource.isResourceType(resourceType)) {
+                final Resource content = resource.getChild("jcr:content");
+                if (content != null && content.isResourceType(resourceType)) {
+                    widget = content;
+                }
+            } else {
+                widget = resource;
             }
-            return null;
+            if (widget != null) {
+                while (selectors.size() > 0) {
+                    final Resource child = widget.getChild(selectors.get(0));
+                    if (child != null) {
+                        widget = child;
+                        selectors.remove(0);
+                    } else {
+                        break;
+                    }
+                }
+            }
         }
         return widget;
     }
@@ -206,22 +245,30 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
                                            @NotNull final String resourceType, @NotNull final List<String> options,
                                            @NotNull final String... selectors) {
-        return getWidgetUri(getWidgetResource(request, resourceType), options, selectors);
+        final List<String> selectorsList = new ArrayList<>();
+        selectorsList.addAll(Arrays.asList(selectors));
+        return getWidgetUri(request, resourceType, options, selectorsList);
+    }
+
+    protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
+                                           @NotNull final String resourceType, @NotNull final List<String> options,
+                                           @NotNull final List<String> selectors) {
+        final int selectorsCount = selectors.size();
+        final Resource widget = getWidgetResource(request, resourceType, selectors);
+        return getWidgetUri(widget, options, selectors, selectors.size() < selectorsCount ? '/' : '.');
     }
 
     protected @NotNull String getWidgetUri(@Nullable final Resource widget, @NotNull final List<String> options,
-                                           @NotNull final String... selectors) {
+                                           @NotNull final List<String> selectors, char selectorSeparator) {
         String path = "";
         if (widget != null) {
             path = widget.getPath();
-            Resource child = selectors.length > 0 ? widget.getChild(selectors[0]) : null;
-            for (int i = 0; i < selectors.length; i++) {
+            Resource child = selectors.size() > 0 ? widget.getChild(selectors.get(0)) : null;
+            for (int i = 0; i < selectors.size(); i++) {
                 if (i == 0 && child != null) {
                     path = child.getPath();
-                } else if (servletPaths.contains(path + "/" + selectors[i]) || child != null) {
-                    path += "/" + selectors[i];
                 } else {
-                    path += "." + selectors[i];
+                    path += selectorSeparator + selectors.get(i);
                 }
             }
             if (path.endsWith("/" + JCR_CONTENT)) {

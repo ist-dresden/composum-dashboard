@@ -24,138 +24,59 @@ platform.
 
 ### Usage
 
-Create a content page or an AEM cq:Page of the resource type
+First, it is necessary that the desired services are activated and configured via OSGi configurations.
+At set of configuration examples is delivered in the 'config' packages,
+one for a Sling setup and another one for an AEM setup.
 
-``composum/dashboard/sling/components/page``
+* ``sling/config/src/main/content/jcr_root/apps/composum/dashboard/config.composum``
+* ``aem/config/src/main/content/jcr_root/apps/composum/dashboard/config.composum``
 
-and your set of DasbboardPlugin service implementations and/or
-your set of content elements to configure prepared DashboardWidget
-implementations, e.g.
-<details>
-  <summary>content page example code</summary>
+Only configured services are available.
+The user interface is automatically set up with the configured services.
+Services that are not configured are not displayed.
 
-```xml
+Each service implements bsically a servlet with a set of view or request options,
+e.g. if the browsers XML view is configured via OSGi with
 
-<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0"
-        xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-        jcr:primaryType="cq:Page">
-    <jcr:content
-            jcr:primaryType="cq:PageContent"
-            jcr:title="Dashboard"
-            sling:resourceType="composum/dashboard/sling/components/page">
-        <widgets
-                jcr:primaryType="nt:unstructured">
-            <custom-widget
-                    jcr:primaryType="nt:unstructured"
-                    jcr:title="My Widget"
-                    sling:resourceType="composum/dashboard/sling/components/widget"
-                    widgetResourceType="my/widget/resource/type"
-                    rank="{Long}500">
-                <tile
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="my/widget/resource/type/tile"/>
-                <view
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="my/widget/resource/type/view"/>
-                <page
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="my/widget/resource/type/page"/>
-            </custom-widget>
-            <views
-                    jcr:primaryType="nt:unstructured">
-                <properties
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="composum/dashboard/sling/components/widget"
-                        jcr:title="Properties"
-                        context="[browser]"
-                        type="hidden"
-                        rank="{Long}300"
-                        widgetResourceType="composum/dashboard/sling/components/properties">
-                    <view
-                            jcr:primaryType="nt:unstructured"
-                            sling:resourceType="composum/dashboard/sling/components/properties/view"/>
-                    <page
-                            jcr:primaryType="nt:unstructured"
-                            sling:resourceType="composum/dashboard/sling/components/properties/page"/>
-                </properties>
-                <preview
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="composum/dashboard/sling/components/widget"
-                        jcr:title="Preview"
-                        context="[browser]"
-                        type="hidden"
-                        rank="{Long}400"
-                        widgetResourceType="composum/dashboard/sling/components/display">
-                    <view
-                            jcr:primaryType="nt:unstructured"
-                            sling:resourceType="composum/dashboard/sling/components/display/view"/>
-                    <load
-                            jcr:primaryType="nt:unstructured"
-                            sling:resourceType="composum/dashboard/sling/components/display/load"/>
-                </preview>
-            </views>
-        </widgets>
-    </jcr:content>
-    <browser
-            jcr:primaryType="nt:unstructured"
-            sling:resourceType="composum/dashboard/sling/components/widget"
-            jcr:title="Composum Browser"
-            navTitle="Browser"
-            type="tool"
-            rank="{Long}300"
-            widgetPageUrl="${path}.html"
-            widgetResourceType="composum/dashboard/sling/components/browser">
-        <view
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="composum/dashboard/sling/components/browser/view"/>
-        <tree
-                jcr:primaryType="nt:unstructured"
-                sling:resourceType="composum/dashboard/sling/components/browser/tree"/>
-    </browser>
-</jcr:root>
-```
-
-</details>
-
-In this example the widget are declared by the predefined resource type
-
-``composum/dashboard/sling/components/widget``
-
-which is used by the predefined GenerigDashboradWidgetPlugin. This plugin is also activated by an
-appropriate OSGi factory configuration:
-<details>
-  <summary>com.composum.sling.dashboard.service.GenericDashboardPlugin~default-widgets.cfg.json</summary>
+``com.composum.sling.dashboard.servlet.DashboardXmlView.cfg.json``...
 
 ```json
 {
-  "resourceType": "composum/dashboard/sling/components/widget",
-  "searchRoot": "/content"
+  "maxDepth": 0,
+  "sourceMode": true,
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/xml",
+    "/apps/cpm/browser/view/xml/view",
+    "/apps/cpm/browser/view/xml/form",
+    "/apps/cpm/browser/view/xml/load"
+  ]
 }
 ```
-</details>
 
-and collects all contents ellements with the configured resource type. These widgets are available the via the
-DashboardManager service.
+This service is rendering its UI as a servlet via the configured paths with
+``/apps/cpm/browser/view/xml.html`` as the main URI to access the service and a set of
+servlet paths for the various UI elements of this implementation.
 
-A single dasboard widget is normally implemented as a servlet whitch declares the needed resource types and
-which is configured via OSGi. This configuration should be required to ensure that such a servlet is
-active only if it should be available on an environment.
+The same service declares a set of resource types (which can be overridden via OSGi)
+through which the service can be used like a normal Sling component to embed service into the
+content of the repository.
 
-### Predefined Widgets and Tools
+#### the DashboardManager service
 
-#### The Composum Browser
+The service always needed to use the dashboard components is the DashboardManager service,
+which provides the central settings for each of the other services, nothing works without this service.
 
-The browser implementation is a widget of type 'tool'. The browser implements a 'page' resource type and
-for internal use a 'tree' and a 'view' resource type. The tree implementation is part of the browser widget
-but the view implementations not. The available views itself are also widgets implemented by their own servlets.
-The browser determines the available views by requesting the avaialable widgets declared for the context 'browser'.
-Each such widget avaialable via the DashboardManager is shown in the browsers view section.
-
-<details>
-  <summary>com.composum.sling.dashboard.servlet.DashboardBrowserServlet.cfg.json</summary>
+``com.composum.sling.dashboard.service.SlingDashboardManager.cfg.json`` (AEM variant)...
 
 ```json
 {
+  "allowedPropertyPatterns": [
+    "^.*$"
+  ],
+  "disabledPropertyPatterns": [
+    "^rep:.*$",
+    "^.*[Pp]assword.*$"
+  ],
   "allowedPathPatterns": [
     "^/$",
     "^/content(/.*)?$",
@@ -178,9 +99,277 @@ Each such widget avaialable via the DashboardManager is shown in the browsers vi
     "sling:Folder",
     "cq:Component"
   ],
+  "cssRunmodes": [
+    "author",
+    "publish"
+  ],
+  "contentPageType": "[cq:Page]/jcr:content[cq:PageContent]",
   "loginUri": "/libs/granite/core/content/login.html"
 }
 ```
+
+For easy and quick setup of the dashboard browser to display the resource properties
+the following services are required:
+
+* SlingDashboardManager
+* DashboardBrowserServlet
+* DashboardPropertiesView
+
+### tools preparation as content
+
+Another way to set up the dashboard widgets is to deploy the desired components as elements of a content page.
+Configuring the desired services is also required, but instead of using the declared servlets via the servlet path,
+the implemented resource types are used to arrange appropriate Sling components.
+
+To start with that approach create a content page or an AEM cq:Page of the resource type
+
+``composum/dashboard/sling``
+
+and declare your set of Dashboard service implementations and/or
+your set of content elements , e.g. ``/content/test/insights``...
+
+<details>
+  <summary>example content code (/content/test/insights)</summary>
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0"
+        xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+        jcr:primaryType="cq:Page">
+    <jcr:content
+            jcr:primaryType="cq:PageContent"
+            jcr:title="Dashboard"
+            sling:resourceType="composum/dashboard/sling">
+        <navigation
+                jcr:primaryType="nt:unstructured">
+            <browser
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Browser"
+                    linkPath="/content/test/insights/browser">
+            </browser>
+            <groovyconsole
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Groovy..."
+                    linkUrl="/groovyconsole">
+            </groovyconsole>
+        </navigation>
+        <generic jcr:primaryType="nt:unstructured">
+        </generic>
+        <widgets
+                jcr:primaryType="nt:unstructured">
+            <service-settings
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="composum/dashboard/sling/service/settings">
+                <tile
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/service/settings/tile"/>
+                <view
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/service/settings/view"/>
+                <page
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/service/settings/page"/>
+            </service-settings>
+            <logfiles
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="composum/dashboard/sling/logfiles">
+                <tile
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/logfiles/tile"/>
+                <view
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/logfiles/view"/>
+                <page
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/logfiles/page"/>
+                <tail
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/logfiles/tail"/>
+            </logfiles>
+        </widgets>
+    </jcr:content>
+    <browser
+            jcr:primaryType="cq:Page">
+        <jcr:content
+                jcr:primaryType="cq:PageContent"
+                jcr:title="Composum Browser"
+                sling:resourceType="composum/dashboard/sling/browser">
+            <tree
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="composum/dashboard/sling/browser/tree"/>
+            <tool
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="composum/dashboard/sling/browser/tool">
+                <favorites
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/favorites">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/favorites/view"/>
+                </favorites>
+                <query
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/query">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/query/view"/>
+                    <page
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/query/page"/>
+                    <find
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/query/find"/>
+                    <load
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/query/load"/>
+                </query>
+            </tool>
+            <view
+                    jcr:primaryType="nt:unstructured"
+                    sling:resourceType="composum/dashboard/sling/browser/view">
+                <properties
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/properties">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/properties/view"/>
+                    <page
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/properties/page"/>
+                </properties>
+                <display
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/display">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/display/view"/>
+                    <form
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/display/form"/>
+                    <load
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/display/load"/>
+                </display>
+                <caconfig
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/caconfig">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/caconfig/view"/>
+                </caconfig>
+                <json
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/source/json">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/source/json/view"/>
+                    <form
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/source/json/form"/>
+                    <load
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/source/json/load"/>
+                </json>
+                <xml
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/source/xml">
+                    <view
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/source/xml/view"/>
+                    <form
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/source/xml/form"/>
+                    <load
+                            jcr:primaryType="nt:unstructured"
+                            sling:resourceType="composum/dashboard/sling/source/xml/load"/>
+                </xml>
+            </view>
+        </jcr:content>
+    </browser>
+</jcr:root>
+```
+
+</details>
+
+With this configuration the Dashboard can be opened using th URI ``/content/test/insights.html`` and
+the Dashboards Browser will be available via the Dashboards menu and directly
+via the URI ``/content/test/insights/browser.html``
+
+### Predefined Widgets and Tools
+
+#### The Browser
+
+The browser implementation is a widget of type 'tool'. The browser implements a 'page' resource type and,
+for internal use, a 'tree', a 'tool' and a 'view' with a 'form' resource type.
+The tree implementation is part of the browser widget, but the view implementations are not.
+
+The available views themselves are also widgets implemented by their own servlets.
+The browser determines the available views by querying the available widgets declared for the Browser context.
+Each such widget available through the DashboardManager is displayed in the browser's view pane.
+
+In addition, the browser arranges the service implementations of the 'Tool' category in the browser's tool menu,
+which is displayed in the browser above the view pane.
+
+A complete Browser with all predefined element consists of the services:
+
+* SlingDashboardManager
+* DashboardBrowserServlet
+
+with the view components:
+
+* DashboardPropertiesView
+
+  to show the resource properties as table with links to follow the path properties
+
+* DashboardDisplayView
+
+  to show the resources rendered as HTML (component based resources) or in the appropriate format (assets)
+
+* DashboardCaConfigView
+
+  to show a set of configured CA configuration settings in the context of the current resource
+
+* DashboardJsonView
+
+  to show the current resource as JSON source code
+
+* DashboardXmlView
+
+  to show the current resource as XML content source code
+
+and the tools
+
+* DashboardFavoritesTool
+
+  to mark resources as favorites and provide these favorites in configured short lists
+
+* DashboardQueryWidget
+
+  to search resources using SQL2, XPath or Text queries
+
+With the following configuration you can be opened the Browser using the URI ``/apps/cpm/browser.html``
+If you have prepared the browser as content as described above, both URIs can be used to open the browser.
+
+If you do not want to provide the services through servlet paths,
+you can remove all "sling.servlet.paths" from the OSGi configuration.
+In that case you must prepare appropriate content for the Dashboard views.
+
+<details>
+  <summary>com.composum.sling.dashboard.servlet.DashboardBrowserServlet.cfg.json</summary>
+
+```json
+{
+  "sling.servlet.paths": [
+    "/apps/cpm/browser",
+    "/apps/cpm/browser/page",
+    "/apps/cpm/browser/view",
+    "/apps/cpm/browser/form",
+    "/apps/cpm/browser/tool",
+    "/apps/cpm/browser/tree"
+  ]
+}
+```
+
 </details>
 
 <details>
@@ -188,23 +377,124 @@ Each such widget avaialable via the DashboardManager is shown in the browsers vi
 
 ```json
 {
-  "allowedPropertyPatterns": [
-    "^.*$"
-  ],
-  "disabledPropertyPatterns": [
-    "^rep:.*$",
-    "^.*[Pp]assword.*$"
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/properties",
+    "/apps/cpm/browser/view/properties/view"
   ]
 }
 ```
+
 </details>
 
 <details>
   <summary>com.composum.sling.dashboard.servlet.DashboardDisplayView.cfg.json</summary>
 
 ```json
-{}
+{
+  "loadDocuments": true,
+  "parameterFields": [
+    "name=wcmmode,label=wcmmode,type=select,options=:--|disabled|edit|preview"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/display",
+    "/apps/cpm/browser/view/display/view",
+    "/apps/cpm/browser/view/display/form",
+    "/apps/cpm/browser/view/display/load"
+  ]
+}
 ```
+
+</details>
+
+<details>
+  <summary>com.composum.sling.dashboard.servlet.DashboardCaConfigView.cfg.json</summary>
+
+```json
+{
+  "inspectedConfigurations": [
+    "<your CA configuration implementation class names...>"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/caconfig",
+    "/apps/cpm/browser/view/caconfig/view"
+  ]
+}
+```
+
+</details>
+
+<details>
+  <summary>com.composum.sling.dashboard.servlet.DashboardJsonView.cfg.json</summary>
+
+```json
+{
+  "maxDepth": 0,
+  "sourceMode": true,
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/json",
+    "/apps/cpm/browser/view/json/view",
+    "/apps/cpm/browser/view/json/form",
+    "/apps/cpm/browser/view/json/load"
+  ]
+}
+```
+
+</details>
+
+<details>
+  <summary>com.composum.sling.dashboard.servlet.DashboardXmlView.cfg.json</summary>
+
+```json
+{
+  "maxDepth": 0,
+  "sourceMode": true,
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/view/xml",
+    "/apps/cpm/browser/view/xml/view",
+    "/apps/cpm/browser/view/xml/form",
+    "/apps/cpm/browser/view/xml/load"
+  ]
+}
+```
+
+</details>
+
+<details>
+  <summary>com.composum.sling.dashboard.servlet.DashboardFavoritesTool.cfg.json</summary>
+
+```json
+{
+  "favoriteGroups": [
+    "Pages=^/content/(?!(dam)/.*$)",
+    "Assets=^/content/(dam)/.*$"
+  ],
+  "sling.servlet.paths": [
+    "/apps/cpm/browser/favorites",
+    "/apps/cpm/browser/favorites/view"
+  ]
+}
+```
+
+</details>
+
+<details>
+  <summary>com.composum.sling.dashboard.servlet.DashboardQueryWidget.cfg.json</summary>
+
+```json
+{
+  "queryTemplates": [
+    "<your set of frequently used queries for your project...>"
+  ],
+  "maxResults": 500,
+  "sling.servlet.paths": [
+    "/apps/cpm/query",
+    "/apps/cpm/query/page",
+    "/apps/cpm/query/view",
+    "/apps/cpm/query/find"
+  ]
+}
+```
+
 </details>
 
 

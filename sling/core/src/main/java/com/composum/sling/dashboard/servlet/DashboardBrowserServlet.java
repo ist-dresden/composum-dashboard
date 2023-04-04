@@ -370,16 +370,16 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     protected void htmlTool(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        htmlForward(request, response, toolWidgets, Collections.singletonList(OPTION_TOOL), OPTION_VIEW);
+        htmlInclude(request, response, toolWidgets, Collections.singletonList(OPTION_TOOL), OPTION_VIEW);
     }
 
     protected void htmlForm(@NotNull final SlingHttpServletRequest request,
                             @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        htmlForward(request, response, viewWidgets, Collections.singletonList(OPTION_FORM), OPTION_FORM);
+        htmlInclude(request, response, viewWidgets, Collections.singletonList(OPTION_FORM), OPTION_FORM);
     }
 
-    protected void htmlForward(@NotNull final SlingHttpServletRequest request,
+    protected void htmlInclude(@NotNull final SlingHttpServletRequest request,
                                @NotNull final SlingHttpServletResponse response,
                                @NotNull final Map<String, DashboardWidget> widgets,
                                @NotNull final Collection<String> options,
@@ -389,14 +389,14 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         if (StringUtils.isNotBlank(submode)) {
             final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;
             if (selectedView != null) {
-                htmlView(request, response, selectedView, selectors);
+                htmlInclude(request, response, selectedView, selectors);
             }
         }
     }
 
-    public void htmlView(@NotNull final SlingHttpServletRequest request,
-                         @NotNull final SlingHttpServletResponse response,
-                         @NotNull final DashboardWidget view, @Nullable final String... selectors)
+    public void htmlInclude(@NotNull final SlingHttpServletRequest request,
+                            @NotNull final SlingHttpServletResponse response,
+                            @NotNull final DashboardWidget view, @Nullable final String... selectors)
             throws ServletException, IOException {
         final RequestDispatcherOptions options = new RequestDispatcherOptions();
         if (selectors != null && selectors.length > 0) {
@@ -419,7 +419,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             if (StringUtils.isNotBlank(submode)) {
                 final DashboardWidget selectedView = StringUtils.isNotBlank(submode) ? widgets.get(submode) : null;
                 if (selectedView != null) {
-                    htmlView(request, response, selectedView, getHtmlViewMode(request, submode));
+                    htmlInclude(request, response, selectedView, getHtmlViewMode(request, submode));
                 }
                 return true;
             }

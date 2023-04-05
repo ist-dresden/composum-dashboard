@@ -425,7 +425,9 @@ class BrowserViewParameters extends ViewWidget {
     getUrlQuery(tabId) {
         if (tabId) {
             const formData = new FormData(this.el);
-            const queryParams = new URLSearchParams(formData).toString();
+            const queryParams = new URLSearchParams(formData).toString()
+                .replace(/[^=]+=&/, '')
+                .replace(/&?[^=]+=$/, '');
             return queryParams ? '?' + queryParams : '';
         } else {
             return '';
@@ -436,7 +438,11 @@ class BrowserViewParameters extends ViewWidget {
         if (tabId) {
             const formData = new FormData(this.el);
             const profileData = {};
-            formData.forEach((value, key) => (profileData[key] = value));
+            formData.forEach((value, key) => {
+                if (value) {
+                    profileData[key] = value
+                }
+            });
             this.profile.set(tabId, profileData);
         }
     }

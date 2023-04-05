@@ -4,10 +4,15 @@ class QueryView extends ViewWidget {
 
     constructor(element) {
         super(element);
+        this.profile = new Profile('query');
         this.$form = this.$('.dashboard-widget__query-form');
         this.$query = this.$form.find('input[name="query"]');
         this.$result = this.$('.dashboard-widget__query-result');
         this.$spinner = this.$('.dashboard-widget__query-spinner');
+        this.$history = this.$('.query-history .dropdown-menu');
+        this.history = this.profile.get('history') || [];
+        this.historyMax = parseInt(this.$el.data('history-max') || '15');
+        this.adjustHistory();
         this.$form.find('.query-templates .dropdown-item').click(this.applyTemplate.bind(this));
         this.$query.on('keyup', this.scanQueryField.bind(this));
         this.$form.on('submit', this.onSubmit.bind(this));
@@ -19,7 +24,7 @@ class QueryView extends ViewWidget {
 
     applyTemplate(event) {
         event.preventDefault();
-        this.changeQuery($(event.currentTarget).text());
+        this.changeQuery($(event.currentTarget).data('query'));
     }
 
     scanQueryField() {
@@ -58,6 +63,7 @@ class QueryView extends ViewWidget {
         this.$spinner.addClass('shown');
         this.loadContent(this.$result, this.formGetUrl(this.$form), function ($element) {
             this.onContentLoaded(undefined, $element);
+            this.traceQuery(this.$query.val());
             this.$spinner.removeClass('shown');
         }.bind(this));
     }
@@ -81,6 +87,40 @@ class QueryView extends ViewWidget {
         const query = this.formData(this.$form).get('query');
         if (query) {
             CPM.history.pushQuery({'query': query});
+        }
+    }
+
+    applyHistoryItem(event) {
+        event.preventDefault();
+        this.changeQuery($(event.currentTarget).data('query'));
+    }
+
+    adjustHistory() {
+        let content = '';
+        for (let i = this.history.length; --i >= 0;) {
+            content += '<a class="dropdown-item" href="#" data-query="'
+                + this.sanitizeAttr(this.history[i]) + '">'
+                + this.sanitizeHtml(this.history[i]) + '</a>';
+        }
+        this.$history.html(content);
+        this.$history.find('.dropdown-item').click(this.applyHistoryItem.bind(this));
+    }
+
+    traceQuery(query) {
+        if (query && this.history.length < 1 || this.history[this.history.length - 1] !== query) {
+            for (let i = 0; i < this.history.length;) {
+                if (query === this.history[i]) {
+                    this.history.splice(i, 1);
+                } else {
+                    i++;
+                }
+            }
+            this.history.push(query);
+            if (this.history.length > this.historyMax) {
+                this.history.splice(0, this.history.length - this.historyMax);
+            }
+            this.profile.set('history', this.history);
+            this.adjustHistory();
         }
     }
 }

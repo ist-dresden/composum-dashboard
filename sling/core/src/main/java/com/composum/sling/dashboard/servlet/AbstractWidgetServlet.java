@@ -186,16 +186,29 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 : (suffixMode.size() > 1 ? suffixMode.get(1) : null);
     }
 
+    /**
+     * @return the view selector that follows the given 'submode' selector in the requests selectors or the suffix, 'view' if not available
+     */
     protected @NotNull String getHtmlViewMode(@NotNull final SlingHttpServletRequest request,
                                               @NotNull final String submode) {
-        String viewMode = OPTION_VIEW;
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
-        final List<String> selectors = Arrays.asList(pathInfo.getSelectors());
+        return Optional.ofNullable(pathInfo.getSelectors()).map(Arrays::asList)
+                .map(selectors -> getSubmodeView(selectors, submode)).orElse(
+                        Optional.ofNullable(pathInfo.getSuffix())
+                                .map(suffix -> Arrays.asList(StringUtils.split(suffix, "/")))
+                                .map(selectors -> getSubmodeView(selectors, submode))
+                                .orElse(OPTION_VIEW));
+    }
+
+    /**
+     * @return the view selector that follows the given 'submode' selector in the given set if available
+     */
+    protected @Nullable String getSubmodeView(@NotNull final List<String> selectors, @NotNull final String submode) {
         final int submodeIndex = selectors.indexOf(submode);
         if (submodeIndex >= 0 && submodeIndex + 1 < selectors.size()) {
-            viewMode = selectors.get(submodeIndex + 1);
+            return selectors.get(submodeIndex + 1);
         }
-        return viewMode;
+        return null;
     }
 
     protected @Nullable Resource getWidgetResource(@NotNull final SlingHttpServletRequest request,
@@ -214,13 +227,19 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         return widget;
     }
 
+    /**
+     * retrieves the resource that matches the given type applied to the given selectors to find the child
+     * of the given resource that matches the selectors, matching selectors are removed from the list
+     *
+     * @return the matching resource and the remaining selectors in the given list (modified!)
+     */
     protected @Nullable Resource getWidgetResource(@Nullable final Resource resource,
                                                    @NotNull final String resourceType,
                                                    @NotNull final List<String> selectors) {
         Resource widget = null;
         if (resource != null) {
             if (!resource.isResourceType(resourceType)) {
-                final Resource content = resource.getChild("jcr:content");
+                final Resource content = resource.getChild(JCR_CONTENT);
                 if (content != null && content.isResourceType(resourceType)) {
                     widget = content;
                 }
@@ -228,14 +247,10 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 widget = resource;
             }
             if (widget != null) {
-                while (selectors.size() > 0) {
-                    final Resource child = widget.getChild(selectors.get(0));
-                    if (child != null) {
-                        widget = child;
-                        selectors.remove(0);
-                    } else {
-                        break;
-                    }
+                Resource child;
+                while (selectors.size() > 0 && (child = widget.getChild(selectors.get(0))) != null) {
+                    widget = child;
+                    selectors.remove(0);
                 }
             }
         }
@@ -245,8 +260,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
                                            @NotNull final String resourceType, @NotNull final List<String> options,
                                            @NotNull final String... selectors) {
-        final List<String> selectorsList = new ArrayList<>();
-        selectorsList.addAll(Arrays.asList(selectors));
+        final List<String> selectorsList = new ArrayList<>(Arrays.asList(selectors));
         return getWidgetUri(request, resourceType, options, selectorsList);
     }
 
@@ -255,22 +269,16 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                                            @NotNull final List<String> selectors) {
         final int selectorsCount = selectors.size();
         final Resource widget = getWidgetResource(request, resourceType, selectors);
-        return getWidgetUri(widget, options, selectors, selectors.size() < selectorsCount ? '/' : '.');
+        // if the resource retrieval has consumed selectors complete the path instead of appending selectors
+        return getWidgetUri(widget, selectors, selectors.size() < selectorsCount ? '/' : '.');
     }
 
-    protected @NotNull String getWidgetUri(@Nullable final Resource widget, @NotNull final List<String> options,
+    protected @NotNull String getWidgetUri(@Nullable final Resource widget,
                                            @NotNull final List<String> selectors, char selectorSeparator) {
         String path = "";
         if (widget != null) {
-            path = widget.getPath();
-            Resource child = selectors.size() > 0 ? widget.getChild(selectors.get(0)) : null;
-            for (int i = 0; i < selectors.size(); i++) {
-                if (i == 0 && child != null) {
-                    path = child.getPath();
-                } else {
-                    path += selectorSeparator + selectors.get(i);
-                }
-            }
+            path = widget.getPath() + (selectors.size() > 0
+                    ? selectorSeparator + StringUtils.join(selectors, selectorSeparator) : "");
             if (path.endsWith("/" + JCR_CONTENT)) {
                 path = StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT);
             }

@@ -1,5 +1,6 @@
 {
   "queryTemplates": [
+    "[cq:Page]/content/$1 $2"
   ],
   "maxResults": 500,
   "sling.servlet.paths": [

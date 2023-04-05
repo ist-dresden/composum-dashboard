@@ -113,16 +113,16 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
         super.activate(bundleContext,
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
-        favoriteGroups.clear();
-        favoriteGroups.put("All", "^.*$");
+        this.favoriteGroups.clear();
+        this.favoriteGroups.put("All", "^.*$");
         for (final String rule : config.favoriteGroups()) {
             final Matcher matcher = GROUP_PATTERN.matcher(rule);
             if (matcher.matches()) {
-                favoriteGroups.put(matcher.group("label"), matcher.group("pattern"));
+                this.favoriteGroups.put(matcher.group("label"), matcher.group("pattern"));
             }
         }
-        historyMax = config.historyMax();
-        properties.put("icon", config.icon());
+        this.historyMax = config.historyMax();
+        this.properties.put("icon", config.icon());
     }
 
     @Override

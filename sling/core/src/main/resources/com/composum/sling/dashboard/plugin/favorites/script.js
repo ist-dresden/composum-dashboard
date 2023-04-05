@@ -4,8 +4,8 @@ class FavoritesView extends ViewWidget {
 
     constructor(element) {
         super(element);
-        this.$content = this.$el.find('.dashboard-widget__favorites-content');
         this.profile = new Profile('favorites');
+        this.$content = this.$el.find('.dashboard-widget__favorites-content');
         this.selection = this.profile.get('selection') || [];
         this.history = this.profile.get('history') || [];
         this.historyMax = parseInt(this.$el.data('history-max') || '100');
@@ -37,11 +37,14 @@ class FavoritesView extends ViewWidget {
         if (this.$currentTab.attr('id') === 'history') {
             for (let i = this.history.length; --i >= 0;) {
                 content += '<tr><td class="path"><a href="#" data-path="'
-                    + this.history[i] + '">' + this.history[i] + '</a></td></tr>';
+                    + this.sanitizeAttr(this.history[i]) + '">'
+                    + this.sanitizeHtml(this.history[i]) + '</a></td></tr>';
             }
         } else {
             this.applySelectionPattern(function (item, index) {
-                content += '<tr><td class="path"><a href="#" data-path="' + item + '">' + item + '</a></td></tr>';
+                content += '<tr><td class="path"><a href="#" data-path="'
+                    + this.sanitizeAttr(item) + '">'
+                    + this.sanitizeHtml(item) + '</a></td></tr>';
                 return index + 1;
             }.bind(this));
         }

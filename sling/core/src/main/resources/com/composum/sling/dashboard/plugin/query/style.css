@@ -37,12 +37,23 @@
     padding: 0.2rem 0.6rem;
 }
 
-.dashboard-widget__query-form .query-templates {
+.dashboard-widget__query-form .query-history {
     margin-right: 0.3rem;
 }
 
+.dashboard-widget__query-form .query-templates .btn {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+}
+
+.dashboard-widget__query-form .query-history .btn {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+    border-left-color: #777;
+}
+
 .dashboard-widget__query-form .query-submit {
-    margin-left: 0.6rem;
+    margin-left: 0.4rem;
 }
 
 .dashboard-widget__query-form_hint {

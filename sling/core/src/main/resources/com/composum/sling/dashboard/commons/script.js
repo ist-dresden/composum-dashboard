@@ -156,16 +156,21 @@ class ViewWidget {
         this.attachLinkHandler(event, element);
     }
 
-    loadContent($element, url, callback) {
+    loadContent($element, url, cbSuccess, cbError) {
         $.ajax({
             type: 'GET',
             url: url,
             success: function (content) {
                 $element.html(content);
-                if (callback) {
-                    callback($element);
+                if (cbSuccess) {
+                    cbSuccess($element);
                 } else {
                     this.onContentLoaded(undefined, $element);
+                }
+            }.bind(this),
+            error: function () {
+                if (cbError) {
+                    cbError();
                 }
             }.bind(this),
             async: true,
@@ -184,6 +189,26 @@ class ViewWidget {
     formGetUrl(form) {
         return ($(form).data("action") || $(form).attr("action")) + '?' + ([...this.formData(form).entries()]
             .map(x => encodeURIComponent(x[0]) + '=' + encodeURIComponent(x[1])).join('&'));
+    }
+
+    sanitizeHtml(string) {
+        return this.sanitize(string, {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': "'"
+        });
+    }
+
+    sanitizeAttr(string) {
+        return this.sanitize(string, {
+            '"': "'"
+        });
+    }
+
+    sanitize(string, map) {
+        const reg = new RegExp('[' + Object.keys(map).join('') + ']', 'ig');
+        return string.replace(reg, (match) => (map[match]));
     }
 }
 

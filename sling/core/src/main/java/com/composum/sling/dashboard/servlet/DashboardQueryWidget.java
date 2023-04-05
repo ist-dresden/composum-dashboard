@@ -18,7 +18,6 @@ import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.xss.XSSAPI;
-import org.apache.sling.xss.XSSFilter;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
@@ -58,12 +57,15 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     @ObjectClassDefinition(name = "Composum Dashboard Query Widget")
     public @interface Config {
 
-        @AttributeDefinition(name = "Max Results")
-        int maxResults() default 500;
-
         @AttributeDefinition(name = "Query Templates",
                 description = "a set of predefined query templates offered in the query fields drop down menu")
         String[] queryTemplates();
+
+        @AttributeDefinition(name = "Max Results")
+        int maxResults() default 500;
+
+        @AttributeDefinition(name = "max History Items")
+        int historyMax() default 15;
 
         @AttributeDefinition(name = "Name")
         String name() default "query";
@@ -121,16 +123,14 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     protected XSSAPI xssapi;
 
     @Reference
-    protected XSSFilter xssFilter;
-
-    @Reference
     protected ResourceFilter resourceFilter;
 
     @Reference(cardinality = ReferenceCardinality.OPTIONAL, policyOption = ReferencePolicyOption.GREEDY)
     protected JsonRenderer jsonRenderer;
 
-    protected int maxResults;
     protected List<String> queryTemplates = new ArrayList<>();
+    protected int maxResults;
+    protected int historyMax;
     protected ValueMap properties = new ValueMapDecorator(new HashMap<>());
 
     @Activate
@@ -139,9 +139,10 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         super.activate(bundleContext,
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
-        this.maxResults = config.maxResults();
         this.queryTemplates = List.of(Optional.ofNullable(config.queryTemplates()).orElse(new String[0]));
-        properties.put("icon", config.icon());
+        this.maxResults = config.maxResults();
+        this.historyMax = config.historyMax();
+        this.properties.put("icon", config.icon());
     }
 
     @Override
@@ -178,28 +179,24 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
                         response.setContentType("text/plain;charset=UTF-8");
                         jsonData(response.getWriter(), resource);
                     }
-                } else {
-                    response.setContentType("application/json;charset=UTF-8");
-                    final JsonWriter writer = new JsonWriter(response.getWriter());
-                    //jsonFind(request, response, writer);
                 }
             } else {
                 prepareTextResponse(response, null);
                 final PrintWriter writer = response.getWriter();
                 switch (mode) {
                     case OPTION_FIND:
-                        htmlFind(request, response, writer);
+                        htmlFind(request, writer);
                         break;
                     case OPTION_TILE:
-                        htmlTile(request, response, writer);
+                        htmlTile(writer);
                         break;
                     case OPTION_VIEW:
-                        htmlView(request, response, writer);
+                        htmlView(request, writer);
                         break;
                     case OPTION_PAGE:
                     default:
                         htmlPageHead(writer);
-                        htmlView(request, response, writer);
+                        htmlView(request, writer);
                         htmlPageTail(writer);
                         break;
                 }
@@ -207,9 +204,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         }
     }
 
-    protected void htmlTile(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
-                            @NotNull final PrintWriter writer)
+    protected void htmlTile(@NotNull final PrintWriter writer)
             throws IOException {
         writer.append("<style>\n");
         copyResource(this.getClass(), TEMPLATE_BASE + "style.css", writer);
@@ -222,28 +217,31 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     }
 
     protected void htmlView(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
                             @NotNull final PrintWriter writer)
             throws IOException {
         final String pattern = StringUtils.defaultString(request.getParameter("query"), "");
         final StringBuilder templates = new StringBuilder();
         for (String template : queryTemplates) {
-            templates.append("<a class=\"dropdown-item\" href=\"#\">").append(template).append("</a>");
+            templates.append("<a class=\"dropdown-item\" href=\"#\" data-query=\"")
+                    .append(xssapi.encodeForHTMLAttr(template.replace('"', '\''))).append("\">")
+                    .append(xssapi.encodeForHTML(template)).append("</a>");
         }
         writer.append("<style>\n");
         copyResource(this.getClass(), TEMPLATE_BASE + "style.css", writer);
         writer.append("</style>\n");
-        writer.append("<div class=\"dashboard-widget__query\" data-popover-uri=\"")
+        writer.append("<div class=\"dashboard-widget__query\" data-history-max=\"")
+                .append(String.valueOf(historyMax)).append("\" data-popover-uri=\"")
                 .append(getWidgetUri(request, resourceType, HTML_MODES, OPTION_LOAD)).append("\">");
         copyResource(getClass(), TEMPLATE_BASE + "form.html", writer, new HashMap<>() {{
-            put("templates", templates.length() > 0
-                    ? loadTemplate("plugin/query/templates.html",
-                    Collections.singletonMap("templates", templates.toString())) : "");
+            put("templates", loadTemplate("plugin/query/templates.html",
+                    Collections.singletonMap("templates", templates.length() > 0
+                            ? templates.toString()
+                            : "<span class=\"dropdown-item\">configure your templates in the query service configuration...</span>")));
             put("action", getWidgetUri(request, resourceType, HTML_MODES, OPTION_FIND));
             put("pattern", xssapi.encodeForHTMLAttr(pattern));
         }});
         writer.append("<div class=\"dashboard-widget__query-result\">\n");
-        htmlFind(request, response, writer);
+        htmlFind(request, writer);
         writer.append("</div><div class=\"dashboard-widget__query-spinner hidden\"><i class=\"fa fa-spinner fa-pulse fa-5x fa-fw\"></i></div>\n");
         writer.append("</div>\n");
     }
@@ -258,7 +256,6 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     }
 
     protected void htmlFind(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
                             @NotNull final PrintWriter writer) {
         final String pattern = buildQuery(request);
         final JcrQuery query = StringUtils.isNotBlank(pattern) ? new JcrQuery(pattern) : null;
@@ -283,7 +280,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
                                 .append(xssapi.encodeForHTMLAttr(path)).append("\">")
                                 .append(xssapi.encodeForHTML(path)).append("</a>");
                         writer.append("</td><td class=\"json\">");
-                        jsonPopup(writer, resource);
+                        jsonPopup(writer);
                         writer.append("</td><td class=\"type\">");
                         writer.append(xssapi.encodeForHTML(values.get("jcr:primaryType", "")));
                         writer.append("</td></tr>\n");
@@ -305,7 +302,7 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
         writer.append("</tbody></table>\n");
     }
 
-    protected void jsonPopup(@NotNull final PrintWriter writer, @NotNull final Resource resource) {
+    protected void jsonPopup(@NotNull final PrintWriter writer) {
         if (jsonRenderer != null) {
             writer.append("<button class=\"btn btn-sm\" data-toggle=\"popover\" data-trigger=\"focus\" data-placement=\"left\"");
             try (final StringWriter buffer = new StringWriter()) {

@@ -2,6 +2,10 @@
     <form class="dashboard-widget__query-form d-flex align-items-stretch" data-action="${action}" method="GET">
         <input type="hidden" name="_charset_" value="UTF-8"/>
         ${templates}
+        <div class="dropdown query-history">
+            <button class="btn btn-dark fa fa-history" type="button" data-toggle="dropdown" aria-expanded="false"></button>
+            <div class="dropdown-menu"><span class="dropdown-item">the query history is empty</span></div>
+        </div>
         <input class="dashboard-widget__query-field" style="flex-grow:1;"
                name="query" value="${pattern}" type="text"/>
         <input class="dashboard-widget__query-argument hidden" name="arg1" type="text"/>

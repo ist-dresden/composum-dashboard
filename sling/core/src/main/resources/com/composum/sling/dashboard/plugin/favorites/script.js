@@ -11,11 +11,11 @@ class FavoritesView extends ViewWidget {
         this.historyMax = parseInt(this.$el.data('history-max') || '100');
         this.showTab(this.profile.get('currentTab'), true);
         this.$el.find('.dashboard-widget__favorites-clear').click(this.clearFavorites.bind(this));
-        this.$el.find('.dashboard-widget__favorites-groups a[data-toggle="tab"]').click(this.onTabSelected.bind(this));
+        this.$el.find('.dashboard-widget__favorites-groups a[data-toggle="tab"]').click(this.selectTab.bind(this));
         $(document).on('path:selected', this.onPathSelected.bind(this));
     }
 
-    onTabSelected(event) {
+    selectTab(event) {
         this.showTab($(event.currentTarget).attr('id'));
     }
 
@@ -40,14 +40,10 @@ class FavoritesView extends ViewWidget {
                     + this.history[i] + '">' + this.history[i] + '</a></td></tr>';
             }
         } else {
-            let pattern = this.$currentTab && this.$currentTab.length > 0
-                ? new RegExp(this.$currentTab.data('pattern')) : undefined;
-            for (let i = 0; i < this.selection.length; i++) {
-                if (!pattern || pattern.exec(this.selection[i]) !== null) {
-                    content += '<tr><td class="path"><a href="#" data-path="'
-                        + this.selection[i] + '">' + this.selection[i] + '</a></td></tr>';
-                }
-            }
+            this.applySelectionPattern(function (item, index) {
+                content += '<tr><td class="path"><a href="#" data-path="' + item + '">' + item + '</a></td></tr>';
+                return index + 1;
+            }.bind(this));
         }
         this.$content.html(content);
         this.$content.find('a').click(this.selectFavorite.bind(this));
@@ -60,13 +56,7 @@ class FavoritesView extends ViewWidget {
 
     onPathSelected(event, path) {
         this.currentPath = path;
-        const $toggle = $('.dashboard-browser__favorite-toggle');
-        if (this.isFavorite(path)) {
-            $toggle.addClass('is-favorite');
-        } else {
-            $toggle.removeClass('is-favorite');
-        }
-        $toggle.off('click').click(this.toggleFavorite.bind(this));
+        this.adjustToggleAction();
         if (this.history.length < 1 || this.history[this.history.length - 1] !== path) {
             this.history.push(path);
             if (this.history.length > this.historyMax) {
@@ -79,13 +69,25 @@ class FavoritesView extends ViewWidget {
         }
     }
 
+    adjustToggleAction() {
+        if (this.currentPath) {
+            const $toggle = $('.dashboard-browser__favorite-toggle');
+            if (this.isFavorite(this.currentPath)) {
+                $toggle.addClass('is-favorite');
+            } else {
+                $toggle.removeClass('is-favorite');
+            }
+            $toggle.off('click').click(this.toggleFavorite.bind(this));
+        }
+    }
+
     toggleFavorite(event) {
         event.preventDefault();
         if (this.currentPath) {
             this.isFavorite(this.currentPath, true);
             this.profile.set('selection', this.selection);
+            this.adjustToggleAction();
             this.renderFavorites();
-            this.onPathSelected(undefined, this.currentPath);
         }
     }
 
@@ -115,11 +117,30 @@ class FavoritesView extends ViewWidget {
 
     clearFavorites(event) {
         event.preventDefault();
-        this.selection = [];
-        this.history = [];
-        this.profile.set('selection', this.selection);
-        this.profile.set('history', this.history);
+        if (this.$currentTab.attr('id') === 'history') {
+            this.history = [];
+            this.profile.set('history', this.history);
+        } else {
+            this.applySelectionPattern(function (item, index) {
+                this.selection.splice(index, 1);
+                return index;
+            }.bind(this));
+            this.profile.set('selection', this.selection);
+        }
+        this.adjustToggleAction();
         this.renderFavorites();
+    }
+
+    applySelectionPattern(action) {
+        const pattern = this.$currentTab && this.$currentTab.length > 0
+            ? new RegExp(this.$currentTab.data('pattern')) : undefined;
+        for (let i = 0; i < this.selection.length;) {
+            if (!pattern || pattern.exec(this.selection[i]) !== null) {
+                i = action(this.selection[i], i);
+            } else {
+                i++
+            }
+        }
     }
 }
 

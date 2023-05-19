@@ -17,6 +17,8 @@ import java.util.Map;
  */
 public interface StartupRunnerService {
 
+    enum MODE {MODIFIED, DEPLOYED}
+
     /**
      * the execution of all configured startup scripts (the automatic execution runned on service activation)
      */
@@ -30,7 +32,7 @@ public interface StartupRunnerService {
      * @param output    the writer for the output printed by the scripts
      * @param force     if 'true' the scripts are executed always, not only if newer than on last execution
      */
-    void runStartupStripts(@NotNull ResourceResolver resolver,
+    void runStartupStripts(@NotNull ResourceResolver resolver, @Nullable final MODE mode,
                            @NotNull Map<String, Object> variables,
                            @NotNull PrintWriter output, boolean force);
 
@@ -44,7 +46,7 @@ public interface StartupRunnerService {
      * @param output     the writer for the output printed by the scripts
      * @param force      if 'true' the scripts are executed always, not only if newer than on last execution
      */
-    void runStartupScript(@NotNull ResourceResolver resolver,
+    void runStartupScript(@NotNull ResourceResolver resolver, @NotNull MODE mode,
                           @NotNull String scriptPath, @NotNull Map<String, Object> variables,
                           @NotNull PrintWriter output, boolean force);
 

@@ -78,7 +78,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         @AttributeDefinition(name = "Name")
         String name() default "browser";
 
-        @AttributeDefinition(name = "Category")
+        @AttributeDefinition(name = "Context")
         String[] context() default {
                 BROWSER_CONTEXT
         };

@@ -25,6 +25,7 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -64,6 +65,7 @@ import java.util.regex.Pattern;
 
 import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.DEPLOYED;
 import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.MODIFIED;
+import static org.osgi.framework.Bundle.ACTIVE;
 
 @Component(
         service = {StartupRunnerService.class, Servlet.class},
@@ -196,6 +198,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
 
     @Override
     public void runStartupStripts() {
+        waitForAllBundlesActive();
         try (final ResourceResolver resolver = resolverFactory.getServiceResourceResolver(SERVICE_AUTH)) {
             runStartupStripts(resolver, null, Collections.singletonMap("dryRun",
                     config.dryRun()), new DropIt(), config.force());
@@ -561,5 +564,26 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
                 }
             });
         }
+    }
+
+    @SuppressWarnings("BusyWait")
+    protected void waitForAllBundlesActive() {
+        final long timeoutAt = System.currentTimeMillis() + (300 * 1000L);
+        while (System.currentTimeMillis() < timeoutAt && !isAllBundlesActive()) {
+            LOG.info("not all bundles active, waiting...");
+            try {
+                Thread.sleep(5000L);
+            } catch (InterruptedException ignore) {
+            }
+        }
+    }
+
+    protected boolean isAllBundlesActive() {
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getState() != ACTIVE) {
+                return false;
+            }
+        }
+        return true;
     }
 }

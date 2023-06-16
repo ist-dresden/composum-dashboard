@@ -165,7 +165,8 @@ jobs:
       run: |
         cd target/checkout
         pwd
-        $MVNCMD nexus-staging:release
+        # There are sometimes temporary failures of OSSRH - we do some retries. If it still fails, manually release at https://oss.sonatype.org/#stagingRepositories
+        $MVNCMD nexus-staging:release || (echo FAILURE 1; sleep 600; $MVNCMD nexus-staging:release) || (echo FAILURE 2; sleep 1200; $MVNCMD nexus-staging:release)
 
     - name: Drop from OSSRH on dryrun
       if: ${{ github.event.inputs.dryrun != 'false' }}
@@ -175,7 +176,7 @@ jobs:
       run: |
         cd target/checkout
         pwd
-        $MVNCMD nexus-staging:drop
+        $MVNCMD nexus-staging:drop || (echo FAILURE 1; sleep 600; $MVNCMD nexus-staging:drop) || (echo FAILURE 2; sleep 1200; $MVNCMD nexus-staging:drop)
 
     - name: List target files even if recipe fails
       if: always()

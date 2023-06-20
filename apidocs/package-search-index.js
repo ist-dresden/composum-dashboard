@@ -1,0 +1,1 @@
+packageSearchIndex = [{"l":"All Packages","url":"allpackages-index.html"},{"l":"com.composum.sling.dashboard"},{"l":"com.composum.sling.dashboard.service"},{"l":"com.composum.sling.dashboard.servlet"},{"l":"com.composum.sling.dashboard.util"}]

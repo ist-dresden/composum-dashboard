@@ -1,0 +1,4 @@
+com.composum.sling.dashboard
+com.composum.sling.dashboard.service
+com.composum.sling.dashboard.servlet
+com.composum.sling.dashboard.util

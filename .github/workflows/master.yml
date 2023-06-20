@@ -5,7 +5,7 @@ run-name: Master - Test public build and generate and deploy site on ${{ github.
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:

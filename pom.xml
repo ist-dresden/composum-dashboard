@@ -44,6 +44,8 @@
         <maven.compiler.target>${java.target}</maven.compiler.target>
         <sling.pckgmgr.uri>/bin/cpm/package.service.html</sling.pckgmgr.uri>
         <groovy.version>[4,5)</groovy.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     </properties>
 
     <scm>
@@ -63,9 +65,8 @@
             <url>https://repo.ist-software.com/repository/maven-snapshots</url>
         </snapshotRepository>
         <site>
-            <!-- This is not actually used, but, strangely, the site plugin requires it. -->
-            <id>api.composum.com</id>
-            <url>scp://api.composum.com/var/www/composum/api/public/</url>
+            <id>site</id>
+            <url>https://ist-dresden.github.io/composum-dashboard/</url>
         </site>
     </distributionManagement>
 
@@ -200,7 +201,13 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-site-plugin</artifactId>
-                    <version>3.8.2</version>
+                    <version>3.12.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-project-info-reports-plugin</artifactId>
+                    <version>3.4.5</version>
                 </plugin>
 
                 <plugin>
@@ -245,20 +252,8 @@
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-site-plugin</artifactId>
-                    <version>3.8.2</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-project-info-reports-plugin</artifactId>
                     <version>3.4.2</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-install-plugin</artifactId>
-                    <version>2.5.2</version>
                 </plugin>
 
                 <plugin>

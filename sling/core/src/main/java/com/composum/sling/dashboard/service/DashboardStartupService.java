@@ -25,6 +25,7 @@ import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -61,6 +62,10 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.DEPLOYED;
+import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.MODIFIED;
+import static org.osgi.framework.Bundle.ACTIVE;
 
 @Component(
         service = {StartupRunnerService.class, Servlet.class},
@@ -106,6 +111,12 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
                 description = "the list of script paths that should be executed only once after script update"
         )
         String[] runOnce();
+
+        @AttributeDefinition(
+                name = "Run On Deployment",
+                description = "the list of script paths that should be executed after each deployment"
+        )
+        String[] runOnDeployment();
 
         @AttributeDefinition(
                 name = "Script Path Pattern",
@@ -179,10 +190,17 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         new Thread(this::runStartupStripts).start();
     }
 
+    protected Calendar getLastDeployed() {
+        final Calendar result = Calendar.getInstance();
+        result.setTimeInMillis(bundleContext.getBundle().getLastModified());
+        return result;
+    }
+
     @Override
     public void runStartupStripts() {
+        waitForAllBundlesActive();
         try (final ResourceResolver resolver = resolverFactory.getServiceResourceResolver(SERVICE_AUTH)) {
-            runStartupStripts(resolver, Collections.singletonMap("dryRun",
+            runStartupStripts(resolver, null, Collections.singletonMap("dryRun",
                     config.dryRun()), new DropIt(), config.force());
         } catch (LoginException ex) {
             LOG.error(ex.getMessage());
@@ -192,13 +210,22 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
     }
 
     @Override
-    public void runStartupStripts(@NotNull final ResourceResolver resolver,
+    public void runStartupStripts(@NotNull final ResourceResolver resolver, @Nullable final MODE mode,
                                   @NotNull final Map<String, Object> variables,
                                   @NotNull final PrintWriter output, boolean force) {
-        for (final String scriptPath : config.runOnce()) {
-            output.append(scriptPath).append("...\n");
-            runStartupScript(resolver, scriptPath, variables, output, force);
-            output.append(scriptPath).append(".\n");
+        if (mode == null || mode == MODIFIED) {
+            for (final String scriptPath : config.runOnce()) {
+                output.append(scriptPath).append("...\n");
+                runStartupScript(resolver, MODIFIED, scriptPath, variables, output, force);
+                output.append(scriptPath).append(".\n");
+            }
+        }
+        if (mode == null || mode == DEPLOYED) {
+            for (final String scriptPath : config.runOnDeployment()) {
+                output.append(scriptPath).append("...\n");
+                runStartupScript(resolver, DEPLOYED, scriptPath, variables, output, force);
+                output.append(scriptPath).append(".\n");
+            }
         }
     }
 
@@ -216,15 +243,27 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         final PrintWriter writer = response.getWriter();
         final String scriptPath = pathInfo.getSuffix();
         if (StringUtils.isNotBlank(scriptPath)) {
-            runStartupScript(resolver, scriptPath, Collections.singletonMap("dryRun", dryRun), writer, force);
+            final MODE mode = DEPLOYED.name().equals(Optional.ofNullable(request.getParameter("mode"))
+                    .orElse(List.of(config.runOnce()).contains(scriptPath) ? "modified" : "deployed")
+                    .toUpperCase()) ? DEPLOYED : MODIFIED;
+            runStartupScript(resolver, mode, scriptPath, Collections.singletonMap("dryRun", dryRun), writer, force);
         } else {
-            runStartupStripts(resolver, Collections.singletonMap("dryRun", dryRun), writer, force);
+            final MODE mode = Optional.ofNullable(request.getParameter("mode"))
+                    .map(p -> {
+                        try {
+                            return MODE.valueOf(p.toUpperCase());
+                        } catch (Exception ex) {
+                            return null;
+                        }
+                    })
+                    .orElse(null);
+            runStartupStripts(resolver, mode, Collections.singletonMap("dryRun", dryRun), writer, force);
         }
         writer.flush();
     }
 
     @Override
-    public void runStartupScript(@NotNull final ResourceResolver resolver,
+    public void runStartupScript(@NotNull final ResourceResolver resolver, @NotNull final MODE mode,
                                  @NotNull final String scriptPath, @NotNull final Map<String, Object> variables,
                                  @NotNull final PrintWriter output, boolean force) {
         Matcher matcher = null;
@@ -239,7 +278,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         if (matcher != null && matcher.matches() && statusPathPattern != null) {
             final String statusPath = matcher.replaceFirst(statusPathPattern);
             try {
-                runStartupScript(resolver, scriptPath, variables, output, statusPath, force);
+                runStartupScript(resolver, mode, scriptPath, variables, output, statusPath, force);
             } catch (PersistenceException ex) {
                 LOG.error(ex.getMessage(), ex);
             }
@@ -249,15 +288,13 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
 
     }
 
-    protected void runStartupScript(@NotNull final ResourceResolver resolver,
-                                    @NotNull final String scriptPath,
-                                    @NotNull final Map<String, Object> variables,
-                                    @NotNull final PrintWriter output,
-                                    @NotNull final String statusPath, boolean force)
+    protected void runStartupScript(@NotNull final ResourceResolver resolver, @NotNull final MODE mode,
+                                    @NotNull final String scriptPath, @NotNull final Map<String, Object> variables,
+                                    @NotNull final PrintWriter output, @NotNull final String statusPath, boolean force)
             throws PersistenceException {
         final Resource statusResource = provideResource(resolver, statusPath);
         if (statusResource != null) {
-            if (force || shouldBeExecuted(resolver, resolver.getResource(scriptPath), statusResource)) {
+            if (force || shouldBeExecuted(resolver, mode, resolver.getResource(scriptPath), statusResource)) {
                 LOG.debug("loading script '{}'...", scriptPath);
                 try (final Reader scriptReader = openScript(resolver, getClass().getClassLoader(), scriptPath)) {
                     if (scriptReader != null) {
@@ -290,15 +327,17 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         }
     }
 
-    protected boolean shouldBeExecuted(@NotNull final ResourceResolver resolver,
+    protected boolean shouldBeExecuted(@NotNull final ResourceResolver resolver, @NotNull final MODE mode,
                                        @Nullable final Resource scriptResource,
                                        @NotNull final Resource statusResource) {
         final ValueMap scriptProps = scriptResource != null ? scriptResource.getValueMap()
                 : new ValueMapDecorator(Collections.emptyMap());
         final ValueMap statusProps = statusResource.getValueMap();
-        final Calendar lastModified = scriptProps.get(FILE_MODIFIED, Calendar.class);
+        final Calendar indicatorTime = mode == MODIFIED
+                ? scriptProps.get(FILE_MODIFIED, Calendar.class)
+                : getLastDeployed();
         final Calendar lastExecuted = statusProps.get(LAST_EXECUTED, Calendar.class);
-        return lastModified != null && (lastExecuted == null || lastExecuted.before(lastModified));
+        return indicatorTime != null && (lastExecuted == null || lastExecuted.before(indicatorTime));
     }
 
     protected void registerExceution(@NotNull final ModifiableValueMap statusProps) {
@@ -490,7 +529,8 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         return null;
     }
 
-    protected @Nullable Resource provideResource(@NotNull final ResourceResolver resolver, @NotNull final String path)
+    protected @Nullable Resource provideResource(@NotNull final ResourceResolver resolver,
+                                                 @NotNull final String path)
             throws PersistenceException {
         Resource resource = resolver.getResource(path);
         if (resource == null && !path.equals("/")) {
@@ -524,5 +564,26 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
                 }
             });
         }
+    }
+
+    @SuppressWarnings("BusyWait")
+    protected void waitForAllBundlesActive() {
+        final long timeoutAt = System.currentTimeMillis() + (300 * 1000L);
+        while (System.currentTimeMillis() < timeoutAt && !isAllBundlesActive()) {
+            LOG.info("not all bundles active, waiting...");
+            try {
+                Thread.sleep(5000L);
+            } catch (InterruptedException ignore) {
+            }
+        }
+    }
+
+    protected boolean isAllBundlesActive() {
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getState() != ACTIVE) {
+                return false;
+            }
+        }
+        return true;
     }
 }

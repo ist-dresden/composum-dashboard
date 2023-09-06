@@ -1,18 +1,113 @@
+class FavoritesToggle extends ViewWidget {
+
+    static selector = '.browser-tool-favorites';
+
+    constructor(element) {
+        super(element);
+        this.profile = new Profile('favorites');
+        this.selection = this.profile.get('selection') || [];
+        this.history = this.profile.get('history') || [];
+        this.historyMax = 200;
+        $(document).on('path:selected', this.onPathSelected.bind(this));
+    }
+
+    getViewWidget() {
+        if (!this.viewWidget) {
+            this.viewWidget = Widgets.getView($(FavoritesView.selector), FavoritesView);
+            if (this.viewWidget) {
+                this.historyMax = parseInt(this.viewWidget.$el.data('history-max') || '100');
+            }
+        }
+        return this.viewWidget;
+    }
+
+    applyToView(action) {
+        const viewWidget = this.getViewWidget();
+        if (viewWidget) {
+            action(viewWidget);
+        }
+    }
+
+    onPathSelected(event, path) {
+        this.currentPath = path;
+        this.adjustToggleAction();
+        if (this.history.length < 1 || this.history[this.history.length - 1] !== path) {
+            this.history.push(path);
+            if (this.historyMax && this.history.length > this.historyMax) {
+                this.history.splice(0, this.history.length - this.historyMax);
+            }
+            this.profile.set('history', this.history);
+            this.applyToView(viewWidget => {
+                if (viewWidget.$currentTab.attr('id') === 'history') {
+                    viewWidget.renderFavorites()
+                }
+            });
+        }
+    }
+
+    adjustToggleAction() {
+        if (this.currentPath) {
+            const $toggle = $('.dashboard-browser__favorite-toggle');
+            if (this.isFavorite(this.currentPath)) {
+                $toggle.addClass('is-favorite');
+            } else {
+                $toggle.removeClass('is-favorite');
+            }
+            $toggle.off('click').click(this.toggleFavorite.bind(this));
+        }
+    }
+
+    toggleFavorite(event) {
+        event.preventDefault();
+        if (this.currentPath) {
+            this.isFavorite(this.currentPath, true);
+            this.profile.set('selection', this.selection);
+            this.adjustToggleAction();
+            this.applyToView(viewWidget => viewWidget.renderFavorites());
+        }
+    }
+
+    isFavorite(path, toggle) {
+        let result = undefined;
+        for (let i = 0; i < this.selection.length; i++) {
+            if (path === this.selection[i]) {
+                if (toggle) {
+                    this.selection.splice(i, 1);
+                    result = false;
+                } else {
+                    result = true;
+                }
+                break;
+            }
+        }
+        if (result === undefined) {
+            if (toggle) {
+                this.selection.push(path);
+                this.selection.sort();
+                return true;
+            }
+            return false;
+        }
+        return result;
+    }
+}
+
+CPM.widgets.register(FavoritesToggle);
+
 class FavoritesView extends ViewWidget {
 
     static selector = '.dashboard-widget__favorites';
 
     constructor(element) {
         super(element);
-        this.profile = new Profile('favorites');
+        this.toggleWidget = Widgets.getView($(FavoritesToggle.selector), FavoritesToggle);
+        this.profile = this.toggleWidget.profile;
+        this.selection = this.toggleWidget.selection;
+        this.history = this.toggleWidget.history;
         this.$content = this.$el.find('.dashboard-widget__favorites-content');
-        this.selection = this.profile.get('selection') || [];
-        this.history = this.profile.get('history') || [];
-        this.historyMax = parseInt(this.$el.data('history-max') || '100');
         this.showTab(this.profile.get('currentTab'), true);
         this.$el.find('.dashboard-widget__favorites-clear').click(this.clearFavorites.bind(this));
         this.$el.find('.dashboard-widget__favorites-groups a[data-toggle="tab"]').click(this.selectTab.bind(this));
-        $(document).on('path:selected', this.onPathSelected.bind(this));
     }
 
     selectTab(event) {
@@ -57,80 +152,19 @@ class FavoritesView extends ViewWidget {
         $(document).trigger('path:select', [$(event.currentTarget).data('path')]);
     }
 
-    onPathSelected(event, path) {
-        this.currentPath = path;
-        this.adjustToggleAction();
-        if (this.history.length < 1 || this.history[this.history.length - 1] !== path) {
-            this.history.push(path);
-            if (this.history.length > this.historyMax) {
-                this.history.splice(0, this.history.length - this.historyMax);
-            }
-            this.profile.set('history', this.history);
-            if (this.$currentTab.attr('id') === 'history') {
-                this.renderFavorites();
-            }
-        }
-    }
-
-    adjustToggleAction() {
-        if (this.currentPath) {
-            const $toggle = $('.dashboard-browser__favorite-toggle');
-            if (this.isFavorite(this.currentPath)) {
-                $toggle.addClass('is-favorite');
-            } else {
-                $toggle.removeClass('is-favorite');
-            }
-            $toggle.off('click').click(this.toggleFavorite.bind(this));
-        }
-    }
-
-    toggleFavorite(event) {
-        event.preventDefault();
-        if (this.currentPath) {
-            this.isFavorite(this.currentPath, true);
-            this.profile.set('selection', this.selection);
-            this.adjustToggleAction();
-            this.renderFavorites();
-        }
-    }
-
-    isFavorite(path, toggle) {
-        let result = undefined;
-        for (let i = 0; i < this.selection.length; i++) {
-            if (path === this.selection[i]) {
-                if (toggle) {
-                    this.selection.splice(i, 1);
-                    result = false;
-                } else {
-                    result = true;
-                }
-                break;
-            }
-        }
-        if (result === undefined) {
-            if (toggle) {
-                this.selection.push(path);
-                this.selection.sort();
-                return true;
-            }
-            return false;
-        }
-        return result;
-    }
-
     clearFavorites(event) {
         event.preventDefault();
         if (this.$currentTab.attr('id') === 'history') {
-            this.history = [];
+            this.history = this.toggleWidget.history = [];
             this.profile.set('history', this.history);
         } else {
-            this.applySelectionPattern(function (item, index) {
+            this.applySelectionPattern((item, index) => {
                 this.selection.splice(index, 1);
                 return index;
-            }.bind(this));
+            });
             this.profile.set('selection', this.selection);
         }
-        this.adjustToggleAction();
+        this.toggleWidget.adjustToggleAction();
         this.renderFavorites();
     }
 

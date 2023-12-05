@@ -82,10 +82,11 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         @AttributeDefinition(name = "Title")
         String title() default "Dashboard";
 
-        @AttributeDefinition(name = "Home Url")
+        @AttributeDefinition(name = "Home Url", description = "The url the logo links to")
         String homeUrl();
 
-        @AttributeDefinition(name = "Navigation")
+        @AttributeDefinition(name = "Navigation",
+                description = "Items in the navigation bar, in the format 'name:label:link', e.g. 'browser:Browser:/apps/cpm/browser.html'.")
         String[] navigation();
 
         @AttributeDefinition(name = "Resource Types",

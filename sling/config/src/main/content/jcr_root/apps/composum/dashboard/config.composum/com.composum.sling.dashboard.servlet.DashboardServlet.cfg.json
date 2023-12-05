@@ -1,5 +1,8 @@
 {
   "sling.servlet.paths": [
     "/apps/cpm/dashboard"
+  ],
+  "navigation": [
+    "browser:Browser:/apps/cpm/browser.html"
   ]
 }

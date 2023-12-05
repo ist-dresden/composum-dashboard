@@ -8,7 +8,7 @@
     <packaging>pom</packaging>
 
     <name>Composum Dashboard</name>
-    <description>a framework for creating a custom project toolset that is placed on a dasboard page</description>
+    <description>a framework for creating a custom project toolset that is placed on a dashboard page</description>
     <url>https://github.com/ist-dresden/composum</url>
 
     <licenses>

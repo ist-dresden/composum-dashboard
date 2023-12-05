@@ -1,5 +1,5 @@
 {
   "sling.servlet.paths": [
-    "/apps/cpm/dasboard"
+    "/apps/cpm/dashboard"
   ]
 }

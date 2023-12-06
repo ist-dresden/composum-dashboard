@@ -29,7 +29,11 @@ Out of the box are currently provided the following tools and widgets, with all 
 
 [![Image of the Dashboard](image/Dashboard.thumb.png)](image/Dashboard.png)
 
+[Picture of the Dashboard - click to enlarge](image/Dashboard.png)
+
 [![Image of the JCR Browser](image/JcrBrowser.thumb.png)](image/JcrBrowser.png)
+
+[Picture of the JCR Browser - click to enlarge](image/JcrBrowser.png)
 
 ## Download and Installation
 

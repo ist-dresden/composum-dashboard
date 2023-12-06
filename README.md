@@ -24,7 +24,11 @@ platform.
 
 [![Image of the Dashboard](src/site/resources/image/Dashboard.thumb.png)](src/site/resources/image/Dashboard.png)
 
+[Picture of the dashboard - click to enlarge](src/site/resources/image/Dashboard.png)
+
 [![Image of the JCR Browser](src/site/resources/image/JcrBrowser.thumb.png)](src/site/resources/image/JcrBrowser.png)
+
+[Picture of the JCR Browser - click to enlarge](src/site/resources/image/JcrBrowser.png)
 
 ### Usage
 

@@ -24,7 +24,7 @@
         <menu name="Overview">
             <item name="Introduction" href="index.html"/>
             <item name="Configuration" href="configuration.html"/>
-            <item name="Config as content page" href="configurationAsContent.html"/>
+            <item name="Configuration as content page" href="configurationAsContent.html"/>
         </menu>
 
         <menu ref="parent" inherit="bottom"/>

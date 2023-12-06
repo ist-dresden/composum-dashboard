@@ -22,6 +22,10 @@ platform.
 - customizable and restrictable via OSGi configuration for each environment
 - prepared as normal content with no additional configuration needed in the web tier
 
+[![Image of the Dashboard](src/site/resources/image/Dashboard.thumb.png)](src/site/resources/image/Dashboard.png)
+
+[![Image of the JCR Browser](src/site/resources/image/JcrBrowser.thumb.png)](src/site/resources/image/JcrBrowser.png)
+
 ### Usage
 
 First, it is necessary that the desired services are activated and configured via OSGi configurations.

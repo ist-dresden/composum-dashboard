@@ -10,8 +10,8 @@ import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
+import org.apache.sling.api.wrappers.ValueMapDecorator;
 import org.apache.sling.caconfig.ConfigurationBuilder;
-import org.apache.sling.caconfig.ConfigurationResolveException;
 import org.apache.sling.caconfig.resource.ConfigurationResourceResolver;
 import org.apache.sling.commons.classloader.DynamicClassLoaderManager;
 import org.apache.sling.xss.XSSAPI;
@@ -31,10 +31,10 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.Servlet;
 import java.io.PrintWriter;
-import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -58,6 +58,9 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
     private static final Logger LOG = LoggerFactory.getLogger(DashboardCaConfigView.class);
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/caconfig";
+
+    /** Property keys we do not display from the configurations. */
+    public static final Pattern IGNORED_PROPERTY_KEYS = Pattern.compile("^jcr:primaryType$");
 
     @ObjectClassDefinition(name = "Composum Dashboard CA Config View")
     public @interface Config {
@@ -237,11 +240,11 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
 
         @Override
         public @NotNull Iterable<String> getPropertyNames() {
-            if (config.properties.isEmpty()) {
-                return valueMap.keySet();
-            }
             final Set<String> propertyNames = new HashSet<>();
             for (String property : valueMap.keySet()) {
+                if (config.properties.isEmpty() && !IGNORED_PROPERTY_KEYS.matcher(property).matches()) {
+                    propertyNames.add(property);
+                }
                 for (final Pattern pattern : config.properties) {
                     final Matcher matcher = pattern.matcher(property);
                     if (matcher.matches()) {
@@ -271,9 +274,14 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
                     providers.add(new ConfigurationProvider(config, valueMap));
                 }
                 for (ConfigurationRule config : collectionConfigurations) {
-                    @NotNull Collection<ValueMap> valueMaps = builder.name(config.configType).asValueMapCollection();
+                    ConfigurationBuilder builderForConfig = builder.name(config.configType);
+                    @NotNull Collection<ValueMap> valueMaps = builderForConfig.asValueMapCollection();
                     for (@NotNull ValueMap valueMap : valueMaps) {
                         providers.add(new ConfigurationProvider(config, valueMap));
+                    }
+                    if (valueMaps.isEmpty()) {
+                        providers.add(new ConfigurationProvider(config,
+                                new ValueMapDecorator(Collections.emptyMap())));
                     }
                 }
             }

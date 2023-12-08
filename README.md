@@ -43,7 +43,7 @@ Only configured services are available.
 The user interface is automatically set up with the configured services.
 Services that are not configured are not displayed.
 
-Each service implements bsically a servlet with a set of view or request options,
+Each service implements basically a servlet with a set of view or request options,
 e.g. if the browsers XML view is configured via OSGi with
 
 ``com.composum.sling.dashboard.servlet.DashboardXmlView.cfg.json``...

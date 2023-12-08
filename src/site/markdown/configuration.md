@@ -6,7 +6,9 @@ There are two basic functions of the configuration:
 
 The first part is done via OSGI configurations as discussed below. The second part can be performed two ways:
 1. in the OSGI configurations the `sling.servlet.paths` can give the paths the servlets are available.
-2. a [special content page](configurationAsContent.md) is created that arranges the necessary servlets and their views as subresources.
+2. a content page is created that arranges the necessary servlets and their views as subresources.
+
+When using the second variant please see the descroption of [the special content page](configurationAsContent.md), but you will still need to enable the needed tools via OSGI as below, except of providing the `sling.servlet.paths`, of course.
 
 At set of configuration examples is delivered in the 'config' packages,
 one for a Sling setup and another one for an AEM setup.
@@ -28,7 +30,7 @@ Only configured services are available.
 The user interface is automatically set up with the configured services.
 Services that are not configured are not displayed.
 
-Each service implements bsically a servlet with a set of view or request options,
+Each service implements basically a servlet with a set of view or request options,
 e.g. if the browsers XML view is configured via OSGi with
 
 ``com.composum.sling.dashboard.servlet.DashboardXmlView.cfg.json``...
@@ -227,6 +229,9 @@ In that case you must prepare appropriate content for the Dashboard views.
 {
   "inspectedConfigurations": [
     "<your CA configuration implementation class names...>"
+  ],
+  "inspectedConfigurationCollections": [
+    "<your CA configuration collection implementation class names...>"
   ],
   "sling.servlet.paths": [
     "/apps/cpm/browser/view/caconfig",

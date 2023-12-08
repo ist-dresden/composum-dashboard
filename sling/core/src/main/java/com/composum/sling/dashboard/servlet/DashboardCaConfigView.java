@@ -92,8 +92,13 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
                         "or 'caconfig-type' if all properties should be shown. caconfig-type is the fully qualified class name of the configuration type.")
         String[] inspectedConfigurations();
 
+        @AttributeDefinition(name = "Inspected Configuration Collections",
+                description = "A set of templates matching: 'caconfig-type[config-properties,...]' if only some properties should be shown, " +
+                        "or 'caconfig-type' if all properties should be shown. caconfig-type is the fully qualified class name of the configuration type.")
+        String[] inspectedConfigurationCollections();
+
         @AttributeDefinition(name = "Resource Types",
-                description = "The resource types implemented by this servlet." +
+                description = "The resource types implemented by this servlet. " +
                         "Relevant only when the it is rendered using a content page.")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
@@ -147,7 +152,9 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
     @Reference
     protected DashboardManager dashboardManager;
 
-    protected transient List<ConfigurationRule> configuration;
+    protected transient List<ConfigurationRule> configurations;
+
+    protected transient List<ConfigurationRule> collectionConfigurations;
 
     @Activate
     @Modified
@@ -155,15 +162,21 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
         super.activate(bundleContext,
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
-        configuration = new ArrayList<>();
-        for (final String rule : config.inspectedConfigurations()) {
+        configurations = parseConfigurationRules(config.inspectedConfigurations());
+        collectionConfigurations = parseConfigurationRules(config.inspectedConfigurationCollections());
+    }
+
+    private List<ConfigurationRule> parseConfigurationRules(String[] configuredRules) {
+        List<ConfigurationRule> parsedConfigurations = new ArrayList<>();
+        for (final String rule : configuredRules) {
             if (StringUtils.isNotBlank(rule)) {
                 Matcher matcher = RULE_PATTERN.matcher(rule);
                 if (matcher.matches()) {
-                    configuration.add(new ConfigurationRule(matcher));
+                    parsedConfigurations.add(new ConfigurationRule(matcher));
                 }
             }
         }
+        return parsedConfigurations;
     }
 
     @Override
@@ -197,48 +210,43 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
 
     protected class ConfigurationProvider extends SettingsProvider {
 
+        @NotNull
         protected final ConfigurationRule config;
-        protected final Class<?> configType;
-        protected final Object caConfig;
+        @NotNull
+        protected final ValueMap valueMap;
 
-        public ConfigurationProvider(@NotNull final ConfigurationRule config, @NotNull final Class<?> configType,
-                                     @Nullable final Object caConfig) {
+        public ConfigurationProvider(@NotNull ConfigurationRule config, @NotNull ValueMap valueMap) {
             this.config = config;
-            this.configType = configType;
-            this.caConfig = caConfig;
+            this.valueMap = valueMap;
         }
 
         @Override
         public String getName() {
-            return configType.getName();
+            return config.configType;
         }
 
         @Override
         public String getLabel() {
-            return configType.getSimpleName();
+            return config.configType;
         }
 
         @Override
         public boolean isAvailable() {
-            return caConfig != null;
+            return !valueMap.isEmpty();
         }
 
         @Override
         public @NotNull Iterable<String> getPropertyNames() {
+            if (config.properties.isEmpty()) {
+                return valueMap.keySet();
+            }
             final Set<String> propertyNames = new HashSet<>();
-            for (final Method method : configType.getDeclaredMethods()) {
-                if (method.getParameterCount() == 0) {
-                    String name = method.getName();
-                    if (config.properties.isEmpty()) {
-                        propertyNames.add(name);
-                    } else {
-                        for (final Pattern pattern : config.properties) {
-                            final Matcher matcher = pattern.matcher(name);
-                            if (matcher.matches()) {
-                                propertyNames.add(name);
-                                break;
-                            }
-                        }
+            for (String property : valueMap.keySet()) {
+                for (final Pattern pattern : config.properties) {
+                    final Matcher matcher = pattern.matcher(property);
+                    if (matcher.matches()) {
+                        propertyNames.add(property);
+                        break;
                     }
                 }
             }
@@ -247,7 +255,7 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
 
         @Override
         public @Nullable Object getProperty(@NotNull final String name) {
-            return getProperty(caConfig, name);
+            return valueMap.get(name);
         }
     }
 
@@ -258,15 +266,14 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
         if (targetResource != null) {
             final ConfigurationBuilder builder = targetResource.adaptTo(ConfigurationBuilder.class);
             if (builder != null) {
-                for (ConfigurationRule config : configuration) {
-                    try {
-                        final Class<?> caConfigType = classLoaderManager.getDynamicClassLoader().loadClass(config.configType);
-                        if (caConfigType != null) {
-                            providers.add(new ConfigurationProvider(config, caConfigType,
-                                    builder.has(caConfigType) ? builder.as(caConfigType) : null));
-                        }
-                    } catch (ClassNotFoundException | ConfigurationResolveException ignore) {
-                        LOG.debug("Configuration type not found: {}", config.configType);
+                for (ConfigurationRule config : configurations) {
+                    @NotNull ValueMap valueMap = builder.name(config.configType).asValueMap();
+                    providers.add(new ConfigurationProvider(config, valueMap));
+                }
+                for (ConfigurationRule config : collectionConfigurations) {
+                    @NotNull Collection<ValueMap> valueMaps = builder.name(config.configType).asValueMapCollection();
+                    for (@NotNull ValueMap valueMap : valueMaps) {
+                        providers.add(new ConfigurationProvider(config, valueMap));
                     }
                 }
             }

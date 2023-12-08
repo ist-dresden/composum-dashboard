@@ -1,0 +1,12 @@
+{
+  "sling.servlet.paths":[
+    "/apps/cpm/caconfig",
+    "/apps/cpm/caconfig/view"
+  ],
+  "inspectedConfigurations":[
+    "no_configuration_types_configured_in_OSGI"
+  ],
+  "inspectedConfigurationCollections":[
+    "no_configuration_collection_types_configured_in_OSGI"
+  ]
+}

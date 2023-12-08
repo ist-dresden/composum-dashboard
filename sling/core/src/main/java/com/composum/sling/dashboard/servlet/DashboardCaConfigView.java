@@ -7,6 +7,7 @@ import com.composum.sling.dashboard.service.ResourceFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.caconfig.ConfigurationBuilder;
@@ -25,12 +26,15 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Servlet;
 import java.io.PrintWriter;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -51,51 +55,61 @@ import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWS
 @Designate(ocd = DashboardCaConfigView.Config.class)
 public class DashboardCaConfigView extends AbstractSettingsWidget implements ContentGenerator {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DashboardCaConfigView.class);
+
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/caconfig";
 
     @ObjectClassDefinition(name = "Composum Dashboard CA Config View")
     public @interface Config {
 
-        @AttributeDefinition(name = "Name")
+        @AttributeDefinition(name = "Name", description = "An ID for the widget.")
         String name() default "caconfig";
 
-        @AttributeDefinition(name = "Context")
+        @AttributeDefinition(name = "Context",
+                description = "The context where the widget is available - e.g. 'browser' or 'dashboard'. " +
+                        "Relevant only when the dashboard is configured using servlet paths.")
         String[] context() default {
                 BROWSER_CONTEXT
         };
 
-        @AttributeDefinition(name = "Category")
+        @AttributeDefinition(name = "Category",
+                description = "The category of a widget - in the browser e.g. 'favorites', 'tool', 'search'. " +
+                        "Relevant only when the dashboard is configured using servlet paths.")
         String[] category();
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = "Rank", description = "The rank is used for ordering widgets / views. " +
+                "Relevant only when the dashboard is configured using servlet paths.")
         int rank() default 1500;
 
-        @AttributeDefinition(name = "Label")
+        @AttributeDefinition(name = "Label", description = "The human readable widget label.")
         String label() default "CAC";
 
         @AttributeDefinition(name = "Navigation Title")
         String navTitle();
 
         @AttributeDefinition(name = "Inspected Configurations",
-                description = "a set of request templates matching: 'caconfig-type[config-properties,...]'")
+                description = "A set of templates matching: 'caconfig-type[config-properties,...]' if only some properties should be shown, " +
+                        "or 'caconfig-type' if all properties should be shown. caconfig-type is the fully qualified class name of the configuration type.")
         String[] inspectedConfigurations();
 
         @AttributeDefinition(name = "Resource Types",
-                description = "the resource types implemented by this servlet")
+                description = "The resource types implemented by this servlet." +
+                        "Relevant only when the it is rendered using a content page.")
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/view"
         };
 
         @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible extensions supported by this servlet")
+                description = "The possible extensions supported by this servlet.")
         String[] sling_servlet_extensions() default {
                 "html",
                 "json"
         };
 
         @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+                description = "The servlet paths if this configuration variant should be supported. " +
+                        "Alternatively, the servlet can be rendered from a special content page using it's resource type(s).")
         String[] sling_servlet_paths();
     }
 
@@ -252,6 +266,7 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
                                     builder.has(caConfigType) ? builder.as(caConfigType) : null));
                         }
                     } catch (ClassNotFoundException | ConfigurationResolveException ignore) {
+                        LOG.debug("Configuration type not found: {}", config.configType);
                     }
                 }
             }

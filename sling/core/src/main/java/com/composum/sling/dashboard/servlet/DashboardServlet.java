@@ -31,6 +31,8 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.Servlet;
@@ -62,6 +64,8 @@ import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_
 @Designate(ocd = DashboardServlet.Config.class)
 public class DashboardServlet extends AbstractDashboardServlet implements DashboardPlugin, ContentGenerator {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DashboardServlet.class);
+
     public static final String DASHBOARD_CONTEXT = "dashboard";
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling";
@@ -78,10 +82,11 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         @AttributeDefinition(name = "Title")
         String title() default "Dashboard";
 
-        @AttributeDefinition(name = "Home Url")
+        @AttributeDefinition(name = "Home Url", description = "The url the logo links to")
         String homeUrl();
 
-        @AttributeDefinition(name = "Navigation")
+        @AttributeDefinition(name = "Navigation",
+                description = "Items in the navigation bar, in the format 'name:label:link', e.g. 'browser:Browser:/apps/cpm/browser.html'.")
         String[] navigation();
 
         @AttributeDefinition(name = "Resource Types",
@@ -286,18 +291,22 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         } else {
             for (final String item : this.navigation) {
                 final Matcher matcher = NAVIGATION_PATTERN.matcher(item);
-                final String linkUrl = matcher.group("link");
-                if (StringUtils.isNotBlank(linkUrl)) {
-                    final String name = matcher.group("name");
-                    if (matcher.matches()) {
-                        final String label = StringUtils.defaultString(matcher.group("label"), name);
-                        writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-href=\"")
-                                .append(linkUrl).append("\"");
-                        if (StringUtils.isNotBlank(label)) {
-                            writer.append(" title =\"").append(label).append("\"");
+                if (matcher.matches()) {
+                    final String linkUrl = matcher.group("link");
+                    if (StringUtils.isNotBlank(linkUrl)) {
+                        final String name = matcher.group("name");
+                        if (matcher.matches()) {
+                            final String label = StringUtils.defaultString(matcher.group("label"), name);
+                            writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-href=\"")
+                                    .append(linkUrl).append("\"");
+                            if (StringUtils.isNotBlank(label)) {
+                                writer.append(" title =\"").append(label).append("\"");
+                            }
+                            writer.append(">").append(label).append("</a></li>");
                         }
-                        writer.append(">").append(label).append("</a></li>");
                     }
+                } else {
+                    LOG.debug("invalid navigation item: '{}'", item);
                 }
             }
         }

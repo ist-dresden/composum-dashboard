@@ -45,7 +45,7 @@ import java.util.regex.Pattern;
 public class DashboardExtractServlet extends SlingAllMethodsServlet {
 
     @ObjectClassDefinition(
-            name = "Composum Dashboard Extract Service configuration"
+            name = "Composum Dashboard Extract Servlet configuration"
     )
     @interface Config {
 

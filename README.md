@@ -502,7 +502,7 @@ In that case you must prepare appropriate content for the Dashboard views.
 
 #### [Composum Nodes](https://github.com/ist-dresden/composum-nodes)
 
-the big brother of the Composum Dasboard tools
+the big brother of the Composum dashboard tools
 
 * [Composum Nodes Homepage](https://www.composum.com/home/nodes.html)
 

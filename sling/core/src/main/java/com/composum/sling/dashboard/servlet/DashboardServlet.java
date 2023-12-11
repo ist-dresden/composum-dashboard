@@ -73,10 +73,10 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
     @ObjectClassDefinition(name = "Composum Dashboard")
     public @interface Config {
 
-        @AttributeDefinition(name = "Name")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
         String name() default "dashboard";
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 9000;
 
         @AttributeDefinition(name = "Title")
@@ -89,20 +89,20 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
                 description = "Items in the navigation bar, in the format 'name:label:link', e.g. 'browser:Browser:/apps/cpm/browser.html'.")
         String[] navigation();
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "the resource types implemented by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE
         };
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible extensions supported by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
         String[] sling_servlet_extensions() default {
                 "html"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 

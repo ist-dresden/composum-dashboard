@@ -17,6 +17,7 @@ platform, including several tools like a lightweight JCR browser and a log viewe
 - with a small footprint of the tools itself in the JCR repository
 - customizable and restrictable via OSGi configuration for each environment
 - prepared as normal content with no additional configuration needed in the web tier
+- works even on an AEM cloud publisher (though only recommended for testing systems)
 
 ## Provided components
 
@@ -65,7 +66,7 @@ be either configured via OSGI or via a content page - for details see the [secti
 ## See also
 
 * [Composum Homepage](https://www.composum.com/home.html)
-* [Composum Nodes](https://github.com/ist-dresden/composum-nodes) - the big brother of the Composum dashboard tools 
+* [Composum Nodes](https://github.com/ist-dresden/composum-nodes) - the big brother of the Composum Dashboard tools 
   / [Composum Nodes Homepage](https://www.composum.com/home/nodes.html)
 * [Composum Pages](https://github.com/ist-dresden/composum-pages) / [Composum Pages Homepage](https://www.composum.
   com/home/pages.html)

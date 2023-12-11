@@ -164,18 +164,13 @@ extends <a href="AbstractSettingsWidget.SettingsProvider.html" title="class in c
 <th class="colLast" scope="col">Description</th>
 </tr>
 <tr class="altColor">
-<td class="colFirst"><code>protected <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html?is-external=true" title="class or interface in java.lang" class="externalLink">Object</a></code></td>
-<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#caConfig">caConfig</a></span></code></th>
-<td class="colLast">&nbsp;</td>
-</tr>
-<tr class="rowColor">
-<td class="colFirst"><code>protected <a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a></code></td>
+<td class="colFirst"><code>protected @NotNull <a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a></code></td>
 <th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#config">config</a></span></code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
-<tr class="altColor">
-<td class="colFirst"><code>protected <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html?is-external=true" title="class or interface in java.lang" class="externalLink">Class</a>&lt;?&gt;</code></td>
-<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#configType">configType</a></span></code></th>
+<tr class="rowColor">
+<td class="colFirst"><code>protected @NotNull org.apache.sling.api.resource.ValueMap</code></td>
+<th class="colSecond" scope="row"><code><span class="memberNameLink"><a href="#valueMap">valueMap</a></span></code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
 </table>
@@ -203,9 +198,8 @@ extends <a href="AbstractSettingsWidget.SettingsProvider.html" title="class in c
 <th class="colLast" scope="col">Description</th>
 </tr>
 <tr class="altColor">
-<th class="colConstructorName" scope="row"><code><span class="memberNameLink"><a href="#%3Cinit%3E(com.composum.sling.dashboard.servlet.DashboardCaConfigView.ConfigurationRule,java.lang.Class,java.lang.Object)">ConfigurationProvider</a></span>&#8203;(@NotNull <a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a>&nbsp;config,
-                     @NotNull <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html?is-external=true" title="class or interface in java.lang" class="externalLink">Class</a>&lt;?&gt;&nbsp;configType,
-                     @Nullable <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html?is-external=true" title="class or interface in java.lang" class="externalLink">Object</a>&nbsp;caConfig)</code></th>
+<th class="colConstructorName" scope="row"><code><span class="memberNameLink"><a href="#%3Cinit%3E(com.composum.sling.dashboard.servlet.DashboardCaConfigView.ConfigurationRule,org.apache.sling.api.resource.ValueMap)">ConfigurationProvider</a></span>&#8203;(@NotNull <a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a>&nbsp;config,
+                     @NotNull org.apache.sling.api.resource.ValueMap&nbsp;valueMap)</code></th>
 <td class="colLast">&nbsp;</td>
 </tr>
 </table>
@@ -288,25 +282,18 @@ extends <a href="AbstractSettingsWidget.SettingsProvider.html" title="class in c
 <ul class="blockList">
 <li class="blockList">
 <h4>config</h4>
-<pre>protected final&nbsp;<a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a> config</pre>
+<pre>@NotNull
+protected final&nbsp;@NotNull <a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a> config</pre>
 </li>
 </ul>
-<a id="configType">
-<!--   -->
-</a>
-<ul class="blockList">
-<li class="blockList">
-<h4>configType</h4>
-<pre>protected final&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html?is-external=true" title="class or interface in java.lang" class="externalLink">Class</a>&lt;?&gt; configType</pre>
-</li>
-</ul>
-<a id="caConfig">
+<a id="valueMap">
 <!--   -->
 </a>
 <ul class="blockListLast">
 <li class="blockList">
-<h4>caConfig</h4>
-<pre>protected final&nbsp;<a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html?is-external=true" title="class or interface in java.lang" class="externalLink">Object</a> caConfig</pre>
+<h4>valueMap</h4>
+<pre>@NotNull
+protected final&nbsp;@NotNull org.apache.sling.api.resource.ValueMap valueMap</pre>
 </li>
 </ul>
 </li>
@@ -319,7 +306,7 @@ extends <a href="AbstractSettingsWidget.SettingsProvider.html" title="class in c
 <!--   -->
 </a>
 <h3>Constructor Detail</h3>
-<a id="&lt;init&gt;(com.composum.sling.dashboard.servlet.DashboardCaConfigView.ConfigurationRule,java.lang.Class,java.lang.Object)">
+<a id="&lt;init&gt;(com.composum.sling.dashboard.servlet.DashboardCaConfigView.ConfigurationRule,org.apache.sling.api.resource.ValueMap)">
 <!--   -->
 </a>
 <ul class="blockListLast">
@@ -328,9 +315,7 @@ extends <a href="AbstractSettingsWidget.SettingsProvider.html" title="class in c
 <pre>public&nbsp;ConfigurationProvider&#8203;(@NotNull
                              @NotNull <a href="DashboardCaConfigView.ConfigurationRule.html" title="class in com.composum.sling.dashboard.servlet">DashboardCaConfigView.ConfigurationRule</a>&nbsp;config,
                              @NotNull
-                             @NotNull <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Class.html?is-external=true" title="class or interface in java.lang" class="externalLink">Class</a>&lt;?&gt;&nbsp;configType,
-                             @Nullable
-                             @Nullable <a href="https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/lang/Object.html?is-external=true" title="class or interface in java.lang" class="externalLink">Object</a>&nbsp;caConfig)</pre>
+                             @NotNull org.apache.sling.api.resource.ValueMap&nbsp;valueMap)</pre>
 </li>
 </ul>
 </li>

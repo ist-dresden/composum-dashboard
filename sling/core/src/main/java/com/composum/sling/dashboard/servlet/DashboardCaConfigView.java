@@ -62,32 +62,30 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
     /** Property keys we do not display from the configurations. */
     public static final Pattern IGNORED_PROPERTY_KEYS = Pattern.compile("^jcr:primaryType$");
 
+
     @ObjectClassDefinition(name = "Composum Dashboard CA Config View")
     public @interface Config {
 
-        @AttributeDefinition(name = "Name", description = "An ID for the widget.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
         String name() default "caconfig";
 
-        @AttributeDefinition(name = "Context",
-                description = "The context where the widget is available - e.g. 'browser' or 'dashboard'. " +
-                        "Relevant only when the dashboard is configured using servlet paths.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_CONTEXT_NAME,
+                description = ConfigurationConstants.CFG_CONTEXT_DESCRIPTION)
         String[] context() default {
                 BROWSER_CONTEXT
         };
 
-        @AttributeDefinition(name = "Category",
-                description = "The category of a widget - in the browser e.g. 'favorites', 'tool', 'search'. " +
-                        "Relevant only when the dashboard is configured using servlet paths.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_CATEGORY_NAME,
+                description = ConfigurationConstants.CFG_CATEGORY_DESCRIPTION)
         String[] category();
 
-        @AttributeDefinition(name = "Rank", description = "The rank is used for ordering widgets / views. " +
-                "Relevant only when the dashboard is configured using servlet paths.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 1500;
 
-        @AttributeDefinition(name = "Label", description = "The human readable widget label.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_LABEL_NAME, description = ConfigurationConstants.CFG_LABEL_DESCRIPTION)
         String label() default "CAC";
 
-        @AttributeDefinition(name = "Navigation Title")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAVIGATION_NAME)
         String navTitle();
 
         @AttributeDefinition(name = "Inspected Configurations",
@@ -100,24 +98,22 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
                         "or 'caconfig-type' if all properties should be shown. caconfig-type is the fully qualified class name of the configuration type.")
         String[] inspectedConfigurationCollections();
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "The resource types implemented by this servlet. " +
-                        "Relevant only when the it is rendered using a content page.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/view"
         };
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "The possible extensions supported by this servlet.")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
         String[] sling_servlet_extensions() default {
                 "html",
                 "json"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "The servlet paths if this configuration variant should be supported. " +
-                        "Alternatively, the servlet can be rendered from a special content page using it's resource type(s).")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 

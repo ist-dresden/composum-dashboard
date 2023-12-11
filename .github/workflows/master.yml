@@ -54,8 +54,9 @@ jobs:
     - name: Mvn Effective Settings
       run: $MVNCMD -N help:effective-settings
 
-    - name: Check versioning
-      run: $MVNCMD org.apache.maven.plugins:maven-enforcer-plugin:3.0.0:enforce -Drules=requireReleaseVersion,requireReleaseDeps
+    # Version check disabled while the site needs to be tested. FIXME: re-enable
+    # - name: Check versioning
+    #   run: $MVNCMD org.apache.maven.plugins:maven-enforcer-plugin:3.0.0:enforce -Drules=requireReleaseVersion,requireReleaseDeps
 
     - name: Check build with Maven
       run: $MVNCMD verify

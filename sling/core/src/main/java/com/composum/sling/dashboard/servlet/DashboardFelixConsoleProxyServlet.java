@@ -134,6 +134,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
             PrintWriter writer = response.getWriter();
             htmlPageHead(writer,
                     JQUERY_UI_SNIPPET,
+                    TEMPLATE_BASE + "felixconsole/felixconsole.css",
                     TEMPLATE_BASE + "felixconsole/webconsole.css",
                     TEMPLATE_BASE + "felixconsole/admin_compat.css");
             consoleServlet.service(slingRequest, response);

@@ -1,0 +1,4 @@
+/** We make inputs and buttons in forms with a POST method invisible, since they wouldn't work, anyway. GET forms are OK. */
+form[method="post"] input, form[method="post"] button {
+    display: none;
+}

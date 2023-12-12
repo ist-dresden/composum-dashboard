@@ -37,9 +37,21 @@
 
     $(document).ready(function () {
         initStaticWidgets();
-        // turn all form method="post" into form method="get" to hopefully avoid any changes
 
-        $('form[method="post"]').attr('method', 'get');
+        // $('form[method="post"]').attr('method', 'get');
     });
+
+    if ($("div.composum-dashboard__widget-view meta").length > 0 && $("div.composum-dashboard__widget-view div#content").length > 0) {
+        // we've got a felix console page with a frame
+        // save all children of div.composum-dashboard__widget-view div#content
+        // remove all children of div.composum-dashboard__widget-view
+        // move all saved children there
+
+        var $content = $("div.composum-dashboard__widget-view div#content");
+        var $widgetView = $("div.composum-dashboard__widget-view");
+        var $children = $content.children();
+        $widgetView.empty();
+        $widgetView.append($children);
+    }
 
 })(window, document);

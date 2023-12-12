@@ -80,7 +80,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) throws InvalidSyntaxException {
         super.activate(bundleContext,
-                config.name(), config.context(), config.category(), config.rank(), config.label(),
+                config.name(), new String[0], new String[0], config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.webConsoleLabel = config.proxied_webconsole_label();
         Collection<ServiceReference<Servlet>> candidates = bundleContext.getServiceReferences(Servlet.class,
@@ -138,7 +138,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                     TEMPLATE_BASE + "felixconsole/webconsole.css",
                     TEMPLATE_BASE + "felixconsole/admin_compat.css");
             consoleServlet.service(slingRequest, response);
-            htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/webconsole.js");
+            htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
         }
     }
 
@@ -153,16 +153,8 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                 description = "The label of the servlet in the Felix Console that we are proxying for the dashboard - e.g. 'requests' for /system/console/requests")
         String proxied_webconsole_label();
 
-        @AttributeDefinition(name = ConfigurationConstants.CFG_CONTEXT_NAME,
-                description = ConfigurationConstants.CFG_CONTEXT_DESCRIPTION, required = false)
-        String[] context() default {};
-
-        @AttributeDefinition(name = ConfigurationConstants.CFG_CATEGORY_NAME,
-                description = ConfigurationConstants.CFG_CATEGORY_DESCRIPTION, required = false)
-        String[] category() default {};
-
         @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
-        int rank() default 6000;
+        int rank() default 7000;
 
         @AttributeDefinition(name = ConfigurationConstants.CFG_LABEL_NAME, description = ConfigurationConstants.CFG_LABEL_DESCRIPTION, required = false)
         String label();
@@ -185,7 +177,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         String[] sling_servlet_paths();
 
         @AttributeDefinition()
-        String webconsole_configurationFactory_nameHint() default "'{proxied.webconsole.label}'";
+        String webconsole_configurationFactory_nameHint() default "'{name}' - '{proxied.webconsole.label}'";
     }
 
 }

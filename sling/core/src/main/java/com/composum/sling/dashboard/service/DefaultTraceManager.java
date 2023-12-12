@@ -11,6 +11,8 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.component.annotations.ReferencePolicy;
 import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -23,6 +25,7 @@ import java.util.TreeMap;
         service = {TraceManager.class},
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
+@Designate(ocd = DefaultTraceManager.Config.class)
 public class DefaultTraceManager implements TraceManager {
 
     protected final Map<String, TraceService> traceServices = new TreeMap<>();
@@ -86,4 +89,10 @@ public class DefaultTraceManager implements TraceManager {
         TraceService trace = getTrace(context);
         return trace != null ? trace.getEntries(level) : Collections.emptyList();
     }
+
+    @ObjectClassDefinition(name = "Composum Dashboard Default Trace Manager",
+            description = "Configuration to enable default trace services")
+    public @interface Config {
+    }
+
 }

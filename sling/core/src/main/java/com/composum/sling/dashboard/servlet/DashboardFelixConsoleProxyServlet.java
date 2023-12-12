@@ -52,6 +52,10 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/proxy";
 
+    public static final String JQUERY_UI_SNIPPET = "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css\"\n" +
+            "      integrity=\"sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==\"\n" +
+            "      crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\"/>\n";
+
     protected String webConsoleLabel;
 
     @Reference
@@ -129,12 +133,11 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
             prepareTextResponse(response, null);
             PrintWriter writer = response.getWriter();
             htmlPageHead(writer,
-                    "<link rel=\"stylesheet\" href=\"https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.13.2/themes/base/jquery-ui.min.css\"\n" +
-                            "      integrity=\"sha512-ELV+xyi8IhEApPS/pSj66+Jiw+sOT1Mqkzlh8ExXihe4zfqbWkxPRi8wptXIO9g73FSlhmquFlUOuMSoXz5IRw==\"\n" +
-                            "      crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\"/>\n",
-                    TEMPLATE_BASE + "felixconsole/webconsole.css");
-            consoleServlet.service(request, response);
-            htmlPageTail(writer);
+                    JQUERY_UI_SNIPPET,
+                    TEMPLATE_BASE + "felixconsole/webconsole.css",
+                    TEMPLATE_BASE + "felixconsole/admin_compat.css");
+            consoleServlet.service(slingRequest, response);
+            htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/webconsole.js");
         }
     }
 

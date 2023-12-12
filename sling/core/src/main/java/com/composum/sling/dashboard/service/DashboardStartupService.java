@@ -93,7 +93,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
     public static final String _NODE_BUILDER = ".aem.groovy.extension.builders.NodeBuilder";
     public static final String _PAGE_BUILDER = ".aem.groovy.extension.builders.PageBuilder";
 
-    @ObjectClassDefinition(name = "Composum Sling Dashboard Startup Service")
+    @ObjectClassDefinition(name = "Composum Dashboard Startup Service")
     public @interface Config {
 
         @AttributeDefinition(

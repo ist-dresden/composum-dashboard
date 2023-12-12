@@ -30,7 +30,7 @@ import java.util.Map;
 @Designate(ocd = DefaultTraceService.Config.class, factory = true)
 public class DefaultTraceService implements TraceService {
 
-    @ObjectClassDefinition(name = "Default Trace Service")
+    @ObjectClassDefinition(name = "Composum Dashboard Default Trace Service")
     @interface Config {
 
         @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)

@@ -59,7 +59,7 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
 
     public static final String JOB_TOPIC = "com/composum/dashboard/content/create";
 
-    @ObjectClassDefinition(name = "Composum Sling Dashboard Manager")
+    @ObjectClassDefinition(name = "Composum Dashboard Manager")
     public @interface Config {
 
         @AttributeDefinition(name = "Allowed Property Patterns")

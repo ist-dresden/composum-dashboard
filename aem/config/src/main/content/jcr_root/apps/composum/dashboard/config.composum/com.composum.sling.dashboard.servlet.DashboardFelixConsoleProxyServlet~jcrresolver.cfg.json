@@ -1,0 +1,13 @@
+{
+  "sling.servlet.resourceTypes":[
+    "composum/dashboard/sling/felixconsole/jcrresolver"
+  ],
+  "name":"jcrresolver",
+  "label":"Sling Resource Resolver",
+  "sling.servlet.paths":[
+    "/apps/cpm/felixconsole/jcrresolver"
+  ],
+  "proxied.webconsole.label":"jcrresolver",
+  "rank:Integer":7200,
+  "navTitle":"Resource Resolver"
+}

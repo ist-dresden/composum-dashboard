@@ -306,7 +306,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
                         }
                     }
                 } else {
-                    LOG.debug("invalid navigation item: '{}'", item);
+                    LOG.trace("invalid navigation item: '{}'", item);
                 }
             }
         }

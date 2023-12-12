@@ -15,6 +15,21 @@
                     jcr:title="Browser"
                     linkPath="/content/test/insights/browser">
             </browser>
+            <requests
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Recent Requests"
+                    linkPath="/content/test/insights/felixconsole/requests">
+            </requests>
+            <jcrresolver
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Resource Resolver"
+                    linkPath="/content/test/insights/felixconsole/jcrresolver">
+            </jcrresolver>
+            <servletresolver
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Servlet Resolver"
+                    linkPath="/content/test/insights/felixconsole//servletresolver">
+            </servletresolver>
             <groovyconsole
                     jcr:primaryType="nt:unstructured"
                     jcr:title="Groovy..."
@@ -166,4 +181,28 @@
             </view>
         </jcr:content>
     </browser>
+    <felixconsole
+            jcr:primaryType="cpp:Page">
+        <requests jcr:primaryType="cpp:Page">
+            <jcr:content
+                    jcr:primaryType="cpp:PageContent"
+                    jcr:title="Sling Recent Requests"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/requests">
+            </jcr:content>
+        </requests>
+        <jcrresolver jcr:primaryType="cpp:Page">
+            <jcr:content
+                    jcr:primaryType="cpp:PageContent"
+                    jcr:title="Resource Resolver"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/jcrresolver">
+            </jcr:content>
+        </jcrresolver>
+        <servletresolver jcr:primaryType="cpp:Page">
+            <jcr:content
+                    jcr:primaryType="cpp:PageContent"
+                    jcr:title="Servlet Resolver"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/servletresolver">
+            </jcr:content>
+        </servletresolver>
+    </felixconsole>
 </jcr:root>

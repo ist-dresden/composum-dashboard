@@ -1,11 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<jcr:root xmlns:cpp="http://sling.composum.com/pages/1.0"
-        xmlns:jcr="http://www.jcp.org/jcr/1.0"
-        xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-        xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
-        jcr:primaryType="cpp:Page">
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0"
+          xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+          jcr:primaryType="cq:Page">
     <jcr:content
-            jcr:primaryType="cpp:PageContent"
+            jcr:primaryType="cq:PageContent"
             jcr:title="Dashboard"
             sling:resourceType="composum/dashboard/sling">
         <navigation
@@ -54,24 +52,12 @@
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="composum/dashboard/sling/logfiles/tail"/>
             </logfiles>
-            <trace jcr:primaryType="nt:unstructured"
-                    sling:resourceType="composum/dashboard/sling/trace">
-                <tile
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="composum/dashboard/sling/trace/tile"/>
-                <view
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="composum/dashboard/sling/trace/view"/>
-                <page
-                        jcr:primaryType="nt:unstructured"
-                        sling:resourceType="composum/dashboard/sling/trace/page"/>
-            </trace>
         </widgets>
     </jcr:content>
     <browser
-            jcr:primaryType="cpp:Page">
+            jcr:primaryType="cq:Page">
         <jcr:content
-                jcr:primaryType="cpp:PageContent"
+                jcr:primaryType="cq:PageContent"
                 jcr:title="Composum Browser"
                 sling:resourceType="composum/dashboard/sling/browser">
             <tree

@@ -1,13 +1,9 @@
 package com.composum.sling.dashboard.servlet;
 
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.Collection;
-import java.util.Map;
-
-import javax.servlet.Servlet;
-import javax.servlet.ServletException;
-
+import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardManager;
+import com.composum.sling.dashboard.service.DashboardPlugin;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
@@ -30,17 +26,23 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.composum.sling.dashboard.service.ContentGenerator;
-import com.composum.sling.dashboard.service.DashboardManager;
-import com.composum.sling.dashboard.service.DashboardPlugin;
-import com.composum.sling.dashboard.service.DashboardWidget;
+import javax.servlet.Servlet;
+import javax.servlet.ServletException;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Proxy to reflect a view of a read only Felix Console in a dashboard widget.
  */
 @Component(service = {Servlet.class, DashboardPlugin.class, ContentGenerator.class},
         property = {
-                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_GET,
+                ServletResolverConstants.SLING_SERVLET_METHODS + "=" + HttpConstants.METHOD_POST
         },
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
@@ -56,6 +58,8 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
             "      crossorigin=\"anonymous\" referrerpolicy=\"no-referrer\"/>\n";
 
     protected String webConsoleLabel;
+    protected boolean allowPOST;
+    protected List<String> additionalScripts;
 
     @Reference
     protected transient DashboardManager dashboardManager;
@@ -83,6 +87,8 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                 config.name(), new String[0], new String[0], config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.webConsoleLabel = config.proxied_webconsole_label();
+        this.allowPOST = config.proxied_webconsole_POST();
+        this.additionalScripts = Arrays.asList(config.proxied_webconsole_scripts());
         Collection<ServiceReference<Servlet>> candidates = bundleContext.getServiceReferences(Servlet.class,
                 "(felix.webconsole.label=" + webConsoleLabel + ")");
         if (candidates.size() == 1) {
@@ -111,11 +117,50 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     @Override
     public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
         // embedded in htmlPageTail
+        for (String script : additionalScripts) {
+            writer.append("<script src=\"").append(script).append("\"></script>\n");
+        }
     }
 
     @Override
-    public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
+    protected StringBuffer getAllowedRequestMethods(Map<String, Method> declaredMethods) {
+        StringBuffer allowBuf = super.getAllowedRequestMethods(declaredMethods);
+        if (allowPOST) {
+            allowBuf.append(", ").append("POST");
+        }
+        return allowBuf;
+    }
+
+    @Override
+    protected boolean mayService(@NotNull SlingHttpServletRequest request,
+                                 @NotNull SlingHttpServletResponse response) throws ServletException,
+            IOException {
+        if (!super.mayService(request, response)) {
+            String method = request.getMethod();
+            if (allowPOST && HttpConstants.METHOD_POST.equals(method)) {
+                doPost(request, response);
+                return true;
+            }
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public void doGet(@NotNull final SlingHttpServletRequest request,
                       @NotNull final SlingHttpServletResponse response)
+            throws ServletException, IOException {
+        doIt(request, response);
+    }
+
+    public void doPost(@NotNull final SlingHttpServletRequest request,
+                       @NotNull final SlingHttpServletResponse response)
+            throws ServletException, IOException {
+        doIt(request, response);
+    }
+
+    protected void doIt(@NotNull final SlingHttpServletRequest slingRequest,
+                     @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
         if (consoleServlet == null) {
             response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
@@ -152,6 +197,13 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                 description = "The label of the servlet in the Felix Console that we are proxying for the dashboard - e.g. 'requests' for /system/console/requests")
         String proxied_webconsole_label();
 
+        @AttributeDefinition(name = "allow POST", description = "allow POST requests (test requests, e.g. for resolver testing)")
+        boolean proxied_webconsole_POST() default false;
+
+        @AttributeDefinition(name = "additional scripts",
+                description = "a set of additional script files to embed (script tag link) at the end of the page body")
+        String[] proxied_webconsole_scripts() default {};
+
         @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 7000;
 
@@ -178,5 +230,4 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         @AttributeDefinition()
         String webconsole_configurationFactory_nameHint() default "'{name}' - '{proxied.webconsole.label}'";
     }
-
 }

@@ -1,4 +1,5 @@
-/** We make inputs and buttons in forms with a POST method invisible, since they wouldn't work, anyway. GET forms are OK. */
-form[method="post"] input, form[method="post"] button {
-    display: none;
+.widget-jcrresolver .composum-dashboard__widget-view,
+.widget-requests .composum-dashboard__widget-view,
+.widget-servletresolver .composum-dashboard__widget-view {
+    padding: 0 8px;
 }

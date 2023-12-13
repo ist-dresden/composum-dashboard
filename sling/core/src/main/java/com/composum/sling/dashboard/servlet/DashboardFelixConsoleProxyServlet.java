@@ -34,7 +34,6 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
-import com.composum.sling.dashboard.util.DashboardRequest;
 
 /**
  * Proxy to reflect a view of a read only Felix Console in a dashboard widget.
@@ -59,21 +58,22 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     protected String webConsoleLabel;
 
     @Reference
-    protected DashboardManager dashboardManager;
+    protected transient DashboardManager dashboardManager;
 
     /**
      * Reference for {@link #consoleServlet}.
      */
-    protected ServiceReference<Servlet> consoleServletRef;
+    protected transient ServiceReference<Servlet> consoleServletRef;
 
     /**
      * The console servlet we proxy for.
      */
-    protected Servlet consoleServlet;
+    protected transient Servlet consoleServlet;
 
     @Override
     public void provideWidgets(@NotNull SlingHttpServletRequest request, @Nullable final String context,
                                @NotNull final Map<String, DashboardWidget> widgetSet) {
+        // no widgets provided
     }
 
     @Activate
@@ -110,6 +110,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
 
     @Override
     public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+        // embedded in htmlPageTail
     }
 
     @Override
@@ -129,20 +130,18 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         } else if ("js".equals(info.getExtension())) {
             response.setContentType("text/javascript");
         }
-        try (DashboardRequest request = new DashboardRequest(slingRequest)) {
-            prepareTextResponse(response, null);
-            PrintWriter writer = response.getWriter();
-            htmlPageHead(writer,
-                    JQUERY_UI_SNIPPET,
-                    TEMPLATE_BASE + "felixconsole/felixconsole.css",
-                    TEMPLATE_BASE + "felixconsole/webconsole.css",
-                    TEMPLATE_BASE + "felixconsole/admin_compat.css");
-            consoleServlet.service(slingRequest, response);
-            htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
-        }
+        prepareTextResponse(response, null);
+        PrintWriter writer = response.getWriter();
+        htmlPageHead(writer,
+                JQUERY_UI_SNIPPET,
+                TEMPLATE_BASE + "felixconsole/felixconsole.css",
+                TEMPLATE_BASE + "felixconsole/webconsole.css",
+                TEMPLATE_BASE + "felixconsole/admin_compat.css");
+        consoleServlet.service(slingRequest, response);
+        htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
     }
 
-    @ObjectClassDefinition(name = "Composum Dashboard Sling Console Proxy",
+    @ObjectClassDefinition(name = "Composum Dashboard Felix Console Proxy",
             description = "provides a dashboard widget to reflect a view of a read only Felix Console view")
     public @interface Config {
 

@@ -36,32 +36,7 @@ Out of the box are currently provided the following tools and widgets, with all 
 
 [Picture of the JCR Browser - click to enlarge](image/JcrBrowser.png)
 
-## Download and Installation
-
-Depending on your platform you will need to install one of the following packages:
-
-- [The complete AEM package for the dashboard tools framework](https://central.sonatype.com/artifact/com.composum.dashboard/composum-dashboard-aem)
-- [The complete Sling Package for the dashboard tools framework](https://central.sonatype.com/artifact/com.composum.dashboard/composum-dashboard-sling)
-
-Since all widgets and views are generally disabled untilthere is an OSGI configuration for them. These 
-can be created using the appropriate following packages as an example:
-
-- [A package with example configurations for AEM](https://central.sonatype.com/artifact/com.composum.dashboard/composum-dashboard-aem-osgi-config/1.2.14)
-- [A package with example configurations for Sling](https://central.sonatype.com/artifact/com.composum.dashboard/composum-dashboard-sling-osgi-config/1.2.14)
-
-or copying and adapting the appropriate configurations from the source of these packages:
-
-- [AEM configurations at /apps/composum/dashboard/config.composum](https://github.com/ist-dresden/composum-dashboard/tree/develop/aem/config/src/main/content/jcr_root/apps/composum/dashboard/config.composum)
-- [Sling configurations at ](https://github.com/ist-dresden/composum-dashboard/tree/develop/sling/config/src/main/content/jcr_root/apps/composum/dashboard/config.composum)
-
-If you use the packages: please note that the path contains a runlevel suffix 'composum' - either this runlevel is 
-added to the system, or the configurations have to be moved appropriately.
-
-The configurations make the dashboard available at http(s)://{host}:{port}/apps/cpm/dashboard.html and the JCR browser 
-available at http(s)://{host}:{port}/apps/cpm/browser.html . 
-Please notice that the URL of the dashboard's elements can 
-be either configured via OSGI or via a content page - for details see the [section on configuration](configuration.md).
-
+For [installation](installation.md) and [configuration](configuration.md) see the corresponding sections of this site.
 
 ## See also
 

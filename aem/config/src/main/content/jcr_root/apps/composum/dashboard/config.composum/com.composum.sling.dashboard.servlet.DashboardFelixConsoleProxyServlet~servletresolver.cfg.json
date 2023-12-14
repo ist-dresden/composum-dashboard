@@ -8,11 +8,6 @@
     "/apps/cpm/felixconsole/servletresolver"
   ],
   "proxied.webconsole.label":"servletresolver",
-  "proxied.webconsole.POST":true,
-  "proxied.webconsole.scripts": [
-    "/libs/clientlibs/granite/jquery/granite/csrf/source/granite.http.externalize.js",
-    "/libs/clientlibs/granite/jquery/granite/csrf/source/csrf.js"
-  ],
   "rank:Integer":7300,
   "navTitle":"Servlet Resolver"
 }

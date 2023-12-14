@@ -197,7 +197,8 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                 description = "The label of the servlet in the Felix Console that we are proxying for the dashboard - e.g. 'requests' for /system/console/requests")
         String proxied_webconsole_label();
 
-        @AttributeDefinition(name = "allow POST", description = "allow POST requests (test requests, e.g. for resolver testing)")
+        @AttributeDefinition(name = "allow POST", description = "allow POST requests (test requests, e.g. for resolver testing). " +
+                "Use with care and only of the proxied console plugin really requires it, as this might allows unintended changes of the system state.")
         boolean proxied_webconsole_POST() default false;
 
         @AttributeDefinition(name = "additional scripts",

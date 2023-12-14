@@ -17,9 +17,9 @@ packages as an example:
 - [A package with example configurations for Sling](https://central.sonatype.com/artifact/com.composum.dashboard/composum-dashboard-sling-osgi-config/1.2.14)
 
 Please note that the example configurations have the path
-`/apps/composum/dashboard/config.composum` containing a runlevel suffix 'composum'. You could
-either add a runlevel "composum" to the system or rename that path to `/apps/composum/dashboard/config`
-or move the configurations appropriately.
+`/apps/composum/dashboard/config.composum` containing a run mode suffix 'composum'. You could
+either add a run mode "composum" to the system or rename that path to something like `config.author.dev`
+or move / copy the configurations appropriately.
 
 With the example configurations, the dashboard appears at http(s)://{host}:{port}/apps/cpm/dashboard.html - 
 the URL it self is configurable.

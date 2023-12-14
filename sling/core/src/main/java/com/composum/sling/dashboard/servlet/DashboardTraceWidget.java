@@ -276,7 +276,7 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
             writer.append("<span class=\"trace-time\">").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(entry.getTime())).append("</span>");
             writer.append("<span class=\"trace-level badge badge-pill badge-").append(LEVEL_TO_BADGE.get(level)).append("\">")
                     .append(xssapi.encodeForHTMLAttr(entry.getProperty("levelHint", level.name()))).append("</span>");
-            writer.append("<span>").append(xssapi.encodeForHTML(entry.getMessage())).append("</span>");
+            writer.append("<span class=\"trace-msg\">").append(xssapi.encodeForHTML(entry.getMessage())).append("</span>");
             writer.append("</button></div><div class=\"card-body\">\n");
             writer.append("<div id=\"pane-").append(domId).append("\" class=\"collapse\" aria-labelledby=\"card-").append(domId).append("\">\n");
             writer.append("<textarea readonly=\"readonly\">");

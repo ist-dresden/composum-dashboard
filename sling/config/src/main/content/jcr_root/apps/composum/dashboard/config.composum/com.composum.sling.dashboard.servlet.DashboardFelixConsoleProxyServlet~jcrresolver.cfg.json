@@ -9,10 +9,6 @@
   ],
   "proxied.webconsole.label":"jcrresolver",
   "proxied.webconsole.POST":true,
-  "proxied.webconsole.scripts": [
-    "/libs/clientlibs/granite/jquery/granite/csrf/source/granite.http.externalize.js",
-    "/libs/clientlibs/granite/jquery/granite/csrf/source/csrf.js"
-  ],
   "rank:Integer":7200,
   "navTitle":"Resource Resolver"
 }

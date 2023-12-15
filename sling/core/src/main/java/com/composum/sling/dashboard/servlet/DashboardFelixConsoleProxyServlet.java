@@ -4,6 +4,8 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
+
+import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
@@ -87,13 +89,28 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                 config.name(), new String[0], new String[0], config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
         this.webConsoleLabel = config.proxied_webconsole_label();
+        if (StringUtils.isBlank(this.webConsoleLabel)) {
+            LOG.trace("No label for Felix Console servlet configured, not providing proxy servlet. {} {}", config.name(), config.label());
+            return;
+        }
         this.allowPOST = config.proxied_webconsole_POST();
         this.additionalScripts = Arrays.asList(config.proxied_webconsole_scripts());
         Collection<ServiceReference<Servlet>> candidates = bundleContext.getServiceReferences(Servlet.class,
                 "(felix.webconsole.label=" + webConsoleLabel + ")");
-        if (candidates.size() == 1) {
+        if (candidates.size() >= 1) {
             this.consoleServletRef = candidates.iterator().next();
             this.consoleServlet = bundleContext.getService(consoleServletRef);
+            if (candidates.size() > 1) { // very strange but seems to happen, so we try the first one.
+                LOG.trace("Found {} candidates for Felix Console servlet with label '{}', expecting exactly one", candidates.size(), webConsoleLabel);
+                // log the candidate properties
+                for (ServiceReference<Servlet> serviceReference : candidates) {
+                    StringBuilder buf = new StringBuilder();
+                    for (String key : serviceReference.getPropertyKeys()) {
+                        buf.append(key).append("=").append(serviceReference.getProperty(key)).append(", ");
+                    }
+                    LOG.error("Candidate for {}: {}", this.webConsoleLabel, buf);
+                }
+            }
         } else {
             LOG.trace("Found {} candidates for Felix Console servlet with label '{}', expecting exactly one", candidates.size(), webConsoleLabel);
         }
@@ -160,7 +177,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     }
 
     protected void doIt(@NotNull final SlingHttpServletRequest slingRequest,
-                     @NotNull final SlingHttpServletResponse response)
+                        @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
         if (consoleServlet == null) {
             response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);

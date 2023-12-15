@@ -65,24 +65,26 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
     @ObjectClassDefinition(name = "Composum Dashboard Json Source View")
     public @interface Config {
 
-        @AttributeDefinition(name = "Name")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
         String name() default "json";
 
-        @AttributeDefinition(name = "Context")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_CONTEXT_NAME,
+                description = ConfigurationConstants.CFG_CONTEXT_DESCRIPTION)
         String[] context() default {
                 BROWSER_CONTEXT
         };
 
-        @AttributeDefinition(name = "Category")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_CATEGORY_NAME,
+                description = ConfigurationConstants.CFG_CATEGORY_DESCRIPTION)
         String[] category();
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 2000;
 
-        @AttributeDefinition(name = "Label")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_LABEL_NAME, description = ConfigurationConstants.CFG_LABEL_DESCRIPTION)
         String label() default "JSON";
 
-        @AttributeDefinition(name = "Navigation Title")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAVIGATION_NAME)
         String navTitle();
 
         @AttributeDefinition(name = "Max Depth")
@@ -105,8 +107,8 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 "name=raw,type=checkbox,label=source 'off'"
         };
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "the resource types implemented by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/view",
@@ -114,15 +116,15 @@ public class DashboardJsonView extends AbstractSourceView implements JsonRendere
                 DEFAULT_RESOURCE_TYPE + "/load"
         };
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible extensions supported by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
         String[] sling_servlet_extensions() default {
                 "html",
                 "json"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 

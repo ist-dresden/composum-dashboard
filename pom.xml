@@ -4,11 +4,11 @@
 
     <groupId>com.composum.dashboard</groupId>
     <artifactId>composum-dashboard</artifactId>
-    <version>1.2.14</version>
+    <version>1.2.15</version>
     <packaging>pom</packaging>
 
     <name>Composum Dashboard</name>
-    <description>a framework for creating a custom project toolset that is placed on a dasboard page</description>
+    <description>a framework for creating a custom project toolset that is placed on a dashboard page</description>
     <url>https://github.com/ist-dresden/composum</url>
 
     <licenses>
@@ -52,7 +52,7 @@
         <connection>scm:git:https://github.com/ist-dresden/composum.git</connection>
         <developerConnection>scm:git:https://github.com/ist-dresden/composum.git</developerConnection>
         <url>https://github.com/ist-dresden/composum.git</url>
-      <tag>composum-dashboard-1.2.14</tag>
+      <tag>composum-dashboard-1.2.15</tag>
   </scm>
 
     <distributionManagement>

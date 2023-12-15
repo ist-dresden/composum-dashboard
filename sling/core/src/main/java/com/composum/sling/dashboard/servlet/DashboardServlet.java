@@ -31,6 +31,8 @@ import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.RequestDispatcher;
 import javax.servlet.Servlet;
@@ -62,6 +64,8 @@ import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_
 @Designate(ocd = DashboardServlet.Config.class)
 public class DashboardServlet extends AbstractDashboardServlet implements DashboardPlugin, ContentGenerator {
 
+    private static final Logger LOG = LoggerFactory.getLogger(DashboardServlet.class);
+
     public static final String DASHBOARD_CONTEXT = "dashboard";
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling";
@@ -69,35 +73,36 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
     @ObjectClassDefinition(name = "Composum Dashboard")
     public @interface Config {
 
-        @AttributeDefinition(name = "Name")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
         String name() default "dashboard";
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 9000;
 
         @AttributeDefinition(name = "Title")
         String title() default "Dashboard";
 
-        @AttributeDefinition(name = "Home Url")
+        @AttributeDefinition(name = "Home Url", description = "The url the logo links to")
         String homeUrl();
 
-        @AttributeDefinition(name = "Navigation")
+        @AttributeDefinition(name = "Navigation",
+                description = "Items in the navigation bar, in the format 'name:label:link', e.g. 'browser:Browser:/apps/cpm/browser.html'.")
         String[] navigation();
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "the resource types implemented by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE
         };
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible extensions supported by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
         String[] sling_servlet_extensions() default {
                 "html"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 
@@ -286,18 +291,22 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         } else {
             for (final String item : this.navigation) {
                 final Matcher matcher = NAVIGATION_PATTERN.matcher(item);
-                final String linkUrl = matcher.group("link");
-                if (StringUtils.isNotBlank(linkUrl)) {
-                    final String name = matcher.group("name");
-                    if (matcher.matches()) {
-                        final String label = StringUtils.defaultString(matcher.group("label"), name);
-                        writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-href=\"")
-                                .append(linkUrl).append("\"");
-                        if (StringUtils.isNotBlank(label)) {
-                            writer.append(" title =\"").append(label).append("\"");
+                if (matcher.matches()) {
+                    final String linkUrl = matcher.group("link");
+                    if (StringUtils.isNotBlank(linkUrl)) {
+                        final String name = matcher.group("name");
+                        if (matcher.matches()) {
+                            final String label = StringUtils.defaultString(matcher.group("label"), name);
+                            writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-href=\"")
+                                    .append(linkUrl).append("\"");
+                            if (StringUtils.isNotBlank(label)) {
+                                writer.append(" title =\"").append(label).append("\"");
+                            }
+                            writer.append(">").append(label).append("</a></li>");
                         }
-                        writer.append(">").append(label).append("</a></li>");
                     }
+                } else {
+                    LOG.trace("invalid navigation item: '{}'", item);
                 }
             }
         }

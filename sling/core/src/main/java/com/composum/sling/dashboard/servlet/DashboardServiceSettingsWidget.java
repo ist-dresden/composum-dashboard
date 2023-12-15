@@ -52,32 +52,34 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
     @ObjectClassDefinition(name = "Composum Dashboard Service Settings Widget")
     public @interface Config {
 
-        @AttributeDefinition(name = "Name")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
         String name() default "service-settings";
 
-        @AttributeDefinition(name = "Context")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_CONTEXT_NAME,
+                description = ConfigurationConstants.CFG_CONTEXT_DESCRIPTION)
         String[] context() default {
                 DASHBOARD_CONTEXT
         };
 
-        @AttributeDefinition(name = "Category")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_CATEGORY_NAME,
+                description = ConfigurationConstants.CFG_CATEGORY_DESCRIPTION)
         String[] category();
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 2000;
 
-        @AttributeDefinition(name = "Label")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_LABEL_NAME, description = ConfigurationConstants.CFG_LABEL_DESCRIPTION)
         String label() default "Service Settings";
 
-        @AttributeDefinition(name = "Navigation Title")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAVIGATION_NAME)
         String navTitle();
 
         @AttributeDefinition(name = "Inspected Settings",
                 description = "a set of request templates matching: 'service-type(filter)[service-properties,...]'")
         String[] inspectedSettings();
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "the resource types implemented by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes() default {
                 DEFAULT_RESOURCE_TYPE,
                 DEFAULT_RESOURCE_TYPE + "/page",
@@ -86,15 +88,15 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
                 DEFAULT_RESOURCE_TYPE + "/json"
         };
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible extensions supported by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
         String[] sling_servlet_extensions() default {
                 "html",
                 "json"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 

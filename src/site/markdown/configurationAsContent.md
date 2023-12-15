@@ -21,8 +21,8 @@ your set of content elements , e.g. ``/content/test/insights``...
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0"
-        xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-        jcr:primaryType="cq:Page">
+          xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+          jcr:primaryType="cq:Page">
     <jcr:content
             jcr:primaryType="cq:PageContent"
             jcr:title="Dashboard"
@@ -34,6 +34,21 @@ your set of content elements , e.g. ``/content/test/insights``...
                     jcr:title="Browser"
                     linkPath="/content/test/insights/browser">
             </browser>
+            <requests
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Recent Requests"
+                    linkPath="/content/test/insights/felixconsole/requests">
+            </requests>
+            <jcrresolver
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Resource Resolver"
+                    linkPath="/content/test/insights/felixconsole/jcrresolver">
+            </jcrresolver>
+            <servletresolver
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Servlet Resolver"
+                    linkPath="/content/test/insights/felixconsole//servletresolver">
+            </servletresolver>
             <groovyconsole
                     jcr:primaryType="nt:unstructured"
                     jcr:title="Groovy..."
@@ -73,6 +88,18 @@ your set of content elements , e.g. ``/content/test/insights``...
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="composum/dashboard/sling/logfiles/tail"/>
             </logfiles>
+            <trace jcr:primaryType="nt:unstructured"
+                   sling:resourceType="composum/dashboard/sling/trace">
+                <tile
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/trace/tile"/>
+                <view
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/trace/view"/>
+                <page
+                        jcr:primaryType="nt:unstructured"
+                        sling:resourceType="composum/dashboard/sling/trace/page"/>
+            </trace>
         </widgets>
     </jcr:content>
     <browser
@@ -173,6 +200,30 @@ your set of content elements , e.g. ``/content/test/insights``...
             </view>
         </jcr:content>
     </browser>
+    <felixconsole
+            jcr:primaryType="cq:Page">
+        <requests jcr:primaryType="cq:Page">
+            <jcr:content
+                    jcr:primaryType="cq:PageContent"
+                    jcr:title="Sling Recent Requests"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/requests">
+            </jcr:content>
+        </requests>
+        <jcrresolver jcr:primaryType="cq:Page">
+            <jcr:content
+                    jcr:primaryType="cq:PageContent"
+                    jcr:title="Resource Resolver"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/jcrresolver">
+            </jcr:content>
+        </jcrresolver>
+        <servletresolver jcr:primaryType="cq:Page">
+            <jcr:content
+                    jcr:primaryType="cq:PageContent"
+                    jcr:title="Servlet Resolver"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/servletresolver">
+            </jcr:content>
+        </servletresolver>
+    </felixconsole>
 </jcr:root>
 ```
 
@@ -194,10 +245,10 @@ page would do.
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <jcr:root xmlns:cpp="http://sling.composum.com/pages/1.0"
-        xmlns:jcr="http://www.jcp.org/jcr/1.0"
-        xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
-        xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
-        jcr:primaryType="cpp:Page">
+          xmlns:jcr="http://www.jcp.org/jcr/1.0"
+          xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+          xmlns:sling="http://sling.apache.org/jcr/sling/1.0"
+          jcr:primaryType="cpp:Page">
     <jcr:content
             jcr:primaryType="cpp:PageContent"
             jcr:title="Dashboard"
@@ -209,6 +260,21 @@ page would do.
                     jcr:title="Browser"
                     linkPath="/content/test/insights/browser">
             </browser>
+            <requests
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Recent Requests"
+                    linkPath="/content/test/insights/felixconsole/requests">
+            </requests>
+            <jcrresolver
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Resource Resolver"
+                    linkPath="/content/test/insights/felixconsole/jcrresolver">
+            </jcrresolver>
+            <servletresolver
+                    jcr:primaryType="nt:unstructured"
+                    jcr:title="Servlet Resolver"
+                    linkPath="/content/test/insights/felixconsole//servletresolver">
+            </servletresolver>
             <groovyconsole
                     jcr:primaryType="nt:unstructured"
                     jcr:title="Groovy..."
@@ -249,7 +315,7 @@ page would do.
                         sling:resourceType="composum/dashboard/sling/logfiles/tail"/>
             </logfiles>
             <trace jcr:primaryType="nt:unstructured"
-                    sling:resourceType="composum/dashboard/sling/trace">
+                   sling:resourceType="composum/dashboard/sling/trace">
                 <tile
                         jcr:primaryType="nt:unstructured"
                         sling:resourceType="composum/dashboard/sling/trace/tile"/>
@@ -360,6 +426,30 @@ page would do.
             </view>
         </jcr:content>
     </browser>
+    <felixconsole
+            jcr:primaryType="cpp:Page">
+        <requests jcr:primaryType="cpp:Page">
+            <jcr:content
+                    jcr:primaryType="cpp:PageContent"
+                    jcr:title="Sling Recent Requests"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/requests">
+            </jcr:content>
+        </requests>
+        <jcrresolver jcr:primaryType="cpp:Page">
+            <jcr:content
+                    jcr:primaryType="cpp:PageContent"
+                    jcr:title="Resource Resolver"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/jcrresolver">
+            </jcr:content>
+        </jcrresolver>
+        <servletresolver jcr:primaryType="cpp:Page">
+            <jcr:content
+                    jcr:primaryType="cpp:PageContent"
+                    jcr:title="Servlet Resolver"
+                    sling:resourceType="composum/dashboard/sling/felixconsole/servletresolver">
+            </jcr:content>
+        </servletresolver>
+    </felixconsole>
 </jcr:root>
 ```
 

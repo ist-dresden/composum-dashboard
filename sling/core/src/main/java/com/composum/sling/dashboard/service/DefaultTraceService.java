@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.service;
 
+import com.composum.sling.dashboard.servlet.ConfigurationConstants;
 import com.composum.sling.dashboard.util.Properties;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
@@ -29,14 +30,14 @@ import java.util.Map;
 @Designate(ocd = DefaultTraceService.Config.class, factory = true)
 public class DefaultTraceService implements TraceService {
 
-    @ObjectClassDefinition(name = "Default Trace Service")
+    @ObjectClassDefinition(name = "Composum Dashboard Default Trace Service")
     @interface Config {
 
-        @AttributeDefinition(name = "Name")
-        String name() default "default";
+        @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
+                String name() default "default";
 
-        @AttributeDefinition(name = "Label")
-        String label();
+        @AttributeDefinition(name = ConfigurationConstants.CFG_LABEL_NAME, description = ConfigurationConstants.CFG_LABEL_DESCRIPTION)
+                String label();
 
         @AttributeDefinition(name = "Trace Level")
         String traceLevel() default "info";
@@ -53,7 +54,7 @@ public class DefaultTraceService implements TraceService {
         @AttributeDefinition(name = "Time Format")
         String timeFormat() default "yyyy-MM-dd HH:mm:ss.SSSZ";
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 1000;
     }
 

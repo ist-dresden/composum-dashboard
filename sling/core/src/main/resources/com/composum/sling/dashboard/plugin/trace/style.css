@@ -17,6 +17,7 @@
 
 .dashboard-widget__trace .card-header .btn {
     width: 100%;
+    text-align: left;
 }
 
 .dashboard-widget__trace .card-header .btn,
@@ -25,16 +26,26 @@
     text-decoration: none;
 }
 
+.dashboard-widget__trace .card-header .btn span {
+    white-space: nowrap;
+    overflow: auto;
+}
+
 .dashboard-widget__trace .trace-time {
     font-family: monospace;
     line-height: 24px;
     font-size: 14px;
+    min-width: 160px;
 }
 
 .dashboard-widget__trace .trace-level {
     min-width: 80px;
     margin: 1px 15px -1px;
     line-height: 18px;
+}
+
+.dashboard-widget__trace .trace-msg {
+    flex-grow: 1;
 }
 
 .dashboard-widget__trace .card-body {

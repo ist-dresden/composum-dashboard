@@ -1,0 +1,12 @@
+{
+  "sling.servlet.resourceTypes": [
+    "composum/dashboard/sling/felixconsole/requests"
+  ],
+  "name": "requests",
+  "label": "Sling Recent Requests",
+  "sling.servlet.paths": [
+    "/apps/cpm/felixconsole/requests"
+  ],
+  "rank:Integer": 7100,
+  "proxied.webconsole.label": "requests"
+}

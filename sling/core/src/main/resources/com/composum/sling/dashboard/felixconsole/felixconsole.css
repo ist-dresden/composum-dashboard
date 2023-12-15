@@ -1,0 +1,40 @@
+.widget-jcrresolver .composum-dashboard__widget-view,
+.widget-requests .composum-dashboard__widget-view,
+.widget-servletresolver .composum-dashboard__widget-view {
+    padding: 0 8px;
+    font-size: 16px;
+    font-family: sans-serif;
+}
+.widget-jcrresolver .statline,
+.widget-requests .statline,
+.widget-servletresolver .statline {
+    padding: 2px 8px;
+}
+.widget-jcrresolver .ui-widget-header,
+.widget-requests .ui-widget-header,
+.widget-servletresolver .ui-widget-header {
+    padding: 2px 8px 2px 0;
+    line-height: 20px;
+}
+.widget-jcrresolver .ui-widget-header span,
+.widget-requests .ui-widget-header span,
+.widget-servletresolver .ui-widget-header span {
+    margin-left: 0;
+    line-height: 24px;
+}
+.widget-jcrresolver table.content,
+.widget-servletresolver table.content {
+    font-size: 13px !important;
+    line-height: 17px;
+}
+.widget-requests .nicetable th,
+.widget-requests .nicetable td {
+    font-size: 13px !important;
+    line-height: 17px;
+    max-width: 300px;
+    overflow: auto;
+}
+.widget-requests .nicetable td a {
+    display: block;
+    white-space: nowrap;
+}

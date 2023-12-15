@@ -16,6 +16,8 @@ import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -42,6 +44,8 @@ import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
 import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
+
+    private static final Logger LOG = LoggerFactory.getLogger(AbstractDashboardServlet.class);
 
     public static final String SELECTOR_CREATE_CONTENT = "create.content";
 
@@ -92,7 +96,8 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
                     response.sendRedirect(request.getContextPath() + path + ".html");
                     return true;
                 }
-            } catch (IOException ignore) {
+            } catch (IOException e) {
+                LOG.trace("createContent", e);
             }
         }
         return false;
@@ -175,6 +180,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
             try {
                 return Integer.parseInt(value);
             } catch (NumberFormatException ignore) {
+                LOG.trace("getIntParameter: value {} for {} {}", value, name, ignore.toString());
             }
         return defaultValue;
     }
@@ -300,7 +306,8 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
                     if (reader != null) {
                         IOUtils.copy(reader, writer);
                     }
-                } catch (IOException ignore) {
+                } catch (IOException e) {
+                    LOG.trace("embedSnippets: for {} {}", snippet, e.toString());
                 }
                 writer.append("</").append(type).append(">\n");
             } else {
@@ -320,11 +327,11 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
                 IOUtils.copy(reader, response.getWriter());
                 return;
             }
-        } catch (Exception ignore) {
+        } catch (Exception e) {
+            LOG.trace("loadPage: for {} {}", template, e.toString());
         }
         if (!response.isCommitted()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 }
-

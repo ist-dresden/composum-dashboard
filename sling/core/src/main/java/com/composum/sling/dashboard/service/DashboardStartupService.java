@@ -67,6 +67,8 @@ import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.DEP
 import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.MODIFIED;
 import static org.osgi.framework.Bundle.ACTIVE;
 
+import com.composum.sling.dashboard.servlet.ConfigurationConstants;
+
 @Component(
         service = {StartupRunnerService.class, Servlet.class},
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
@@ -91,7 +93,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
     public static final String _NODE_BUILDER = ".aem.groovy.extension.builders.NodeBuilder";
     public static final String _PAGE_BUILDER = ".aem.groovy.extension.builders.PageBuilder";
 
-    @ObjectClassDefinition(name = "Composum Sling Dashboard Startup Service")
+    @ObjectClassDefinition(name = "Composum Dashboard Startup Service")
     public @interface Config {
 
         @AttributeDefinition(
@@ -148,18 +150,18 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         )
         long threadTimeout() default (60L * 60L * 1000L);
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "the resource types implemented by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes();
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible extensions supported by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
         String[] sling_servlet_extensions() default {
                 "txt"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 

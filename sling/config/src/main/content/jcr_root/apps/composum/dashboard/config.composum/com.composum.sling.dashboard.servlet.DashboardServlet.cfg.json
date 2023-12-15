@@ -3,6 +3,9 @@
     "/apps/cpm/dashboard"
   ],
   "navigation": [
-    "browser:Browser:/apps/cpm/browser.html"
+    "browser:Browser:/apps/cpm/browser.html",
+    "requests:Recent Requests:/apps/cpm/felixconsole/requests.html",
+    "jcrresolver:Resource Resolver:/apps/cpm/felixconsole/jcrresolver.html",
+    "servletresolver:Servlet Resolver:/apps/cpm/felixconsole/servletresolver.html"
   ]
 }

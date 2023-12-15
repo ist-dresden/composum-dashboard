@@ -99,22 +99,22 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                 "extract.src"
         };
 
-        @AttributeDefinition(name = "Resource Types",
-                description = "the Sling resource types implemented by this servlet")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
+                description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
         String[] sling_servlet_resourceTypes() default {
                 ServletResolverConstants.DEFAULT_RESOURCE_TYPE
         };
 
-        @AttributeDefinition(name = "Servlet Extensions",
-                description = "the possible URL extensions supported by this servlet")
-        String[] sling_servlet_extensions() default {
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_NAME,
+                        description = ConfigurationConstants.CFG_SERVLET_EXTENSIONS_DESCRIPTION)
+                String[] sling_servlet_extensions() default {
                 "txt",
                 "json",
                 "zip"
         };
 
-        @AttributeDefinition(name = "Servlet Paths",
-                description = "the servlet paths if this configuration variant should be supported")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_SERVLET_PATHS_NAME,
+                description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
 

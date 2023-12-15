@@ -7,6 +7,7 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.Date;
 
+/** Can be used to log information that is to be shown with the trace widget in the dashboard. */
 public interface TraceService {
 
     enum Level {

@@ -23,8 +23,14 @@
 
         <menu name="Overview">
             <item name="Introduction" href="index.html"/>
-            <item name="Configuration" href="configuration.html"/>
+            <item name="Download and Installation" href="installation.html"/>
+        </menu>
+
+        <menu name="Configuration">
+            <item name="General Configuration" href="configuration.html"/>
             <item name="Configuration as content page" href="configurationAsContent.html"/>
+            <item name="Browser Configuration" href="browserConfiguration.html"/>
+            <item name="Felix Console Proxy" href="felixConsoleProxyConfiguration.html" />
         </menu>
 
         <menu ref="parent" inherit="bottom"/>

@@ -36,6 +36,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.composum.sling.dashboard.servlet.ConfigurationConstants;
+
 @Component(service = DashboardPlugin.class)
 @Designate(ocd = GenericDashboardPlugin.Config.class, factory = true)
 public class GenericDashboardPlugin implements DashboardPlugin {
@@ -57,7 +59,7 @@ public class GenericDashboardPlugin implements DashboardPlugin {
                 "if specified all matching widget implementations are registred as widget services also")
         String[] widgetContext();
 
-        @AttributeDefinition(name = "Rank")
+        @AttributeDefinition(name = ConfigurationConstants.CFG_RANK_NAME, description = ConfigurationConstants.CFG_RANK_DESCRIPTION)
         int rank() default 3000;
 
         @AttributeDefinition()

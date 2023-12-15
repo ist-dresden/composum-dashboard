@@ -1,0 +1,13 @@
+{
+  "sling.servlet.resourceTypes":[
+    "composum/dashboard/sling/felixconsole/servletresolver"
+  ],
+  "name":"servletresolver",
+  "label":"Sling Servlet Resolver",
+  "sling.servlet.paths":[
+    "/apps/cpm/felixconsole/servletresolver"
+  ],
+  "proxied.webconsole.label":"servletresolver",
+  "rank:Integer":7300,
+  "navTitle":"Servlet Resolver"
+}

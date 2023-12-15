@@ -18,8 +18,9 @@ platform, including several tools such as a lightweight JCR browser and a log vi
     - a summarized status information view on each tile
     - the option to open a detailed view for each of the arranged tools
     - the option to add some light versions of the [Composum Nodes](https://github.com/ist-dresden/composum-nodes) tools:
-        - a repository browser to inspect the JCR repository
+        - [a repository browser](https://ist-dresden.github.io/composum-dashboard/browserConfiguration.html) to inspect the JCR repository
         - a log file viewer
+        - [a proxy](https://ist-dresden.github.io/composum-dashboard/felixConsoleProxyConfiguration.html) for debugging views of the Felix Console
 - with a small footprint of the tools itself in the JCR repository
 - customizable and restrictable via OSGi configuration for each environment
 - prepared as normal content with no additional configuration needed in the web tier

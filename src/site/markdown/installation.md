@@ -22,7 +22,7 @@ either add a run mode "composum" to the system or rename that path to something 
 or move / copy the configurations appropriately.
 
 With the example configurations, the dashboard appears at http(s)://{host}:{port}/apps/cpm/dashboard.html - 
-the URL it self is configurable.
+the URL itself is configurable.
 
 ## Detailed configuration for production use
 

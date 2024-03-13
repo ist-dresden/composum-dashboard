@@ -29,6 +29,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -194,7 +195,8 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
 
         @Override
         public String getName() {
-            return config.serviceType;
+            return Optional.ofNullable(reference.getProperty("service.pid"))
+                    .map(Object::toString).orElse(config.serviceType);
         }
 
         @Override
@@ -274,7 +276,6 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
                             || ((service = bundleContext.getService(ref)) != null
                             && config.serviceType.equals(service.getClass().getName()))) {
                         serviceReferences.add(ref);
-                        break;
                     }
                 }
             }

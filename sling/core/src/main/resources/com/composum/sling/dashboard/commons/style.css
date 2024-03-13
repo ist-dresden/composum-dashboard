@@ -38,7 +38,12 @@ body {
     color: #ddd;
 }
 
-.composum-dashboard__navbar .nav-link {
+.composum-dashboard__navbar .dropdown-menu {
+    background: #444;
+}
+
+.composum-dashboard__navbar .nav-link,
+.composum-dashboard__navbar .dropdown {
     padding: 0 10px;
     line-height: 36px;
 }

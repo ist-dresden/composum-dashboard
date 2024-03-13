@@ -7,6 +7,11 @@
     color: #212529;
 }
 
+.dashboard-widget__settings-tile .list-group {
+    max-height: 295px;
+    overflow: auto;
+}
+
 .dashboard-widget__settings-tile .list-group-item {
     padding: 0.5rem 1.25rem;
     line-height: 20px;

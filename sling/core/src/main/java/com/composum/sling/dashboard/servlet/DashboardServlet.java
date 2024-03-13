@@ -39,6 +39,8 @@ import javax.servlet.Servlet;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -274,20 +276,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         final Resource navigation = Optional.ofNullable(dashboard.getChild("navigation"))
                 .orElse(dashboard.getChild("jcr:content/navigation"));
         if (navigation != null) {
-            for (final Resource item : navigation.getChildren()) {
-                final ValueMap values = item.getValueMap();
-                final String linkUrl = linkUrl(resolver, values);
-                if (StringUtils.isNotBlank(linkUrl)) {
-                    final String title = values.get("title", values.get("jcr:title", ""));
-                    writer.append("<li class=\"nav-item\"><a class=\"nav-link\" href=\"#\" data-href=\"")
-                            .append(linkUrl).append("\"");
-                    if (StringUtils.isNotBlank(title)) {
-                        writer.append(" title =\"").append(title).append("\"");
-                    }
-                    writer.append(">").append(values.get("label", values.get("jcr:title",
-                            item.getName()))).append("</a></li>");
-                }
-            }
+            htmlNavigationTree(writer, navigation, "nav-item");
         } else {
             for (final String item : this.navigation) {
                 final Matcher matcher = NAVIGATION_PATTERN.matcher(item);
@@ -311,6 +300,41 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
             }
         }
         writer.append("</ul>");
+    }
+
+    protected void htmlNavigationTree(@NotNull final PrintWriter writer,
+                                      @NotNull final Resource navigation, @NotNull final String itemClass) {
+        final ResourceResolver resolver = navigation.getResourceResolver();
+        for (final Resource item : navigation.getChildren()) {
+            final ValueMap values = item.getValueMap();
+            final String linkUrl = linkUrl(resolver, values);
+            if (StringUtils.isNotBlank(linkUrl)) {
+                final String title = values.get("title", values.get("jcr:title", ""));
+                writer.append("<li class=\"").append(itemClass).append("\"><a class=\"nav-link\" href=\"#\" data-href=\"")
+                        .append(linkUrl).append("\"");
+                if (StringUtils.isNotBlank(title)) {
+                    writer.append(" title =\"").append(title).append("\"");
+                }
+                writer.append(">").append(values.get("label", values.get("jcr:title",
+                        item.getName()))).append("</a></li>");
+            } else {
+                final StringWriter buffer = new StringWriter();
+                try (PrintWriter bufferWriter = new PrintWriter(buffer)) {
+                    htmlNavigationTree(bufferWriter, item, "nav-item");
+                }
+                final String markup = buffer.toString();
+                if (StringUtils.isNotBlank(markup)) {
+                    writer.append("<li class=\"dropdown\">")
+                            .append("<div class=\"nav-item dropdown-toggle\" id=\"dashboardToolsDropdown\" data-toggle=\"dropdown\">")
+                            .append(values.get("label", values.get("jcr:title", item.getName())))
+                            .append("</div>")
+                            .append("<ul class=\"dropdown-menu\" aria-labelledby=\"dashboardToolsDropdown\">")
+                            .append(markup)
+                            .append("</ul>")
+                            .append("</li>");
+                }
+            }
+        }
     }
 
     protected @Nullable String linkUrl(@NotNull final ResourceResolver resolver, @NotNull final ValueMap values) {

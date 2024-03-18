@@ -170,19 +170,19 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
             }
         }
         final List<String> suffixMode = getSuffixMode(request, options);
-        return suffixMode.size() > 0 ? suffixMode.get(0) : options.get(0);
+        return !suffixMode.isEmpty() ? suffixMode.get(0) : options.get(0);
     }
 
     protected @Nullable String getHtmlSubmode(@NotNull final SlingHttpServletRequest request,
                                               @NotNull final Collection<String> options) {
         final List<String> selectorMode = getSelectorMode(request, options);
-        if (options.size() == 0 && selectorMode.size() > 0) {
+        if (options.isEmpty() && !selectorMode.isEmpty()) {
             return selectorMode.get(0);
         } else if (selectorMode.size() > 1) {
             return selectorMode.get(1);
         }
         final List<String> suffixMode = getSuffixMode(request, options);
-        return options.size() == 0 && selectorMode.size() > 0 ? suffixMode.get(0)
+        return options.isEmpty() && !selectorMode.isEmpty() ? suffixMode.get(0)
                 : (suffixMode.size() > 1 ? suffixMode.get(1) : null);
     }
 
@@ -248,7 +248,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
             }
             if (widget != null) {
                 Resource child;
-                while (selectors.size() > 0 && (child = widget.getChild(selectors.get(0))) != null) {
+                while (!selectors.isEmpty() && (child = widget.getChild(selectors.get(0))) != null) {
                     widget = child;
                     selectors.remove(0);
                 }
@@ -277,7 +277,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                                            @NotNull final List<String> selectors, char selectorSeparator) {
         String path = "";
         if (widget != null) {
-            path = widget.getPath() + (selectors.size() > 0
+            path = widget.getPath() + (!selectors.isEmpty()
                     ? selectorSeparator + StringUtils.join(selectors, selectorSeparator) : "");
             if (path.endsWith("/" + JCR_CONTENT)) {
                 path = StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT);
@@ -293,7 +293,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String[] selectors = pathInfo.getSelectors();
         for (int i = 0; i < selectors.length; i++) {
-            if (options.size() == 0 || options.contains(selectors[i])) {
+            if (options.isEmpty() || options.contains(selectors[i])) {
                 for (; i < selectors.length; i++) {
                     result.add(selectors[i]);
                 }
@@ -310,7 +310,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 .orElse("");
         if (StringUtils.isNotBlank(suffix)) {
             List<String> keys = Arrays.asList(StringUtils.split(suffix, "/"));
-            if (options.size() == 0 || options.contains(keys.get(0))) {
+            if (options.isEmpty() || options.contains(keys.get(0))) {
                 return keys;
             }
         }
@@ -342,7 +342,8 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         return result;
     }
 
-    protected void htmlPageHead(@NotNull final PrintWriter writer, String... styles)
+    protected void htmlPageHead(@NotNull final ResourceResolver resolver,
+                                @NotNull final PrintWriter writer, String... styles)
             throws IOException {
         final Set<String> styleSet = new LinkedHashSet<>();
         styleSet.add(TEMPLATE_BASE + "commons/style.css");
@@ -357,7 +358,8 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         writer.append("</nav><div class=\"composum-dashboard__widget-view\">\n");
     }
 
-    protected void htmlPageTail(@NotNull final PrintWriter writer, String... scripts)
+    protected void htmlPageTail(@NotNull final ResourceResolver resolver,
+                                @NotNull final PrintWriter writer, String... scripts)
             throws IOException {
         final Set<String> scriptSet = new LinkedHashSet<>();
         scriptSet.add(TEMPLATE_BASE + "commons/script.js");
@@ -365,7 +367,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         writer.append("</div>\n");
         copyResource(getClass(), PLUGIN_BASE + "page/script.html", writer, Collections.emptyMap());
         embedSnippets(writer, "script", scriptSet);
-        embedScript(writer, OPTION_PAGE);
+        embedScripts(resolver, writer, OPTION_PAGE);
         copyResource(getClass(), PLUGIN_BASE + "page/tail.html", writer, Collections.emptyMap());
     }
 

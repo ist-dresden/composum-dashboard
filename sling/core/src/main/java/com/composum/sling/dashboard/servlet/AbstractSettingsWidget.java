@@ -9,6 +9,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -118,9 +119,10 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                         break;
                     case OPTION_PAGE:
                     default:
-                        htmlPageHead(writer);
+                        final ResourceResolver resolver = slingRequest.getResourceResolver();
+                        htmlPageHead(resolver, writer);
                         htmlView(request, response, writer, resource);
-                        htmlPageTail(writer);
+                        htmlPageTail(resolver, writer);
                         break;
                 }
             } else {

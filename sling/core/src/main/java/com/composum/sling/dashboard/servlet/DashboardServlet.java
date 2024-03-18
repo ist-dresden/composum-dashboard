@@ -40,7 +40,6 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -217,10 +216,10 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
                 htmlDashboard(request, response, writer);
                 copyResource(getClass(), PAGE_TEMPLATES + "script.html", writer, properties);
                 if (currentWidget != null) {
-                    currentWidget.embedScript(writer, OPTION_VIEW);
+                    currentWidget.embedScripts(resolver, writer, OPTION_VIEW);
                 } else {
                     for (final DashboardWidget widget : getWidgets(request)) {
-                        widget.embedScript(writer, OPTION_TILE);
+                        widget.embedScripts(resolver, writer, OPTION_TILE);
                     }
                 }
                 copyResource(getClass(), PAGE_TEMPLATES + "tail.html", writer, properties);

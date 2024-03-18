@@ -9,8 +9,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
+import org.apache.sling.jcr.resource.api.JcrResourceConstants;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
@@ -97,7 +100,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         this.additionalScripts = Arrays.asList(config.proxied_webconsole_scripts());
         Collection<ServiceReference<Servlet>> candidates = bundleContext.getServiceReferences(Servlet.class,
                 "(felix.webconsole.label=" + webConsoleLabel + ")");
-        if (candidates.size() >= 1) {
+        if (!candidates.isEmpty()) {
             this.consoleServletRef = candidates.iterator().next();
             this.consoleServlet = bundleContext.getService(consoleServletRef);
             if (candidates.size() > 1) { // very strange but seems to happen, so we try the first one.
@@ -112,7 +115,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
                 }
             }
         } else {
-            LOG.trace("Found {} candidates for Felix Console servlet with label '{}', expecting exactly one", candidates.size(), webConsoleLabel);
+            LOG.trace("No candidates found for Felix Console servlet with label '{}', expecting exactly one", webConsoleLabel);
         }
     }
 
@@ -132,10 +135,13 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
         // embedded in htmlPageTail
-        for (String script : additionalScripts) {
-            writer.append("<script src=\"").append(script).append("\"></script>\n");
+        for (final String script : additionalScripts) {
+            if (!script.startsWith("/") || !embedScript(resolver, script, writer)) {
+                writer.append("<script src=\"").append(script).append("\"></script>\n");
+            }
         }
     }
 
@@ -179,6 +185,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     protected void doIt(@NotNull final SlingHttpServletRequest slingRequest,
                         @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
+        final ResourceResolver resolver = slingRequest.getResourceResolver();
         if (consoleServlet == null) {
             response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
             response.getWriter().println("No unique Felix Console servlet with label '" + webConsoleLabel + "' found");
@@ -194,13 +201,13 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         }
         prepareTextResponse(response, null);
         PrintWriter writer = response.getWriter();
-        htmlPageHead(writer,
+        htmlPageHead(resolver, writer,
                 JQUERY_UI_SNIPPET,
                 TEMPLATE_BASE + "felixconsole/felixconsole.css",
                 TEMPLATE_BASE + "felixconsole/webconsole.css",
                 TEMPLATE_BASE + "felixconsole/admin_compat.css");
         consoleServlet.service(slingRequest, response);
-        htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
+        htmlPageTail(resolver, writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
     }
 
     @ObjectClassDefinition(name = "Composum Dashboard Felix Console Proxy",

@@ -247,7 +247,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     @Override
@@ -327,10 +328,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             PrintWriter writer = response.getWriter();
             copyResource(getClass(), PAGE_TEMPLATE, writer, properties);
             for (DashboardWidget widget : viewWidgets.values()) {
-                widget.embedScript(writer, OPTION_VIEW);
+                widget.embedScripts(resolver, writer, OPTION_VIEW);
             }
             for (DashboardWidget widget : toolWidgets.values()) {
-                widget.embedScript(writer, OPTION_VIEW);
+                widget.embedScripts(resolver, writer, OPTION_VIEW);
             }
             copyResource(getClass(), PAGE_TAIL, writer, properties);
         }

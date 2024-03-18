@@ -6,6 +6,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.jetbrains.annotations.NotNull;
 
@@ -53,7 +54,8 @@ public abstract class AbstractSourceView extends AbstractWidgetServlet {
     protected abstract @NotNull ResourceFilter getResourceFilter();
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     protected boolean isSourceMode(@NotNull final SlingHttpServletRequest request) {

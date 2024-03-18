@@ -12,6 +12,7 @@ import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
+import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,8 +39,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
 import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
 import static com.composum.sling.dashboard.DashboardConfig.JCR_TITLE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
 import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
 import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 
@@ -333,5 +338,27 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         if (!response.isCommitted()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
+    }
+
+    protected boolean embedScript(@NotNull final ResourceResolver resolver,
+                                  @NotNull final String resourcePath, @NotNull final Writer writer) {
+        final Resource content = Optional.ofNullable(resolver.getResource(resourcePath))
+                .map(r -> NT_FILE.equals(r.getValueMap().get(JCR_PRIMARY_TYPE, ""))
+                        ? r.getChild(JCR_CONTENT) : r)
+                .filter(c -> NT_RESOURCE.equals(c.getValueMap().get(JCR_PRIMARY_TYPE, "")))
+                .orElse(null);
+        if (content != null) {
+            try (final InputStream input = content.getValueMap().get(JCR_DATA, InputStream.class);
+                 final Reader reader = Optional.ofNullable(input).map(InputStreamReader::new).orElse(null)) {
+                if (reader != null) {
+                    writer.append("<script>");
+                    IOUtils.copy(reader, writer);
+                    writer.append("</script>");
+                    return true;
+                }
+            } catch (IOException ignore) {
+            }
+        }
+        return false;
     }
 }

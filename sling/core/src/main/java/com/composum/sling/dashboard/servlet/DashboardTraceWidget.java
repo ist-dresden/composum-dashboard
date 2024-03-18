@@ -10,6 +10,7 @@ import com.google.gson.stream.JsonWriter;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -122,7 +123,8 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     /*
@@ -160,10 +162,11 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
                         return;
                     case OPTION_PAGE:
                     default:
+                        final ResourceResolver resolver = slingRequest.getResourceResolver();
                         prepareTextResponse(response, null);
-                        htmlPageHead(writer);
+                        htmlPageHead(resolver, writer);
                         htmlView(request, response, writer);
-                        htmlPageTail(writer, "/com/composum/sling/dashboard/commons/script.js");
+                        htmlPageTail(resolver, writer, "/com/composum/sling/dashboard/commons/script.js");
                         return;
                 }
             }

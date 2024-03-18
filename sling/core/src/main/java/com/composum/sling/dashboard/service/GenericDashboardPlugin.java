@@ -144,11 +144,12 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
-        public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode)
+        public void embedScripts(@NotNull final ResourceResolver resolver,
+                                 @NotNull final PrintWriter writer, @NotNull final String mode)
                 throws IOException {
             DashboardWidget widget = getServlet();
             if (widget != null) {
-                widget.embedScript(writer, mode);
+                widget.embedScripts(resolver, writer, mode);
             }
         }
 

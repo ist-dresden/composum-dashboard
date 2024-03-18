@@ -153,7 +153,8 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode)
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode)
             throws IOException {
         if (OPTION_PAGE.equals(mode) || OPTION_VIEW.equals(mode)) {
             writer.append("<script>\n");
@@ -197,9 +198,10 @@ public class DashboardQueryWidget extends AbstractWidgetServlet implements Conte
                         break;
                     case OPTION_PAGE:
                     default:
-                        htmlPageHead(writer);
+                        final ResourceResolver resolver = slingRequest.getResourceResolver();
+                        htmlPageHead(resolver, writer);
                         htmlView(request, writer);
-                        htmlPageTail(writer);
+                        htmlPageTail(resolver, writer);
                         break;
                 }
             }

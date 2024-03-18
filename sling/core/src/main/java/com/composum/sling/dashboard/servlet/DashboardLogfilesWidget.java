@@ -7,6 +7,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.settings.SlingSettingsService;
@@ -246,7 +247,8 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode)
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode)
             throws IOException {
         if (OPTION_PAGE.equals(mode) || OPTION_VIEW.equals(mode)) {
             writer.append("<script>\n");
@@ -286,10 +288,11 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
                     }
                     break;
                 case OPTION_PAGE:
+                    final ResourceResolver resolver = slingRequest.getResourceResolver();
                     prepareTextResponse(response, null);
-                    htmlPageHead(writer);
+                    htmlPageHead(resolver, writer);
                     htmlView(request, response, session, writer);
-                    htmlPageTail(writer);
+                    htmlPageTail(resolver, writer);
                     return;
             }
             response.sendError(HttpServletResponse.SC_NOT_FOUND);

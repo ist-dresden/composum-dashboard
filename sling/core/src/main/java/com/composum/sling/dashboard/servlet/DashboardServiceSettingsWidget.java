@@ -6,6 +6,7 @@ import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -156,7 +157,8 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     @Override

@@ -1,5 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -29,9 +31,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 
 public abstract class AbstractWidgetServlet extends AbstractDashboardServlet implements DashboardWidget {
 
@@ -67,9 +66,9 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     @Deprecated(since = "1.1.2 - use activation with bundle context")
-    protected void activate(@NotNull final String name, @NotNull final String[] context,
+    protected void activate(@NotNull final String name, @NotNull final String[] ignoredContext,
                             @NotNull final String[] category, int rank,
-                            @NotNull final String label, @Nullable final String navTitle,
+                            @NotNull final String label, @Nullable final String ignoredNavTitle,
                             @Nullable String[] resourceTypes, @Nullable String[] servletPaths) {
         activate(null, name, category, category, rank, label, name, resourceTypes, servletPaths);
     }
@@ -150,6 +149,31 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
             }
         }
         return resource;
+    }
+
+    // for backwards source code compatibility
+
+    @SuppressWarnings({"RedundantThrows", "unused"})
+    protected void embedScript(@NotNull PrintWriter writer, @NotNull String mode)
+            throws IOException {
+    }
+
+    @Override
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode)
+            throws IOException {
+    }
+
+    @SuppressWarnings("unused")
+    protected void htmlPageHead(@NotNull final PrintWriter writer, String... styles)
+            throws IOException {
+        htmlPageHead(null, writer, styles);
+    }
+
+    @SuppressWarnings("unused")
+    protected void htmlPageTail(@NotNull final PrintWriter writer, String... scripts)
+            throws IOException {
+        htmlPageTail(null, writer, scripts);
     }
 
     // Helpers
@@ -265,7 +289,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
-                                           @NotNull final String resourceType, @NotNull final List<String> options,
+                                           @NotNull final String resourceType, @NotNull final List<String> ignoredOptions,
                                            @NotNull final List<String> selectors) {
         final int selectorsCount = selectors.size();
         final Resource widget = getWidgetResource(request, resourceType, selectors);
@@ -282,7 +306,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
             if (path.endsWith("/" + JCR_CONTENT)) {
                 path = StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT);
             }
-            path = path.replaceAll("/jcr:", "/_jcr_") + ".html";
+            path = path.replace("/jcr:", "/_jcr_") + ".html";
         }
         return path;
     }
@@ -342,7 +366,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         return result;
     }
 
-    protected void htmlPageHead(@NotNull final ResourceResolver resolver,
+    protected void htmlPageHead(@Nullable final ResourceResolver ignoredResolver,
                                 @NotNull final PrintWriter writer, String... styles)
             throws IOException {
         final Set<String> styleSet = new LinkedHashSet<>();
@@ -358,7 +382,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         writer.append("</nav><div class=\"composum-dashboard__widget-view\">\n");
     }
 
-    protected void htmlPageTail(@NotNull final ResourceResolver resolver,
+    protected void htmlPageTail(@Nullable final ResourceResolver resolver,
                                 @NotNull final PrintWriter writer, String... scripts)
             throws IOException {
         final Set<String> scriptSet = new LinkedHashSet<>();
@@ -367,7 +391,9 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         writer.append("</div>\n");
         copyResource(getClass(), PLUGIN_BASE + "page/script.html", writer, Collections.emptyMap());
         embedSnippets(writer, "script", scriptSet);
-        embedScripts(resolver, writer, OPTION_PAGE);
+        if (resolver != null) {
+            embedScripts(resolver, writer, OPTION_PAGE);
+        }
         copyResource(getClass(), PLUGIN_BASE + "page/tail.html", writer, Collections.emptyMap());
     }
 

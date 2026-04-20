@@ -95,6 +95,7 @@ public class ValueEmbeddingReader extends Reader {
      * @param reader the text to read - probably with embedded value placeholders
      * @param values the set of available placeholders
      */
+    @SuppressWarnings("unused")
     public ValueEmbeddingReader(@NotNull Reader reader, @NotNull Map<String, Object> values) {
         this(reader, values, null, null, null);
     }
@@ -125,10 +126,6 @@ public class ValueEmbeddingReader extends Reader {
         this.locale = locale != null ? locale : Locale.getDefault();
         this.resourceContext = resourceContext != null ? resourceContext : values.getClass();
         this.resourceBundle = resourceBundle;
-    }
-
-    public boolean isKeepUnresolvable(final boolean... decision) {
-        return decision.length > 0 ? (keepUnresolvable = decision[0]) : keepUnresolvable;
     }
 
     protected void embedKey(Key key) {

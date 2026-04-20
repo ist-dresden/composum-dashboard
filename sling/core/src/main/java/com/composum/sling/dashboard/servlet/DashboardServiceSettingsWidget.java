@@ -1,14 +1,16 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardWidget;
-import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CONTEXT;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
+import org.apache.sling.commons.classloader.DynamicClassLoaderManager;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -20,22 +22,26 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.Servlet;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CONTEXT;
 
 /**
  * a primitive viewer for the settings of a configured set of services
@@ -48,6 +54,8 @@ import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CO
 )
 @Designate(ocd = DashboardServiceSettingsWidget.Config.class)
 public class DashboardServiceSettingsWidget extends AbstractSettingsWidget implements ContentGenerator {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DashboardServiceSettingsWidget.class);
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/service/settings";
 
@@ -79,6 +87,10 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
         @AttributeDefinition(name = "Inspected Settings",
                 description = "a set of request templates matching: 'service-type(filter)[service-properties,...]'")
         String[] inspectedSettings();
+
+        @AttributeDefinition(name = "Force Inspection",
+                description = "of 'on' (default) a service is resolved for each possible reference (can cause some error log entries)")
+        boolean forceInspection() default true;
 
         @AttributeDefinition(name = ConfigurationConstants.CFG_RESOURCE_TYPE_NAME,
                 description = ConfigurationConstants.CFG_RESOURCE_TYPE_DESCRIPTION)
@@ -129,10 +141,19 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
     @Reference
     protected XSSAPI xssapi;
 
+    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
+    protected volatile DynamicClassLoaderManager classLoaderManager;
+
     @Reference
     protected DashboardManager dashboardManager;
 
     protected transient List<SettingsRule> configuration;
+    protected transient boolean forceInspection;
+
+    protected transient Map<SettingsRule, List<ServiceReference<?>>> serviceReferences = new HashMap<>();
+
+    protected transient Map<String, Class<?>> classSet = new HashMap<>();
+    protected static final Class<?> UNAVAILABLE = Object.class;
 
     @Activate
     @Modified
@@ -140,6 +161,7 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
         super.activate(bundleContext,
                 config.name(), config.context(), config.category(), config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
+        forceInspection = config.forceInspection();
         configuration = new ArrayList<>();
         for (final String rule : config.inspectedSettings()) {
             if (StringUtils.isNotBlank(rule)) {
@@ -149,6 +171,7 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
                 }
             }
         }
+        serviceReferences.clear();
     }
 
     @Override
@@ -261,28 +284,83 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
     }
 
     protected @NotNull List<ServiceReference<?>> getServiceReferences(@NotNull final SettingsRule config) {
-        final List<ServiceReference<?>> serviceReferences = new ArrayList<>();
-        try {
-            ServiceReference<?>[] references = bundleContext.getAllServiceReferences(config.serviceType,
-                    StringUtils.isNotBlank(config.filter) ? config.filter : null);
-            if (references != null) {
-                serviceReferences.addAll(Arrays.asList(references));
-            } else {
-                ServiceReference<?>[] all = bundleContext.getAllServiceReferences(null,
+        List<ServiceReference<?>> configReferences = serviceReferences.get(config);
+        if (configReferences == null) {
+            configReferences = new ArrayList<>();
+            serviceReferences.put(config, configReferences);
+            try {
+                ServiceReference<?>[] references = bundleContext.getAllServiceReferences(config.serviceType,
                         StringUtils.isNotBlank(config.filter) ? config.filter : null);
-                for (ServiceReference<?> ref : all) {
-                    Object service;
-                    if (config.serviceType.equals(ref.getProperty("service.pid"))
-                            || (!config.serviceType.contains("~")
-                            && config.serviceType.equals(ref.getProperty("service.factoryPid")))
-                            || ((service = bundleContext.getService(ref)) != null
-                            && config.serviceType.equals(service.getClass().getName()))) {
-                        serviceReferences.add(ref);
+                if (references != null) {
+                    configReferences.addAll(Arrays.asList(references));
+                } else {
+                    ServiceReference<?>[] all = bundleContext.getAllServiceReferences(null,
+                            StringUtils.isNotBlank(config.filter) ? config.filter : null);
+                    for (ServiceReference<?> ref : all) {
+                        List<String> serviceTypes = Optional.ofNullable((String[]) ref.getProperty("objectClass"))
+                                .map(Arrays::asList).orElse(Collections.emptyList());
+                        /*
+                        Optional.ofNullable(ref.getProperty("objectClass"))
+                                .ifPresent(set -> {
+                                    for (String className : (String[]) set) {
+                                        Optional.ofNullable(getServiceType(className))
+                                                .ifPresent(serviceType -> {
+                                                    if (type.isAssignableFrom(serviceType)) {
+                                                        LOG.warn("{} ~= {}}", serviceType.getName(), type.getName());
+                                                        serviceReferences.add(ref);
+                                                    }
+                                                });
+                                    }
+                                });
+                        /**/
+                        try {
+                            Object service;
+                            if (serviceTypes.contains(config.serviceType)
+                                    || config.serviceType.equals(ref.getProperty("service.pid"))
+                                    || (!config.serviceType.contains("~")
+                                    && config.serviceType.equals(ref.getProperty("service.factoryPid")))
+                                    || (forceInspection && (service = bundleContext.getService(ref)) != null
+                                    && config.serviceType.equals(service.getClass().getName()))) {
+                                configReferences.add(ref);
+                            }
+                        } catch (Exception ex) {
+                            LOG.debug("Error processing service reference: {}", ex.toString());
+                        }
+                        /**/
                     }
                 }
+            } catch (InvalidSyntaxException ignore) {
+            } catch (Exception ex) {
+                LOG.debug("Error fetching service references: {}", ex.toString());
             }
-        } catch (InvalidSyntaxException ignore) {
         }
-        return serviceReferences;
+        return configReferences;
+    }
+
+    @SuppressWarnings("unused")
+    protected Class<?> getServiceType(@NotNull final SettingsRule config) {
+        return getServiceType(config.serviceType);
+    }
+
+    protected Class<?> getServiceType(@NotNull final String className) {
+        final Class<?> type = classSet.computeIfAbsent(className, (k) -> {
+            final Class<?> found = findServiceType(k);
+            return found != null ? found : UNAVAILABLE;
+        });
+        return type != UNAVAILABLE ? type : null;
+    }
+
+    protected Class<?> findServiceType(@NotNull final String className) {
+        try {
+            Class<?> type = null;
+            if (classLoaderManager != null) {
+                type = classLoaderManager.getDynamicClassLoader().loadClass(className);
+            }
+            return type != null ? type : Class.forName(className);
+        } catch (ClassNotFoundException ignore) {
+            LOG.warn("Failed to load service type class '{}' ({})", className,
+                    classLoaderManager != null ? classLoaderManager.getDynamicClassLoader() : null);
+            return null;
+        }
     }
 }

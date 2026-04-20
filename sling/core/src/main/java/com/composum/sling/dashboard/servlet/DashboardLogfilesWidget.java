@@ -1,7 +1,8 @@
 package com.composum.sling.dashboard.servlet;
 
-import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardWidget;
+import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CONTEXT;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -38,8 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Pattern;
-
-import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CONTEXT;
 
 /**
  * a primitive logfile viewer servlet implementation to declare a Composum Dashborad Widget for logfiles
@@ -115,7 +114,7 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
         String[] sling_servlet_paths();
     }
 
-    public class LoggerSession implements Serializable {
+    public static class LoggerSession implements Serializable {
 
         private final String logfile;
         private final File file;
@@ -237,11 +236,6 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
     }
 
     @Override
-    public @NotNull String getLabel() {
-        return StringUtils.defaultString(label, getName());
-    }
-
-    @Override
     protected @NotNull String defaultResourceType() {
         return DEFAULT_RESOURCE_TYPE;
     }
@@ -276,10 +270,6 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
                 case OPTION_TILE:
                     htmlTile(request, response, writer);
                     return;
-                case OPTION_VIEW:
-                default:
-                    htmlView(request, response, session, writer);
-                    return;
                 case OPTION_TAIL:
                     if (session != null) {
                         response.setContentType("text/plain;charset=UTF-8");
@@ -294,6 +284,10 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
                     htmlView(request, response, session, writer);
                     htmlPageTail(resolver, writer);
                     return;
+                case OPTION_VIEW:
+                default:
+                    htmlView(request, response, session, writer);
+                    return;
             }
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
@@ -304,7 +298,7 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
     }
 
     protected void htmlTile(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
+                            @NotNull final SlingHttpServletResponse ignoredResponse,
                             @NotNull final PrintWriter writer)
             throws IOException {
         writer.append("<style>\n");
@@ -405,7 +399,7 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
     }
 
     protected void logfileView(@NotNull final SlingHttpServletRequest request,
-                               @NotNull final SlingHttpServletResponse response,
+                               @NotNull final SlingHttpServletResponse ignoredResponse,
                                @NotNull LoggerSession session, @NotNull final PrintWriter writer) {
         writer.append("<div class=\"dashboard-widget__logfile\"><textarea readonly=\"readonly\" data-tail=\"")
                 .append(getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_TAIL))
@@ -414,8 +408,8 @@ public class DashboardLogfilesWidget extends AbstractWidgetServlet implements Co
         writer.append("</textarea></div>\n");
     }
 
-    protected void htmlTail(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
+    protected void htmlTail(@NotNull final SlingHttpServletRequest ignoredRequest,
+                            @NotNull final SlingHttpServletResponse ignoredResponse,
                             @NotNull final LoggerSession session, @NotNull final PrintWriter writer) {
         session.dump(writer, false);
     }

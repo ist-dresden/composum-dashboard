@@ -42,6 +42,7 @@ public class DefaultTraceManager implements TraceManager {
         }
     }
 
+    @SuppressWarnings("unused")
     protected void unbindTraceService(@NotNull final TraceService service) {
         synchronized (traceServices) {
             traceServices.remove(service.getName());

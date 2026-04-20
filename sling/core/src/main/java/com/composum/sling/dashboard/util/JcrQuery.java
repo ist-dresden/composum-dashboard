@@ -151,10 +151,10 @@ public class JcrQuery {
             if (StringUtils.isNotBlank(term)) {
                 if (StringUtils.isNotBlank(operator)) {
                     if (operator.contains(">")) { // ensure that a possible '><' will be '<>'
-                        operator = operator.replaceAll(">", "") + ">";
+                        operator = operator.replace(">", "") + ">";
                     }
                     if (operator.contains("=")) { // ensure that a possible '=>' will be '>='
-                        operator = operator.replaceAll("=", "") + "=";
+                        operator = operator.replace("=", "") + "=";
                     }
                     query.append("[").append(property).append("]")
                             .append(operator).append("'").append(term).append("'");

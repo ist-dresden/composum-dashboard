@@ -1,10 +1,8 @@
 package com.composum.sling.dashboard.util;
 
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceResolverFactory;
-import org.apache.sling.api.resource.ResourceWrapper;
 import org.apache.sling.api.wrappers.SlingHttpServletRequestWrapper;
 import org.jetbrains.annotations.NotNull;
 import org.osgi.framework.BundleContext;
@@ -19,20 +17,7 @@ import java.util.Map;
  */
 public class DashboardRequest extends SlingHttpServletRequestWrapper implements AutoCloseable {
 
-    public class WrappedResource extends ResourceWrapper {
-
-        public WrappedResource(@NotNull Resource resource) {
-            super(resource);
-        }
-
-        @Override
-        public @NotNull ResourceResolver getResourceResolver() {
-            return serviceResolver;
-        }
-    }
-
     private ResourceResolver serviceResolver;
-    private Resource wrappedResource;
 
     private final Map<Class<?>, Object> services = new HashMap<>();
     private transient BundleContext bundleContext;
@@ -42,9 +27,7 @@ public class DashboardRequest extends SlingHttpServletRequestWrapper implements 
         wrappedRequest.getSession(true); // ensure that a session is initialized
         try {
             serviceResolver = getService(ResourceResolverFactory.class).getServiceResourceResolver(null);
-            wrappedResource = new WrappedResource(wrappedRequest.getResource());
-        } catch (Exception ex) {
-            wrappedResource = wrappedRequest.getResource();
+        } catch (Exception ignore) {
         }
     }
 

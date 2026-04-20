@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.util;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.lang3.StringUtils;
@@ -19,22 +20,20 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.Map;
 
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-
 public class Properties {
 
     // HTML (table)
 
     public static String toHtml(@NotNull final PrintWriter writer, @NotNull final Resource resource,
-                                @NotNull final String name, @Nullable final Object value,
-                                @NotNull final ResourceFilter filter, @NotNull final XSSAPI xssapi) {
+                                @Nullable final Object value, @NotNull final ResourceFilter filter,
+                                @NotNull final XSSAPI xssapi) {
         String type = "";
         if (value != null) {
             if (value instanceof Object[]) {
                 writer.append("<ul>");
                 for (Object val : (Object[]) value) {
                     writer.append("<li>");
-                    type = toHtml(writer, resource, name, val, filter, xssapi);
+                    type = toHtml(writer, resource, val, filter, xssapi);
                     writer.append("</li>");
                 }
                 writer.append("</ul>");
@@ -43,7 +42,7 @@ public class Properties {
                 writer.append("<ul>");
                 for (Object val : (Iterable<?>) value) {
                     writer.append("<li>");
-                    type = toHtml(writer, resource, name, val, filter, xssapi);
+                    type = toHtml(writer, resource, val, filter, xssapi);
                     writer.append("</li>");
                 }
                 writer.append("</ul>");

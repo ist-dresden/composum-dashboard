@@ -1,5 +1,16 @@
 package com.composum.sling.dashboard.service;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CREATED;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_LAST_MODIFIED;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIME_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIXIN_TYPES;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
+import static com.composum.sling.dashboard.DashboardConfig.patternList;
 import com.google.gson.stream.JsonWriter;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -49,18 +60,6 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CREATED;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_LAST_MODIFIED;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_MIME_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_MIXIN_TYPES;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
-import static com.composum.sling.dashboard.DashboardConfig.patternList;
 
 @Component
 @Designate(ocd = ResourceExtractConfig.class)
@@ -270,13 +269,13 @@ public class DashboardExtractService implements ResourceExtractService {
 
         protected final Pattern targetFilter;
         protected final boolean mapToTarget;
-        public final DashboardExtractSession session;
+        protected final DashboardExtractSession session;
         protected final JsonWriter jsonWriter;
         protected final Stack<String> openPath = new Stack<>();
 
         private final Set<String> entryResourceSet = new TreeSet<>();
 
-        public SourceJsonExtractor(@NotNull final ResourceExtractConfig config,
+        public SourceJsonExtractor(@NotNull final ResourceExtractConfig ignoredConfig,
                                    @Nullable final Pattern targetFilter,
                                    @Nullable final Boolean mapToTarget,
                                    @NotNull final ExtractSession session,
@@ -498,6 +497,7 @@ public class DashboardExtractService implements ResourceExtractService {
             return sourcePathSet;
         }
 
+        @SuppressWarnings("unused")
         public Set<String> getTargetPathSet() {
             return targetPathSet;
         }

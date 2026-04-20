@@ -187,7 +187,7 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
 
     protected void writeTab(@NotNull final PrintWriter writer, @NotNull final String linkCssClasses,
                             @NotNull String id, @NotNull String label, @NotNull String pattern) {
-        id = xssapi.encodeForHTMLAttr(id.replaceAll("[\\s]+", "").toLowerCase());
+        id = xssapi.encodeForHTMLAttr(id.replaceAll("\\s+", "").toLowerCase());
         label = xssapi.encodeForHTMLAttr(label);
         writer.append("<li class=\"nav-item favorite-group-").append(id)
                 .append("\"><a class=\"nav-link ").append(linkCssClasses)

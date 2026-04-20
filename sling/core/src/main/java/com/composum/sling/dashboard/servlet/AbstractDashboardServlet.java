@@ -1,5 +1,13 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_TITLE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
+import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
@@ -12,7 +20,6 @@ import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
-import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -38,15 +45,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_TITLE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
-import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
@@ -87,6 +85,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
      * @param contentGenerator the content generator implementation to use
      * @return 'true' if the content creation was successful
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     protected boolean createContent(@NotNull final SlingHttpServletRequest request,
                                     @NotNull final SlingHttpServletResponse response,
                                     @NotNull final DashboardManager dashboardManager,
@@ -178,14 +177,15 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return parameters.toString();
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected int getIntParameter(@NotNull final SlingHttpServletRequest request,
                                   @NotNull final String name, int defaultValue) {
         final String value = request.getParameter(name);
         if (StringUtils.isNotBlank(value))
             try {
                 return Integer.parseInt(value);
-            } catch (NumberFormatException ignore) {
-                LOG.trace("getIntParameter: value {} for {} {}", value, name, ignore.toString());
+            } catch (NumberFormatException ex) {
+                LOG.trace("getIntParameter: value {} for {} {}", value, name, ex.toString());
             }
         return defaultValue;
     }
@@ -258,6 +258,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected @Nullable String loadTemplate(@NotNull final String scriptResource,
                                             @NotNull final Map<String, Object> properties)
             throws IOException {
@@ -321,6 +322,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         }
     }
 
+    @SuppressWarnings("unused")
     public void loadPage(@NotNull final HttpServletResponse response, @NotNull final String template,
                          @NotNull final Map<String, Object> properties)
             throws IOException {

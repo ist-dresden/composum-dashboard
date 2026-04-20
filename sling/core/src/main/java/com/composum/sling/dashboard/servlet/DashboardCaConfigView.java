@@ -1,9 +1,10 @@
 package com.composum.sling.dashboard.servlet;
 
+import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardWidget;
-import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
@@ -27,8 +28,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.servlet.Servlet;
 import java.io.PrintWriter;
@@ -42,8 +41,6 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
-
 /**
  * a primitive viewer for the settings of a configured set of services
  */
@@ -55,8 +52,6 @@ import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWS
 )
 @Designate(ocd = DashboardCaConfigView.Config.class)
 public class DashboardCaConfigView extends AbstractSettingsWidget implements ContentGenerator {
-
-    private static final Logger LOG = LoggerFactory.getLogger(DashboardCaConfigView.class);
 
     public static final String DEFAULT_RESOURCE_TYPE = "composum/dashboard/sling/caconfig";
 
@@ -209,7 +204,7 @@ public class DashboardCaConfigView extends AbstractSettingsWidget implements Con
         return xssapi;
     }
 
-    protected class ConfigurationProvider extends SettingsProvider {
+    protected static class ConfigurationProvider extends SettingsProvider {
 
         @NotNull
         protected final ConfigurationRule config;

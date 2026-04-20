@@ -1,5 +1,8 @@
 package com.composum.sling.dashboard.service;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
+import static com.composum.sling.dashboard.DashboardConfig.patternList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -45,10 +48,6 @@ import java.util.TreeMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
-import static com.composum.sling.dashboard.DashboardConfig.patternList;
-
 
 @Component(
         service = {DashboardManager.class, ResourceFilter.class},
@@ -56,8 +55,6 @@ import static com.composum.sling.dashboard.DashboardConfig.patternList;
 )
 @Designate(ocd = SlingDashboardManager.Config.class)
 public class SlingDashboardManager implements DashboardManager, ResourceFilter {
-
-    public static final String JOB_TOPIC = "com/composum/dashboard/content/create";
 
     @ObjectClassDefinition(name = "Composum Dashboard Manager")
     public @interface Config {
@@ -109,8 +106,6 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         String loginUri() default "/system/sling/form/login.html";
     }
 
-    protected static final String SA_WIDGETS = SlingDashboardManager.class.getName() + "#";
-
     protected static final Pattern CONTENT_TYPE = Pattern.compile("^(?<name>[^\\[]+)?\\[(?<type>.+)]$");
 
     public static final String[] DATE_FORMATS = new String[]{
@@ -150,6 +145,7 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         }
     }
 
+    @SuppressWarnings("unused")
     protected void unbindDashboardPlugin(@NotNull final DashboardPlugin plugin) {
         synchronized (dashboardPlugins) {
             dashboardPlugins.remove(plugin);
@@ -323,6 +319,7 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         return resource;
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected void loadJsonContent(@NotNull final Resource resource, @Nullable String name, @NotNull final String jsonContent)
             throws IOException {
         JsonElement element = new JsonParser().parse(jsonContent);

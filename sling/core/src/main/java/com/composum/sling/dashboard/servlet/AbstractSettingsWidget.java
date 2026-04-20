@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JSON_DATE_FORMAT;
 import com.composum.sling.dashboard.service.ResourceFilter;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.Properties;
@@ -9,6 +10,7 @@ import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.xss.XSSAPI;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -23,14 +25,12 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
-import static com.composum.sling.dashboard.DashboardConfig.JSON_DATE_FORMAT;
-
 /**
  * a primitive viewer for the settings of a configured set of services
  */
 public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
 
-    protected abstract class SettingsProvider {
+    protected abstract static class SettingsProvider {
 
         protected Map<String, Object> properties;
 
@@ -118,9 +118,10 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
                         break;
                     case OPTION_PAGE:
                     default:
-                        htmlPageHead(writer);
+                        final ResourceResolver resolver = slingRequest.getResourceResolver();
+                        htmlPageHead(resolver, writer);
                         htmlView(request, response, writer, resource);
-                        htmlPageTail(writer);
+                        htmlPageTail(resolver, writer);
                         break;
                 }
             } else {
@@ -132,7 +133,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
     }
 
     protected void htmlTile(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
+                            @NotNull final SlingHttpServletResponse ignoredResponse,
                             @NotNull final PrintWriter writer)
             throws IOException {
         writer.append("<style>\n");
@@ -157,7 +158,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
     }
 
     protected void htmlView(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
+                            @NotNull final SlingHttpServletResponse ignoredResponse,
                             @NotNull final PrintWriter writer, @NotNull final Resource context)
             throws IOException {
         writer.append("<style>\n");
@@ -183,7 +184,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
             for (final Map.Entry<String, Object> entry : provider.getProperties().entrySet()) {
                 writer.append("<tr><td class=\"name\">").append(xssApi().encodeForHTML(entry.getKey()))
                         .append("</td><td class=\"value\">");
-                String type = Properties.toHtml(writer, context, name, entry.getValue(), resourceFilter(), xssApi());
+                String type = Properties.toHtml(writer, context, entry.getValue(), resourceFilter(), xssApi());
                 writer.append("</td><td class=\"type\">").append(xssApi().encodeForHTML(type)).append("</td></tr>\n");
             }
             writer.append("</tbody></table></div>\n");
@@ -198,7 +199,7 @@ public abstract class AbstractSettingsWidget extends AbstractWidgetServlet {
     }
 
     protected void dumpJson(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
+                            @NotNull final SlingHttpServletResponse ignoredResponse,
                             @NotNull final JsonWriter writer)
             throws IOException {
         writer.beginArray();

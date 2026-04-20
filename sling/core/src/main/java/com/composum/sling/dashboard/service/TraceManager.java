@@ -5,6 +5,7 @@ import com.composum.sling.dashboard.service.TraceService.TraceEntry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+@SuppressWarnings("unused")
 public interface TraceManager {
 
     /**

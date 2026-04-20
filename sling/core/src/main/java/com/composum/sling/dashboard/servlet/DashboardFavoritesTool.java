@@ -5,6 +5,7 @@ import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
@@ -133,7 +134,8 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode)
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode)
             throws IOException {
         if (OPTION_PAGE.equals(mode) || OPTION_VIEW.equals(mode)) {
             writer.append("<script>\n");
@@ -185,7 +187,7 @@ public class DashboardFavoritesTool extends AbstractWidgetServlet implements Con
 
     protected void writeTab(@NotNull final PrintWriter writer, @NotNull final String linkCssClasses,
                             @NotNull String id, @NotNull String label, @NotNull String pattern) {
-        id = xssapi.encodeForHTMLAttr(id.replaceAll("[\\s]+", "").toLowerCase());
+        id = xssapi.encodeForHTMLAttr(id.replaceAll("\\s+", "").toLowerCase());
         label = xssapi.encodeForHTMLAttr(label);
         writer.append("<li class=\"nav-item favorite-group-").append(id)
                 .append("\"><a class=\"nav-link ").append(linkCssClasses)

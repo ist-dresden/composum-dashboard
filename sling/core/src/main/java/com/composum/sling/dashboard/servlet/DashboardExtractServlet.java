@@ -25,8 +25,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.servlet.Servlet;
 import javax.servlet.http.HttpServletResponse;
@@ -47,7 +45,7 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
     @ObjectClassDefinition(
             name = "Composum Dashboard Extract Servlet configuration"
     )
-    @interface Config {
+    protected @interface Config {
 
         @AttributeDefinition(
                 name = "Predefined Paths",
@@ -117,8 +115,6 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                 description = ConfigurationConstants.CFG_SERVLET_PATHS_DESCRIPTION)
         String[] sling_servlet_paths();
     }
-
-    private static final Logger LOG = LoggerFactory.getLogger(DashboardExtractServlet.class);
 
     @Reference
     private ResourceExtractService extractService;
@@ -253,7 +249,7 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                 response.setStatus(HttpServletResponse.SC_GONE);
                 response.setContentType("text/plain;charset=UTF-8");
                 PrintWriter writer = response.getWriter();
-                writer.println(ex.toString());
+                writer.println(ex);
                 ex.printStackTrace(writer);
             }
             return;
@@ -265,13 +261,6 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                                  @NotNull final ExtractSession session, final String... key) throws IOException {
         final PrintWriter writer = response.getWriter();
         switch (ext) {
-            default:
-            case "txt":
-                prepareTextResponse(response, "text/plain");
-                for (String name : key != null && key.length > 0 ? key : session.getPathSets().keySet().toArray(new String[0])) {
-                    writePlainText(writer, name, session.getPathSets().get(name));
-                }
-                break;
             case "json":
                 prepareTextResponse(response, "application/json");
                 final JsonWriter jsonWriter = new JsonWriter(writer);
@@ -281,6 +270,13 @@ public class DashboardExtractServlet extends SlingAllMethodsServlet {
                     writeJson(jsonWriter, name, session.getPathSets().get(name));
                 }
                 jsonWriter.endObject();
+                break;
+            case "txt":
+            default:
+                prepareTextResponse(response, "text/plain");
+                for (String name : key != null && key.length > 0 ? key : session.getPathSets().keySet().toArray(new String[0])) {
+                    writePlainText(writer, name, session.getPathSets().get(name));
+                }
                 break;
         }
     }

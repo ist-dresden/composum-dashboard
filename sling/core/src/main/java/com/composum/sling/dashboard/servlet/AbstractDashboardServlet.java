@@ -1,5 +1,13 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_TITLE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_FILE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
+import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
@@ -37,11 +45,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_TITLE;
-import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
@@ -82,6 +85,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
      * @param contentGenerator the content generator implementation to use
      * @return 'true' if the content creation was successful
      */
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
     protected boolean createContent(@NotNull final SlingHttpServletRequest request,
                                     @NotNull final SlingHttpServletResponse response,
                                     @NotNull final DashboardManager dashboardManager,
@@ -173,14 +177,15 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return parameters.toString();
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected int getIntParameter(@NotNull final SlingHttpServletRequest request,
                                   @NotNull final String name, int defaultValue) {
         final String value = request.getParameter(name);
         if (StringUtils.isNotBlank(value))
             try {
                 return Integer.parseInt(value);
-            } catch (NumberFormatException ignore) {
-                LOG.trace("getIntParameter: value {} for {} {}", value, name, ignore.toString());
+            } catch (NumberFormatException ex) {
+                LOG.trace("getIntParameter: value {} for {} {}", value, name, ex.toString());
             }
         return defaultValue;
     }
@@ -253,6 +258,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         }
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected @Nullable String loadTemplate(@NotNull final String scriptResource,
                                             @NotNull final Map<String, Object> properties)
             throws IOException {
@@ -316,6 +322,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         }
     }
 
+    @SuppressWarnings("unused")
     public void loadPage(@NotNull final HttpServletResponse response, @NotNull final String template,
                          @NotNull final Map<String, Object> properties)
             throws IOException {
@@ -333,5 +340,27 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         if (!response.isCommitted()) {
             response.sendError(HttpServletResponse.SC_NOT_FOUND);
         }
+    }
+
+    protected boolean embedScript(@NotNull final ResourceResolver resolver,
+                                  @NotNull final String resourcePath, @NotNull final Writer writer) {
+        final Resource content = Optional.ofNullable(resolver.getResource(resourcePath))
+                .map(r -> NT_FILE.equals(r.getValueMap().get(JCR_PRIMARY_TYPE, ""))
+                        ? r.getChild(JCR_CONTENT) : r)
+                .filter(c -> NT_RESOURCE.equals(c.getValueMap().get(JCR_PRIMARY_TYPE, "")))
+                .orElse(null);
+        if (content != null) {
+            try (final InputStream input = content.getValueMap().get(JCR_DATA, InputStream.class);
+                 final Reader reader = Optional.ofNullable(input).map(InputStreamReader::new).orElse(null)) {
+                if (reader != null) {
+                    writer.append("<script>");
+                    IOUtils.copy(reader, writer);
+                    writer.append("</script>");
+                    return true;
+                }
+            } catch (IOException ignore) {
+            }
+        }
+        return false;
     }
 }

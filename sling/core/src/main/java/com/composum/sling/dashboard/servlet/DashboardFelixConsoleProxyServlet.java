@@ -1,14 +1,13 @@
 package com.composum.sling.dashboard.servlet;
 
 import com.composum.sling.dashboard.service.ContentGenerator;
-import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.jetbrains.annotations.NotNull;
@@ -21,7 +20,6 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
-import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
@@ -63,9 +61,6 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     protected boolean allowPOST;
     protected List<String> additionalScripts;
 
-    @Reference
-    protected transient DashboardManager dashboardManager;
-
     /**
      * Reference for {@link #consoleServlet}.
      */
@@ -84,7 +79,7 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
 
     @Activate
     @Modified
-    protected void activate(final BundleContext bundleContext, final Config config) throws InvalidSyntaxException {
+    protected void activate(final BundleContext bundleContext, final Config config) {
         super.activate(bundleContext,
                 config.name(), new String[0], new String[0], config.rank(), config.label(),
                 config.navTitle(), config.sling_servlet_resourceTypes(), config.sling_servlet_paths());
@@ -95,27 +90,9 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         }
         this.allowPOST = config.proxied_webconsole_POST();
         this.additionalScripts = Arrays.asList(config.proxied_webconsole_scripts());
-        Collection<ServiceReference<Servlet>> candidates = bundleContext.getServiceReferences(Servlet.class,
-                "(felix.webconsole.label=" + webConsoleLabel + ")");
-        if (candidates.size() >= 1) {
-            this.consoleServletRef = candidates.iterator().next();
-            this.consoleServlet = bundleContext.getService(consoleServletRef);
-            if (candidates.size() > 1) { // very strange but seems to happen, so we try the first one.
-                LOG.trace("Found {} candidates for Felix Console servlet with label '{}', expecting exactly one", candidates.size(), webConsoleLabel);
-                // log the candidate properties
-                for (ServiceReference<Servlet> serviceReference : candidates) {
-                    StringBuilder buf = new StringBuilder();
-                    for (String key : serviceReference.getPropertyKeys()) {
-                        buf.append(key).append("=").append(serviceReference.getProperty(key)).append(", ");
-                    }
-                    LOG.error("Candidate for {}: {}", this.webConsoleLabel, buf);
-                }
-            }
-        } else {
-            LOG.trace("Found {} candidates for Felix Console servlet with label '{}', expecting exactly one", candidates.size(), webConsoleLabel);
-        }
     }
 
+    @SuppressWarnings("unused")
     @Deactivate
     protected void deactivate() {
         this.consoleServlet = null;
@@ -126,16 +103,52 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         }
     }
 
+    protected void initConsoleServlet() {
+        try {
+            Collection<ServiceReference<Servlet>> candidates = bundleContext.getServiceReferences(Servlet.class,
+                    "(felix.webconsole.label=" + webConsoleLabel + ")");
+            if (!candidates.isEmpty()) {
+                this.consoleServletRef = candidates.iterator().next();
+                this.consoleServlet = bundleContext.getService(consoleServletRef);
+                if (candidates.size() > 1) { // very strange but seems to happen, so we try the first one.
+                    LOG.trace("Found {} candidates for Felix Console servlet with label '{}'.", candidates.size(), webConsoleLabel);
+                    // log the candidate properties
+                    for (ServiceReference<Servlet> serviceReference : candidates) {
+                        StringBuilder buf = new StringBuilder();
+                        for (String key : serviceReference.getPropertyKeys()) {
+                            buf.append(key).append("=").append(serviceReference.getProperty(key)).append(", ");
+                        }
+                        LOG.error("Candidate for {}: {}", this.webConsoleLabel, buf);
+                    }
+                }
+            } else {
+                LOG.trace("No candidates found for Felix Console servlet with label '{}'.", webConsoleLabel);
+            }
+        } catch (InvalidSyntaxException ex) {
+            LOG.error("Error getting Felix Console servlet with label '{}': {}", webConsoleLabel, ex.toString());
+        }
+    }
+
+    protected Servlet getConsoleServlet() {
+        if (consoleServlet == null) {
+            initConsoleServlet();
+        }
+        return consoleServlet;
+    }
+
     @Override
     protected @NotNull String defaultResourceType() {
         return DEFAULT_RESOURCE_TYPE; // doesn't make any sense, but is required
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
         // embedded in htmlPageTail
-        for (String script : additionalScripts) {
-            writer.append("<script src=\"").append(script).append("\"></script>\n");
+        for (final String script : additionalScripts) {
+            if (!script.startsWith("/") || !embedScript(resolver, script, writer)) {
+                writer.append("<script src=\"").append(script).append("\"></script>\n");
+            }
         }
     }
 
@@ -179,7 +192,8 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
     protected void doIt(@NotNull final SlingHttpServletRequest slingRequest,
                         @NotNull final SlingHttpServletResponse response)
             throws ServletException, IOException {
-        if (consoleServlet == null) {
+        final ResourceResolver resolver = slingRequest.getResourceResolver();
+        if (getConsoleServlet() == null) {
             response.setStatus(SlingHttpServletResponse.SC_NOT_FOUND);
             response.getWriter().println("No unique Felix Console servlet with label '" + webConsoleLabel + "' found");
             return;
@@ -194,13 +208,13 @@ public class DashboardFelixConsoleProxyServlet extends AbstractWidgetServlet imp
         }
         prepareTextResponse(response, null);
         PrintWriter writer = response.getWriter();
-        htmlPageHead(writer,
+        htmlPageHead(resolver, writer,
                 JQUERY_UI_SNIPPET,
                 TEMPLATE_BASE + "felixconsole/felixconsole.css",
                 TEMPLATE_BASE + "felixconsole/webconsole.css",
                 TEMPLATE_BASE + "felixconsole/admin_compat.css");
-        consoleServlet.service(slingRequest, response);
-        htmlPageTail(writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
+        getConsoleServlet().service(slingRequest, response);
+        htmlPageTail(resolver, writer, TEMPLATE_BASE + "felixconsole/felixconsole.js");
     }
 
     @ObjectClassDefinition(name = "Composum Dashboard Felix Console Proxy",

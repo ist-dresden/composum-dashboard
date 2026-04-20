@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.util;
 
+import static com.composum.sling.dashboard.util.ValueEmbeddingReader.TYPE_RESOURCE;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.resource.ValueMap;
@@ -21,14 +22,12 @@ import java.util.MissingResourceException;
 import java.util.ResourceBundle;
 import java.util.Stack;
 
-import static com.composum.sling.dashboard.util.ValueEmbeddingReader.TYPE_RESOURCE;
-
 /**
  * a filter writer implementation to embed values from a value map for written placeholders
  */
 public class ValueEmbeddingWriter extends FilterWriter {
 
-    interface TokenWriter {
+    protected interface TokenWriter {
 
         boolean write(char token) throws IOException;
 
@@ -219,10 +218,6 @@ public class ValueEmbeddingWriter extends FilterWriter {
         writerStack.push(new TextWriter());
     }
 
-    public boolean isKeepUnresolvable(final boolean... decision) {
-        return decision.length > 0 ? (keepUnresolvable = decision[0]) : keepUnresolvable;
-    }
-
     //
     // Writer...
     //
@@ -264,14 +259,6 @@ public class ValueEmbeddingWriter extends FilterWriter {
 
     public void pass(String str) throws IOException {
         wrappedWriter.write(str);
-    }
-
-    public void pass(String str, int off, int len) throws IOException {
-        wrappedWriter.write(str, off, len);
-    }
-
-    public void pass(char[] cbuf, int off, int len) throws IOException {
-        wrappedWriter.write(cbuf, off, len);
     }
 
     public void pass(int chr) throws IOException {

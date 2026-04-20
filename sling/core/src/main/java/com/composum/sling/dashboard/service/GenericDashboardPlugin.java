@@ -1,5 +1,6 @@
 package com.composum.sling.dashboard.service;
 
+import com.composum.sling.dashboard.servlet.ConfigurationConstants;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
@@ -35,8 +36,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import com.composum.sling.dashboard.servlet.ConfigurationConstants;
 
 @Component(service = DashboardPlugin.class)
 @Designate(ocd = GenericDashboardPlugin.Config.class, factory = true)
@@ -144,11 +143,12 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
 
         @Override
-        public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode)
+        public void embedScripts(@NotNull final ResourceResolver resolver,
+                                 @NotNull final PrintWriter writer, @NotNull final String mode)
                 throws IOException {
             DashboardWidget widget = getServlet();
             if (widget != null) {
-                widget.embedScript(writer, mode);
+                widget.embedScripts(resolver, writer, mode);
             }
         }
 
@@ -164,8 +164,6 @@ public class GenericDashboardPlugin implements DashboardPlugin {
             return null;
         }
     }
-
-    protected static final String SA_WIDGETS = GenericDashboardPlugin.class.getName() + "#";
 
     public static final String WIDGET_QUERY_FMT = "/jcr:root%s//*[@sling:resourceType='%s']";
 
@@ -190,6 +188,7 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         }
     }
 
+    @SuppressWarnings("unused")
     protected void removeDashboardWidget(@NotNull final DashboardWidget widget) {
         if (isMatchingWidget(widget)) {
             synchronized (widgetServices) {
@@ -224,7 +223,7 @@ public class GenericDashboardPlugin implements DashboardPlugin {
         return rank;
     }
 
-    @SuppressWarnings("deprecated")
+    @SuppressWarnings("deprecation")
     @Override
     public void provideWidgets(@NotNull final SlingHttpServletRequest request, @Nullable final String context,
                                @NotNull final Map<String, DashboardWidget> widgetSet) {

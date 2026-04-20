@@ -3,11 +3,13 @@ package com.composum.sling.dashboard.servlet;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.Properties;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -29,8 +31,6 @@ import java.io.PrintWriter;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-
-import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
@@ -106,7 +106,8 @@ public class DashboardPropertiesView extends AbstractWidgetServlet implements Co
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     @Override
@@ -130,7 +131,7 @@ public class DashboardPropertiesView extends AbstractWidgetServlet implements Co
                     if (resourceFilter.isAllowedProperty(name)) {
                         final Object value = entry.getValue();
                         writer.append("<tr><td>").append(xssapi.encodeForHTML(name)).append("</td><td>");
-                        final String type = Properties.toHtml(writer, resource, name, value, resourceFilter, xssapi);
+                        final String type = Properties.toHtml(writer, resource, value, resourceFilter, xssapi);
                         writer.append("</td>").append("<td>").append(type).append("</td></tr>\n");
                     }
                 }

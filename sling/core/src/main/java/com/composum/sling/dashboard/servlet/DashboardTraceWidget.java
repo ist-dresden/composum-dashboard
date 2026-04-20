@@ -1,15 +1,17 @@
 package com.composum.sling.dashboard.servlet;
 
-import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.TraceManager;
 import com.composum.sling.dashboard.service.TraceService;
 import com.composum.sling.dashboard.service.TraceService.Level;
+import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CONTEXT;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import com.google.gson.stream.JsonWriter;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.request.RequestPathInfo;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -31,8 +33,6 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.HashMap;
 import java.util.Map;
-
-import static com.composum.sling.dashboard.servlet.DashboardServlet.DASHBOARD_CONTEXT;
 
 /**
  * a primitive logfile viewer servlet implementation to declare a Composum Dashborad Widget for logfiles
@@ -122,35 +122,19 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
-
-    /*
-    protected static int counter = 0;
-
-    protected void simulateTrace() {
-        Level level = new Level[]{Level.ERROR, Level.WARNING, Level.SUCCESS, Level.INFO, Level.DEBUG}
-                [(int) Math.round(Math.random() * 4)];
-        traceManager.trace(null, level, null, "simulated trace of level '%s'", level,
-                new HashMap<>() {{
-                    put("levelHint", "# " + (++counter));
-                    put("list", new String[]{"item 0", "item 1"});
-                }});
-    }
-    */
 
     @Override
     public void doGet(@NotNull final SlingHttpServletRequest slingRequest,
                       @NotNull final SlingHttpServletResponse response)
             throws IOException {
         try (DashboardRequest request = new DashboardRequest(slingRequest)) {
-            //simulateTrace();
             final PrintWriter writer = response.getWriter();
             final String mode = getHtmlMode(request, HTML_MODES);
             final RequestPathInfo pathInfo = request.getRequestPathInfo();
-            if ("json".equals(pathInfo.getExtension())) {
-
-            } else {
+            if (!"json".equals(pathInfo.getExtension())) {
                 switch (mode) {
                     case OPTION_TILE:
                         htmlTile(request, response, writer);
@@ -160,10 +144,11 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
                         return;
                     case OPTION_PAGE:
                     default:
+                        final ResourceResolver resolver = slingRequest.getResourceResolver();
                         prepareTextResponse(response, null);
-                        htmlPageHead(writer);
+                        htmlPageHead(resolver, writer);
                         htmlView(request, response, writer);
-                        htmlPageTail(writer, "/com/composum/sling/dashboard/commons/script.js");
+                        htmlPageTail(resolver, writer, "/com/composum/sling/dashboard/commons/script.js");
                         return;
                 }
             }
@@ -171,8 +156,8 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
         }
     }
 
-    protected void htmlTile(@NotNull final SlingHttpServletRequest request,
-                            @NotNull final SlingHttpServletResponse response,
+    protected void htmlTile(@NotNull final SlingHttpServletRequest ignoredRequest,
+                            @NotNull final SlingHttpServletResponse ignoredResponse,
                             @NotNull final PrintWriter writer)
             throws IOException {
         writer.append("<style>\n");
@@ -225,7 +210,7 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
                         .append(index == 0 ? " active" : "").append("\" id=\"tab-").append(tabId)
                         .append("\" data-toggle=\"tab\" href=\"#panel-").append(tabId)
                         .append("\" role=\"tab\" aria-controls=\"panel-").append(tabId)
-                        .append("\" aria-selected=\"").append(index == 0 ? "true" : "false").append("\">")
+                        .append("\" aria-selected=\"").append(Boolean.toString(index == 0)).append("\">")
                         .append(xssapi.encodeForHTML(trace.getLabel()));
                 htmlBadges(writer, trace);
                 writer.append("</a></li>\n");
@@ -260,8 +245,8 @@ public class DashboardTraceWidget extends AbstractWidgetServlet implements Conte
         writer.append("</script>\n");
     }
 
-    protected void traceView(@NotNull final SlingHttpServletRequest request,
-                             @NotNull final SlingHttpServletResponse response,
+    protected void traceView(@NotNull final SlingHttpServletRequest ignoredRequest,
+                             @NotNull final SlingHttpServletResponse ignoredResponse,
                              @NotNull final TraceService trace, @NotNull final PrintWriter writer)
             throws IOException {
         writer.append("<div class=\"dashboard-widget__trace\">");

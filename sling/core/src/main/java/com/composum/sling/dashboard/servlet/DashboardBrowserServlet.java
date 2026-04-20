@@ -1,5 +1,8 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
@@ -15,7 +18,6 @@ import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ResourceUtil;
-import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
 import org.apache.sling.xss.XSSAPI;
@@ -53,10 +55,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 
 /**
  * a primitive repository browser for a simple repository content visualization
@@ -172,6 +170,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         }
     }
 
+    @SuppressWarnings("unused")
     protected void removeDashboardWidget(@NotNull final DashboardWidget widget) {
         synchronized (viewWidgets) {
             viewWidgets.remove(widget.getName());
@@ -188,7 +187,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         provideWidgets(request, context, widgetSet, toolWidgets.values());
     }
 
-    protected void provideWidgets(@NotNull SlingHttpServletRequest request, @Nullable final String context,
+    protected void provideWidgets(@NotNull SlingHttpServletRequest ignoredRequest, @Nullable final String context,
                                   @NotNull final Map<String, DashboardWidget> widgetSet,
                                   @NotNull Collection<DashboardWidget> browserSet) {
         for (DashboardWidget widget : browserSet) {
@@ -247,7 +246,8 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     @Override
@@ -306,7 +306,6 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         final Resource browser = getWidgetResource(request, resourceType, Collections.emptyList());
         if (browser != null) {
             final String targetPath = Optional.ofNullable(request.getRequestPathInfo().getSuffix()).orElse("");
-            final ValueMap values = browser.getValueMap();
             final Map<String, Object> properties = new HashMap<>();
             properties.put("html-css-classes", getHtmlCssClasses("dashboard-browser__page"));
             properties.put("home-url", xssapi.encodeForHTMLAttr(homeUrl));
@@ -327,10 +326,10 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
             PrintWriter writer = response.getWriter();
             copyResource(getClass(), PAGE_TEMPLATE, writer, properties);
             for (DashboardWidget widget : viewWidgets.values()) {
-                widget.embedScript(writer, OPTION_VIEW);
+                widget.embedScripts(resolver, writer, OPTION_VIEW);
             }
             for (DashboardWidget widget : toolWidgets.values()) {
-                widget.embedScript(writer, OPTION_VIEW);
+                widget.embedScripts(resolver, writer, OPTION_VIEW);
             }
             copyResource(getClass(), PAGE_TAIL, writer, properties);
         }
@@ -528,7 +527,6 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
 
     public void writeNodeIdentifiers(@NotNull final JsonWriter writer, @NotNull final Resource resource)
             throws IOException {
-        final ValueMap values = resource.getValueMap();
         final String path = resource.getPath();
         String name = resource.getName();
         if (StringUtils.isBlank(name) && "/".equals(path)) {

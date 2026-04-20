@@ -1,9 +1,12 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.service.DashboardPlugin;
 import com.composum.sling.dashboard.service.DashboardWidget;
+import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_TILE;
+import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_VIEW;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -40,7 +43,6 @@ import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,10 +51,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
-import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_TILE;
-import static com.composum.sling.dashboard.servlet.AbstractWidgetServlet.OPTION_VIEW;
 
 /**
  * a primitive repository browser for a simple repository content visualization
@@ -134,6 +132,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
             cardinality = ReferenceCardinality.MULTIPLE,
             policyOption = ReferencePolicyOption.GREEDY
     )
+
     protected void addDashboardWidget(@NotNull final DashboardWidget widget) {
         if (widget.getContext().contains(DASHBOARD_CONTEXT)) {
             synchronized (dashboardWidgets) {
@@ -142,6 +141,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         }
     }
 
+    @SuppressWarnings("unused")
     protected void removeDashboardWidget(@NotNull final DashboardWidget widget) {
         synchronized (dashboardWidgets) {
             dashboardWidgets.remove(widget.getName());
@@ -188,7 +188,6 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
     }
 
     public @NotNull String getTitle(@NotNull final SlingHttpServletRequest request) {
-        final Resource resource = request.getResource();
         final DashboardWidget currentWidget = getCurrentWidget(request);
         return currentWidget != null ? currentWidget.getLabel() : title;
     }
@@ -217,10 +216,10 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
                 htmlDashboard(request, response, writer);
                 copyResource(getClass(), PAGE_TEMPLATES + "script.html", writer, properties);
                 if (currentWidget != null) {
-                    currentWidget.embedScript(writer, OPTION_VIEW);
+                    currentWidget.embedScripts(resolver, writer, OPTION_VIEW);
                 } else {
                     for (final DashboardWidget widget : getWidgets(request)) {
-                        widget.embedScript(writer, OPTION_TILE);
+                        widget.embedScripts(resolver, writer, OPTION_TILE);
                     }
                 }
                 copyResource(getClass(), PAGE_TEMPLATES + "tail.html", writer, properties);
@@ -268,11 +267,10 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
     }
 
     protected void htmlNavigation(@NotNull final SlingHttpServletRequest request,
-                                  @NotNull final SlingHttpServletResponse response,
+                                  @NotNull final SlingHttpServletResponse ignoredResponse,
                                   @NotNull final PrintWriter writer) {
         writer.append("<ul class=\"navbar-nav mr-auto\">");
         final Resource dashboard = request.getResource();
-        final ResourceResolver resolver = dashboard.getResourceResolver();
         final Resource navigation = Optional.ofNullable(dashboard.getChild("navigation"))
                 .orElse(dashboard.getChild("jcr:content/navigation"));
         if (navigation != null) {
@@ -302,6 +300,7 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
         writer.append("</ul>");
     }
 
+    @SuppressWarnings("SameParameterValue")
     protected void htmlNavigationTree(@NotNull final PrintWriter writer,
                                       @NotNull final Resource navigation, @NotNull final String itemClass) {
         final ResourceResolver resolver = navigation.getResourceResolver();

@@ -1,5 +1,7 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
@@ -29,9 +31,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-import static com.composum.sling.dashboard.DashboardConfig.NT_UNSTRUCTURED;
 
 public abstract class AbstractWidgetServlet extends AbstractDashboardServlet implements DashboardWidget {
 
@@ -67,9 +66,9 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     @Deprecated(since = "1.1.2 - use activation with bundle context")
-    protected void activate(@NotNull final String name, @NotNull final String[] context,
+    protected void activate(@NotNull final String name, @NotNull final String[] ignoredContext,
                             @NotNull final String[] category, int rank,
-                            @NotNull final String label, @Nullable final String navTitle,
+                            @NotNull final String label, @Nullable final String ignoredNavTitle,
                             @Nullable String[] resourceTypes, @Nullable String[] servletPaths) {
         activate(null, name, category, category, rank, label, name, resourceTypes, servletPaths);
     }
@@ -152,6 +151,31 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         return resource;
     }
 
+    // for backwards source code compatibility
+
+    @SuppressWarnings({"RedundantThrows", "unused"})
+    protected void embedScript(@NotNull PrintWriter writer, @NotNull String mode)
+            throws IOException {
+    }
+
+    @Override
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode)
+            throws IOException {
+    }
+
+    @SuppressWarnings("unused")
+    protected void htmlPageHead(@NotNull final PrintWriter writer, String... styles)
+            throws IOException {
+        htmlPageHead(null, writer, styles);
+    }
+
+    @SuppressWarnings("unused")
+    protected void htmlPageTail(@NotNull final PrintWriter writer, String... scripts)
+            throws IOException {
+        htmlPageTail(null, writer, scripts);
+    }
+
     // Helpers
 
     protected @NotNull String getHtmlMode(@NotNull final SlingHttpServletRequest request,
@@ -170,19 +194,19 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
             }
         }
         final List<String> suffixMode = getSuffixMode(request, options);
-        return suffixMode.size() > 0 ? suffixMode.get(0) : options.get(0);
+        return !suffixMode.isEmpty() ? suffixMode.get(0) : options.get(0);
     }
 
     protected @Nullable String getHtmlSubmode(@NotNull final SlingHttpServletRequest request,
                                               @NotNull final Collection<String> options) {
         final List<String> selectorMode = getSelectorMode(request, options);
-        if (options.size() == 0 && selectorMode.size() > 0) {
+        if (options.isEmpty() && !selectorMode.isEmpty()) {
             return selectorMode.get(0);
         } else if (selectorMode.size() > 1) {
             return selectorMode.get(1);
         }
         final List<String> suffixMode = getSuffixMode(request, options);
-        return options.size() == 0 && selectorMode.size() > 0 ? suffixMode.get(0)
+        return options.isEmpty() && !selectorMode.isEmpty() ? suffixMode.get(0)
                 : (suffixMode.size() > 1 ? suffixMode.get(1) : null);
     }
 
@@ -248,7 +272,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
             }
             if (widget != null) {
                 Resource child;
-                while (selectors.size() > 0 && (child = widget.getChild(selectors.get(0))) != null) {
+                while (!selectors.isEmpty() && (child = widget.getChild(selectors.get(0))) != null) {
                     widget = child;
                     selectors.remove(0);
                 }
@@ -265,7 +289,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
     }
 
     protected @NotNull String getWidgetUri(@NotNull final SlingHttpServletRequest request,
-                                           @NotNull final String resourceType, @NotNull final List<String> options,
+                                           @NotNull final String resourceType, @NotNull final List<String> ignoredOptions,
                                            @NotNull final List<String> selectors) {
         final int selectorsCount = selectors.size();
         final Resource widget = getWidgetResource(request, resourceType, selectors);
@@ -277,12 +301,12 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                                            @NotNull final List<String> selectors, char selectorSeparator) {
         String path = "";
         if (widget != null) {
-            path = widget.getPath() + (selectors.size() > 0
+            path = widget.getPath() + (!selectors.isEmpty()
                     ? selectorSeparator + StringUtils.join(selectors, selectorSeparator) : "");
             if (path.endsWith("/" + JCR_CONTENT)) {
                 path = StringUtils.substringBeforeLast(path, "/" + JCR_CONTENT);
             }
-            path = path.replaceAll("/jcr:", "/_jcr_") + ".html";
+            path = path.replace("/jcr:", "/_jcr_") + ".html";
         }
         return path;
     }
@@ -293,7 +317,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         final RequestPathInfo pathInfo = request.getRequestPathInfo();
         final String[] selectors = pathInfo.getSelectors();
         for (int i = 0; i < selectors.length; i++) {
-            if (options.size() == 0 || options.contains(selectors[i])) {
+            if (options.isEmpty() || options.contains(selectors[i])) {
                 for (; i < selectors.length; i++) {
                     result.add(selectors[i]);
                 }
@@ -310,7 +334,7 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
                 .orElse("");
         if (StringUtils.isNotBlank(suffix)) {
             List<String> keys = Arrays.asList(StringUtils.split(suffix, "/"));
-            if (options.size() == 0 || options.contains(keys.get(0))) {
+            if (options.isEmpty() || options.contains(keys.get(0))) {
                 return keys;
             }
         }
@@ -342,7 +366,8 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         return result;
     }
 
-    protected void htmlPageHead(@NotNull final PrintWriter writer, String... styles)
+    protected void htmlPageHead(@Nullable final ResourceResolver ignoredResolver,
+                                @NotNull final PrintWriter writer, String... styles)
             throws IOException {
         final Set<String> styleSet = new LinkedHashSet<>();
         styleSet.add(TEMPLATE_BASE + "commons/style.css");
@@ -357,7 +382,8 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         writer.append("</nav><div class=\"composum-dashboard__widget-view\">\n");
     }
 
-    protected void htmlPageTail(@NotNull final PrintWriter writer, String... scripts)
+    protected void htmlPageTail(@Nullable final ResourceResolver resolver,
+                                @NotNull final PrintWriter writer, String... scripts)
             throws IOException {
         final Set<String> scriptSet = new LinkedHashSet<>();
         scriptSet.add(TEMPLATE_BASE + "commons/script.js");
@@ -365,7 +391,9 @@ public abstract class AbstractWidgetServlet extends AbstractDashboardServlet imp
         writer.append("</div>\n");
         copyResource(getClass(), PLUGIN_BASE + "page/script.html", writer, Collections.emptyMap());
         embedSnippets(writer, "script", scriptSet);
-        embedScript(writer, OPTION_PAGE);
+        if (resolver != null) {
+            embedScripts(resolver, writer, OPTION_PAGE);
+        }
         copyResource(getClass(), PLUGIN_BASE + "page/tail.html", writer, Collections.emptyMap());
     }
 

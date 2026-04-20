@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.composum.dashboard</groupId>
     <artifactId>composum-dashboard</artifactId>
-    <version>1.2.16</version>
+    <version>1.2.17</version>
     <packaging>pom</packaging>
 
     <name>Composum Dashboard</name>
@@ -35,35 +36,37 @@
 
     <properties>
         <package.group>com/composum/dashboard</package.group>
-        <release.repository.id>ossrh</release.repository.id>
-        <release.repository.url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</release.repository.url>
+
+        <giturl>https://github.com/ist-dresden/composum-dashboard.git</giturl>
+
+        <release.repository.name>Composum Dashboard</release.repository.name>
+        <release.repository.id>central</release.repository.id>
+        <release.repository.url>https://central.sonatype.com/</release.repository.url>
+        <release.autoPublish>false</release.autoPublish>
+        <release.keyname>info@composum.com</release.keyname>
+
         <install.path>/apps/composum/dashboard/install</install.path>
+
         <java.source>11</java.source>
         <java.target>11</java.target>
         <maven.compiler.source>${java.source}</maven.compiler.source>
         <maven.compiler.target>${java.target}</maven.compiler.target>
-        <sling.pckgmgr.uri>/bin/cpm/package.service.html</sling.pckgmgr.uri>
-        <groovy.version>[4,5)</groovy.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+
+        <groovy.version>[4,5)</groovy.version>
+
+        <sling.pckgmgr.uri>/bin/cpm/package.service.html</sling.pckgmgr.uri>
     </properties>
 
     <scm>
-        <connection>scm:git:https://github.com/ist-dresden/composum.git</connection>
-        <developerConnection>scm:git:https://github.com/ist-dresden/composum.git</developerConnection>
-        <url>https://github.com/ist-dresden/composum.git</url>
-      <tag>HEAD</tag>
-  </scm>
+        <connection>scm:git:${giturl}</connection>
+        <developerConnection>scm:git:${giturl}t</developerConnection>
+        <url>scm:git:${giturl}</url>
+        <tag>HEAD</tag>
+    </scm>
 
     <distributionManagement>
-        <repository>
-            <id>${release.repository.id}</id>
-            <url>${release.repository.url}</url>
-        </repository>
-        <snapshotRepository>
-            <id>istrepo</id>
-            <url>https://repo.ist-software.com/repository/maven-snapshots</url>
-        </snapshotRepository>
         <site>
             <id>site</id>
             <url>https://ist-dresden.github.io/composum-dashboard/</url>
@@ -78,19 +81,12 @@
     <profiles>
 
         <profile>
-            <!-- profile to release the artifacts for the public repository -->
-            <id>nexus-staging</id>
+            <id>deploy-central</id>
             <build>
                 <plugins>
                     <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <serverId>${release.repository.id}</serverId>
-                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>false</autoReleaseAfterClose>
-                        </configuration>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
                     </plugin>
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
@@ -110,14 +106,31 @@
                                     <goal>sign</goal>
                                 </goals>
                                 <configuration>
-                                    <keyname>info@composum.com</keyname>
+                                    <keyname>${release.keyname}</keyname>
                                 </configuration>
                             </execution>
                         </executions>
                     </plugin>
-
                 </plugins>
             </build>
+        </profile>
+
+        <profile>
+            <id>deploy-local</id>
+            <properties>
+                <central.publishing.skip>true</central.publishing.skip>
+                <deploy.local.path>./offlinedependencies</deploy.local.path>
+            </properties>
+            <distributionManagement>
+                <snapshotRepository>
+                    <id>local-snapshots</id>
+                    <url>file:${deploy.local.path}</url>
+                </snapshotRepository>
+                <repository>
+                    <id>local-releases</id>
+                    <url>file:${deploy.local.path}</url>
+                </repository>
+            </distributionManagement>
         </profile>
 
     </profiles>
@@ -128,7 +141,7 @@
 
                 <plugin>
                     <artifactId>maven-compiler-plugin</artifactId>
-                    <version>3.8.1</version>
+                    <version>3.12.1</version>
                     <configuration>
                         <encoding>UTF-8</encoding>
                         <source>${java.source}</source>
@@ -173,12 +186,15 @@
                         <validatorsSettings>
                             <jackrabbit-filter>
                                 <options>
-                                    <validRoots>/apps,/apps/composum,/apps/composum/dashboard,/apps/composum/dashboard/install</validRoots>
+                                    <validRoots>
+                                        /apps,/apps/composum,/apps/composum/dashboard,/apps/composum/dashboard/install
+                                    </validRoots>
                                 </options>
                             </jackrabbit-filter>
                             <jackrabbit-packagetype>
                                 <options>
-                                    <allowComplexFilterRulesInApplicationPackages>true</allowComplexFilterRulesInApplicationPackages>
+                                    <allowComplexFilterRulesInApplicationPackages>true
+                                    </allowComplexFilterRulesInApplicationPackages>
                                 </options>
                             </jackrabbit-packagetype>
                         </validatorsSettings>
@@ -252,12 +268,6 @@
 
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-project-info-reports-plugin</artifactId>
-                    <version>3.4.2</version>
-                </plugin>
-
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-install-plugin</artifactId>
                     <version>2.5.2</version>
                 </plugin>
@@ -266,6 +276,24 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
                     <version>2.5.3</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-gpg-plugin</artifactId>
+                    <version>3.0.1</version>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.sonatype.central</groupId>
+                    <artifactId>central-publishing-maven-plugin</artifactId>
+                    <version>0.10.0</version>
+                    <extensions>true</extensions>
+                    <configuration>
+                        <publishingServerId>${release.repository.id}</publishingServerId>
+                        <autoPublish>${release.autoPublish}</autoPublish>
+                        <deploymentName>${release.repository.name}</deploymentName>
+                    </configuration>
                 </plugin>
 
             </plugins>
@@ -291,7 +319,7 @@
             <dependency>
                 <groupId>org.apache.sling</groupId>
                 <artifactId>org.apache.sling.caconfig.api</artifactId>
-                <version>1.3.0</version>
+                <version>1.1.2</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>

@@ -1,8 +1,14 @@
 package com.composum.sling.dashboard.servlet;
 
+import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_MIME_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
+import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
 import com.composum.sling.dashboard.service.ContentGenerator;
 import com.composum.sling.dashboard.service.DashboardWidget;
 import com.composum.sling.dashboard.service.ResourceFilter;
+import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 import com.composum.sling.dashboard.util.DashboardRequest;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
 import org.apache.commons.io.IOUtils;
@@ -10,6 +16,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.apache.sling.api.resource.ValueMap;
 import org.apache.sling.api.servlets.HttpConstants;
 import org.apache.sling.api.servlets.ServletResolverConstants;
@@ -42,13 +49,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
-
-import static com.composum.sling.dashboard.DashboardConfig.JCR_CONTENT;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_DATA;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_MIME_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.JCR_PRIMARY_TYPE;
-import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
-import static com.composum.sling.dashboard.servlet.DashboardBrowserServlet.BROWSER_CONTEXT;
 
 @Component(service = {Servlet.class, DashboardWidget.class, ContentGenerator.class},
         property = {
@@ -118,7 +118,7 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
     protected static final List<String> HTML_MODES =
             Arrays.asList(OPTION_VIEW, OPTION_FORM, OPTION_LOAD);
 
-    enum Type {PREVIEW, TEXT, CODE, IMAGE, VIDEO, DOCUMENT, BINARY, UNKNOWN}
+    protected enum Type {PREVIEW, TEXT, CODE, IMAGE, VIDEO, DOCUMENT, BINARY, UNKNOWN}
 
     @Reference
     protected XSSAPI xssapi;
@@ -146,7 +146,8 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
     }
 
     @Override
-    public void embedScript(@NotNull final PrintWriter writer, @NotNull final String mode) {
+    public void embedScripts(@NotNull final ResourceResolver resolver,
+                             @NotNull final PrintWriter writer, @NotNull final String mode) {
     }
 
     @Override
@@ -155,6 +156,12 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
             throws IOException {
         try (DashboardRequest request = new DashboardRequest(slingRequest)) {
             switch (getHtmlMode(request, HTML_MODES)) {
+                case OPTION_FORM:
+                    sendFormFields(response, parameterFields);
+                    break;
+                case OPTION_LOAD:
+                    loadContent(request, response);
+                    break;
                 case OPTION_VIEW:
                 default:
                     final Resource resource = resourceFilter.getRequestResource(request);
@@ -165,12 +172,6 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                             case PREVIEW:
                                 preview(request, response, displayType, Collections.singletonMap("targetUrl",
                                         getTargetUrl(resource, "html") + getRequestParameters(request, true)));
-                                break;
-                            case DOCUMENT:
-                            default:
-                                preview(request, response, displayType, Collections.singletonMap("targetUrl",
-                                        (loadDocuments ? getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD) : "")
-                                                + getTargetUrl(resource, null)));
                                 break;
                             case IMAGE:
                             case VIDEO:
@@ -190,22 +191,22 @@ public class DashboardDisplayView extends AbstractWidgetServlet implements Conte
                                     put("content", getContent(resource));
                                 }});
                                 break;
+                            case DOCUMENT:
+                            default:
+                                preview(request, response, displayType, Collections.singletonMap("targetUrl",
+                                        (loadDocuments ? getWidgetUri(request, DEFAULT_RESOURCE_TYPE, HTML_MODES, OPTION_LOAD) : "")
+                                                + getTargetUrl(resource, null)));
+                                break;
                         }
                     } else {
                         response.sendError(HttpServletResponse.SC_NOT_FOUND);
                     }
                     break;
-                case OPTION_FORM:
-                    sendFormFields(response, parameterFields);
-                    break;
-                case OPTION_LOAD:
-                    loadContent(request, response);
-                    break;
             }
         }
     }
 
-    protected void preview(@NotNull final SlingHttpServletRequest request,
+    protected void preview(@NotNull final SlingHttpServletRequest ignoredRequest,
                            @NotNull final SlingHttpServletResponse response,
                            @NotNull final Type template, @NotNull final Map<String, Object> properties)
             throws IOException {

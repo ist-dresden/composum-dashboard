@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
+@SuppressWarnings("unused")
 public interface DashboardConfig {
 
     String JCR_CONTENT = "jcr:content";

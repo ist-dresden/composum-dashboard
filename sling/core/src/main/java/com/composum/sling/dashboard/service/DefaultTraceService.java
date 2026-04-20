@@ -31,7 +31,7 @@ import java.util.Map;
 public class DefaultTraceService implements TraceService {
 
     @ObjectClassDefinition(name = "Composum Dashboard Default Trace Service")
-    @interface Config {
+    protected @interface Config {
 
         @AttributeDefinition(name = ConfigurationConstants.CFG_NAME_NAME, description = ConfigurationConstants.CFG_NAME_DESCRIPTION)
                 String name() default "default";

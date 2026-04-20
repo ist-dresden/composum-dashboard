@@ -1,5 +1,8 @@
 package com.composum.sling.dashboard.service;
 
+import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.DEPLOYED;
+import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.MODIFIED;
+import com.composum.sling.dashboard.servlet.ConfigurationConstants;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
@@ -26,6 +29,7 @@ import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.Bundle;
+import static org.osgi.framework.Bundle.ACTIVE;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -62,12 +66,6 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.DEPLOYED;
-import static com.composum.sling.dashboard.service.StartupRunnerService.MODE.MODIFIED;
-import static org.osgi.framework.Bundle.ACTIVE;
-
-import com.composum.sling.dashboard.servlet.ConfigurationConstants;
 
 @Component(
         service = {StartupRunnerService.class, Servlet.class},
@@ -177,7 +175,6 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
     protected Config config;
 
     protected Map<Pattern, String> scriptPathPattern = new LinkedHashMap<>();
-    protected String statusPathPattern;
 
     @Activate
     protected void activate(final BundleContext bundleContext, final Config config) {
@@ -329,9 +326,8 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         }
     }
 
-    protected boolean shouldBeExecuted(@NotNull final ResourceResolver resolver, @NotNull final MODE mode,
-                                       @Nullable final Resource scriptResource,
-                                       @NotNull final Resource statusResource) {
+    protected boolean shouldBeExecuted(@NotNull final ResourceResolver ignoredResolver, @NotNull final MODE mode,
+                                       @Nullable final Resource scriptResource, @NotNull final Resource statusResource) {
         final ValueMap scriptProps = scriptResource != null ? scriptResource.getValueMap()
                 : new ValueMapDecorator(Collections.emptyMap());
         final ValueMap statusProps = statusResource.getValueMap();
@@ -549,7 +545,7 @@ public class DashboardStartupService extends SlingSafeMethodsServlet implements 
         return resource;
     }
 
-    protected class DropIt extends PrintWriter {
+    protected static class DropIt extends PrintWriter {
 
         public DropIt() {
             super(new Writer() {

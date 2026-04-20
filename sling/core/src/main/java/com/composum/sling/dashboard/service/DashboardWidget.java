@@ -1,10 +1,9 @@
 package com.composum.sling.dashboard.service;
 
 import org.apache.sling.api.SlingHttpServletRequest;
-import org.apache.sling.api.resource.PersistenceException;
 import org.apache.sling.api.resource.Resource;
+import org.apache.sling.api.resource.ResourceResolver;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -62,7 +61,7 @@ public interface DashboardWidget {
      * @param writer the writer of the response
      * @param mode   the rendered view mode, e.g. 'tile', 'view', 'page'
      */
-    void embedScript(@NotNull PrintWriter writer, @NotNull String mode)
+    void embedScripts(@NotNull ResourceResolver resolver, @NotNull PrintWriter writer, @NotNull String mode)
             throws IOException;
 
     Comparator<DashboardWidget> COMPARATOR = new Comparator<>() {

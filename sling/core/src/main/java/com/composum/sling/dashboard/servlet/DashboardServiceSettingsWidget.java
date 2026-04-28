@@ -33,7 +33,6 @@ import javax.servlet.Servlet;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -297,36 +296,18 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
                     ServiceReference<?>[] all = bundleContext.getAllServiceReferences(null,
                             StringUtils.isNotBlank(config.filter) ? config.filter : null);
                     for (ServiceReference<?> ref : all) {
-                        List<String> serviceTypes = Optional.ofNullable((String[]) ref.getProperty("objectClass"))
-                                .map(Arrays::asList).orElse(Collections.emptyList());
-                        /*
-                        Optional.ofNullable(ref.getProperty("objectClass"))
-                                .ifPresent(set -> {
-                                    for (String className : (String[]) set) {
-                                        Optional.ofNullable(getServiceType(className))
-                                                .ifPresent(serviceType -> {
-                                                    if (type.isAssignableFrom(serviceType)) {
-                                                        LOG.warn("{} ~= {}}", serviceType.getName(), type.getName());
-                                                        serviceReferences.add(ref);
-                                                    }
-                                                });
-                                    }
-                                });
-                        /**/
                         try {
                             Object service;
-                            if (serviceTypes.contains(config.serviceType)
-                                    || config.serviceType.equals(ref.getProperty("service.pid"))
+                            if (config.serviceType.equals(ref.getProperty("service.pid"))
                                     || (!config.serviceType.contains("~")
                                     && config.serviceType.equals(ref.getProperty("service.factoryPid")))
-                                    || (forceInspection && (service = bundleContext.getService(ref)) != null
+                                    || ((service = bundleContext.getService(ref)) != null
                                     && config.serviceType.equals(service.getClass().getName()))) {
                                 configReferences.add(ref);
                             }
                         } catch (Exception ex) {
                             LOG.debug("Error processing service reference: {}", ex.toString());
                         }
-                        /**/
                     }
                 }
             } catch (InvalidSyntaxException ignore) {
@@ -335,32 +316,5 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
             }
         }
         return configReferences;
-    }
-
-    @SuppressWarnings("unused")
-    protected Class<?> getServiceType(@NotNull final SettingsRule config) {
-        return getServiceType(config.serviceType);
-    }
-
-    protected Class<?> getServiceType(@NotNull final String className) {
-        final Class<?> type = classSet.computeIfAbsent(className, (k) -> {
-            final Class<?> found = findServiceType(k);
-            return found != null ? found : UNAVAILABLE;
-        });
-        return type != UNAVAILABLE ? type : null;
-    }
-
-    protected Class<?> findServiceType(@NotNull final String className) {
-        try {
-            Class<?> type = null;
-            if (classLoaderManager != null) {
-                type = classLoaderManager.getDynamicClassLoader().loadClass(className);
-            }
-            return type != null ? type : Class.forName(className);
-        } catch (ClassNotFoundException ignore) {
-            LOG.warn("Failed to load service type class '{}' ({})", className,
-                    classLoaderManager != null ? classLoaderManager.getDynamicClassLoader() : null);
-            return null;
-        }
     }
 }

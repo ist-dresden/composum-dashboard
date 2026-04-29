@@ -30,6 +30,7 @@ import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -50,11 +51,11 @@ import java.util.regex.Pattern;
 
 
 @Component(
-        service = {DashboardManager.class, ResourceFilter.class},
+        service = {DashboardManager.class, DashboardContext.class, ResourceFilter.class},
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = SlingDashboardManager.Config.class)
-public class SlingDashboardManager implements DashboardManager, ResourceFilter {
+public class SlingDashboardManager implements DashboardManager, DashboardContext, ResourceFilter {
 
     @ObjectClassDefinition(name = "Composum Dashboard Manager")
     public @interface Config {
@@ -246,6 +247,14 @@ public class SlingDashboardManager implements DashboardManager, ResourceFilter {
         widgets.sort(DashboardWidget.COMPARATOR);
         return widgets;
     }
+
+    // DashboardContext
+
+    public @Nullable InputStream getResourceAsStream(@NotNull final String resourcePath) {
+        return getClass().getClassLoader().getResourceAsStream(resourcePath);
+    }
+
+    // content creation, preparation
 
     /**
      * the generator feature for creating dashboard content using an implemented content generator that can be used to

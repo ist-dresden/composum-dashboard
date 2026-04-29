@@ -79,6 +79,30 @@ body {
     line-height: 16px;
 }
 
+.composum-dashboard__widget {
+    position: relative;
+}
+
+.composum-dashboard__widget > a {
+    position: absolute;
+    top: 0;
+    left: 1rem;
+    right: 1rem;
+    height: 50px;
+    z-index: 1;
+}
+
+.composum-dashboard__widget .composum-dashboard__widget-time {
+    position: absolute;
+    display: inline-block;
+    top: 0.4rem;
+    right: 1.4rem;
+    text-align: right;
+    line-height: 1;
+    font-size: 60%;
+    color: #fff;
+}
+
 .composum-dashboard__widget-view {
     position: absolute;
     top: 40px;
@@ -86,6 +110,17 @@ body {
     right: 0;
     bottom: 0;
     overflow: auto;
+}
+
+.composum-dashboard__widget .card-body .nav-tabs {
+    border: none;
+    padding: 0 10px;
+    background: #ccc;
+}
+
+.composum-dashboard__widget .card-body .nav-tabs .nav-item .nav-link {
+    border-radius: 0;
+    padding: 0.25rem 1rem;
 }
 
 .composum-dashboard__widget-view .nav-tabs {

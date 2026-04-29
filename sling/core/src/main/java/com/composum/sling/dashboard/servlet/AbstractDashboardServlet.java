@@ -9,6 +9,7 @@ import static com.composum.sling.dashboard.DashboardConfig.NT_RESOURCE;
 import static com.composum.sling.dashboard.DashboardConfig.SLING_RESOURCE_TYPE;
 import static com.composum.sling.dashboard.DashboardConfig.getFirstProperty;
 import com.composum.sling.dashboard.service.ContentGenerator;
+import com.composum.sling.dashboard.service.DashboardContext;
 import com.composum.sling.dashboard.service.DashboardManager;
 import com.composum.sling.dashboard.util.ValueEmbeddingReader;
 import com.composum.sling.dashboard.util.ValueEmbeddingWriter;
@@ -45,6 +46,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.function.Function;
 
 public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
 
@@ -58,6 +60,22 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
     protected List<String> servletPaths;
 
     protected BundleContext bundleContext;
+
+    protected DashboardContext dashboardContext;
+
+    protected <T> T frameworkApply(Function<DashboardContext, T> function) {
+        if (dashboardContext == null) {
+            dashboardContext = Optional.ofNullable(bundleContext)
+                    .map(bundleContext -> bundleContext.getServiceReference(DashboardContext.class))
+                    .map(serviceReference -> bundleContext.getService(serviceReference))
+                    .orElse(null);
+        }
+        T result = null;
+        if (dashboardContext != null) {
+            result = function.apply(dashboardContext);
+        }
+        return result;
+    }
 
     protected void activate(@Nullable final BundleContext bundleContext,
                             @Nullable final String[] resourceTypes, @Nullable final String[] servletPaths) {
@@ -247,8 +265,8 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
                                  @NotNull final String scriptResource,
                                  @NotNull final Map<String, Object> properties)
             throws IOException {
-        try (final InputStream pageContent = getClass().getClassLoader()
-                .getResourceAsStream("/com/composum/sling/dashboard/" + scriptResource);
+        try (final InputStream pageContent = getResourceAsStream(null,
+                "/com/composum/sling/dashboard/" + scriptResource);
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             if (reader != null) {
                 final Writer writer = new ValueEmbeddingWriter(responseWriter, properties,
@@ -262,8 +280,8 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
     protected @Nullable String loadTemplate(@NotNull final String scriptResource,
                                             @NotNull final Map<String, Object> properties)
             throws IOException {
-        try (final InputStream pageContent = getClass().getClassLoader()
-                .getResourceAsStream("/com/composum/sling/dashboard/" + scriptResource);
+        try (final InputStream pageContent = getResourceAsStream(null,
+                "/com/composum/sling/dashboard/" + scriptResource);
              final InputStreamReader reader = pageContent != null ? new InputStreamReader(pageContent) : null) {
             if (reader != null) {
                 return IOUtils.toString(new ValueEmbeddingReader(reader, properties, Locale.ENGLISH, this.getClass()));
@@ -298,16 +316,21 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
         return reader != null ? new ValueEmbeddingReader(reader, properties, null, context) : null;
     }
 
-    protected @Nullable Reader openResource(@NotNull final Class<?> context, @NotNull final String resourcePath) {
-        final InputStream stream = context.getClassLoader().getResourceAsStream(resourcePath);
+    protected @Nullable Reader openResource(@Nullable final Class<?> context, @NotNull final String resourcePath) {
+        final InputStream stream = getResourceAsStream(context, resourcePath);
         return stream != null ? new InputStreamReader(stream, StandardCharsets.UTF_8) : null;
+    }
+
+    protected @Nullable InputStream getResourceAsStream(@Nullable final Class<?> classCtx, @NotNull final String resourcePath) {
+        return Optional.ofNullable((classCtx != null ? classCtx : getClass()).getClassLoader().getResourceAsStream(resourcePath))
+                .orElseGet(() -> frameworkApply(ctx -> ctx.getResourceAsStream(resourcePath)));
     }
 
     protected void embedSnippets(@NotNull final PrintWriter writer, String type, Iterable<String> snippets) {
         for (String snippet : snippets) {
             if (snippet.startsWith("/")) {
                 writer.append("<").append(type).append(">\n");
-                try (final InputStream stream = getClass().getClassLoader().getResourceAsStream(snippet);
+                try (final InputStream stream = getResourceAsStream(null, snippet);
                      final Reader reader = stream != null ? new InputStreamReader(stream) : null) {
                     if (reader != null) {
                         IOUtils.copy(reader, writer);
@@ -326,7 +349,7 @@ public abstract class AbstractDashboardServlet extends SlingSafeMethodsServlet {
     public void loadPage(@NotNull final HttpServletResponse response, @NotNull final String template,
                          @NotNull final Map<String, Object> properties)
             throws IOException {
-        try (final InputStream pageContent = getClass().getClassLoader().getResourceAsStream(template);
+        try (final InputStream pageContent = getResourceAsStream(null, template);
              final Reader reader = pageContent != null ? new ValueEmbeddingReader(
                      new InputStreamReader(pageContent), properties, Locale.ENGLISH, this.getClass()) : null) {
             if (reader != null) {

@@ -96,7 +96,7 @@ public class DashboardBrowserServlet extends AbstractWidgetServlet implements Da
         String navTitle() default "Browser";
 
         @AttributeDefinition(name = "Home Url")
-        String homeUrl() default "https://www.composum.com";
+        String homeUrl() default "https://github.com/ist-dresden/composum-dashboard";
 
         @AttributeDefinition(name = "Toolbar")
         String[] toolbar() default {

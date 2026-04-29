@@ -256,11 +256,16 @@ public class DashboardServlet extends AbstractDashboardServlet implements Dashbo
             writer.append("<div class=\"composum-dashboard__content container-fluid mt-3 mb-3\">\n");
             writer.append("<div class=\"composum-dashboard__widgets row\">\n");
             for (final DashboardWidget widget : getWidgets(request)) {
+                long start = System.currentTimeMillis();
                 writer.append("<div class=\"composum-dashboard__widget col-lg-4 col-md-6 col-12\"><a href=\"#\" data-href=\"")
                         .append(getPagePath(request)).append(".html/").append(widget.getName())
                         .append("\" style=\"text-decoration: none;\">\n");
+                writer.append("</a>");
                 includeWidget(request, response, widget, "tile");
-                writer.append("</a></div>\n");
+                writer.append("<div class=\"composum-dashboard__widget-time\">")
+                        .append(Long.toString(System.currentTimeMillis() - start))
+                        .append("<br/>ms</div>");
+                writer.append("</div>\n");
             }
             writer.append("</div></div>");
         }

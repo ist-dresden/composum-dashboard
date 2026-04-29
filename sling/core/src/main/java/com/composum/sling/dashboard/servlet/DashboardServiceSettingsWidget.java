@@ -16,10 +16,13 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.ConfigurationPolicy;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Modified;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -52,7 +55,7 @@ import java.util.regex.Pattern;
         configurationPolicy = ConfigurationPolicy.REQUIRE, immediate = true
 )
 @Designate(ocd = DashboardServiceSettingsWidget.Config.class)
-public class DashboardServiceSettingsWidget extends AbstractSettingsWidget implements ContentGenerator {
+public class DashboardServiceSettingsWidget extends AbstractSettingsWidget implements ContentGenerator, ServiceListener {
 
     private static final Logger LOG = LoggerFactory.getLogger(DashboardServiceSettingsWidget.class);
 
@@ -151,9 +154,6 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
 
     protected transient Map<SettingsRule, List<ServiceReference<?>>> serviceReferences = new HashMap<>();
 
-    protected transient Map<String, Class<?>> classSet = new HashMap<>();
-    protected static final Class<?> UNAVAILABLE = Object.class;
-
     @Activate
     @Modified
     protected void activate(final BundleContext bundleContext, final Config config) {
@@ -171,6 +171,22 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
             }
         }
         serviceReferences.clear();
+        bundleContext.addServiceListener(this);
+    }
+
+    @Deactivate
+    protected void deactivate() {
+        bundleContext.removeServiceListener(this);
+    }
+
+    @Override
+    public void serviceChanged(ServiceEvent event) {
+        final ServiceReference<?> ref = event.getServiceReference();
+        for (Map.Entry<SettingsRule, List<ServiceReference<?>>> entry : serviceReferences.entrySet()) {
+            if (entry.getValue().contains(ref)) {
+                serviceReferences.remove(entry.getKey());
+            }
+        }
     }
 
     @Override
@@ -286,7 +302,6 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
         List<ServiceReference<?>> configReferences = serviceReferences.get(config);
         if (configReferences == null) {
             configReferences = new ArrayList<>();
-            serviceReferences.put(config, configReferences);
             try {
                 ServiceReference<?>[] references = bundleContext.getAllServiceReferences(config.serviceType,
                         StringUtils.isNotBlank(config.filter) ? config.filter : null);
@@ -314,6 +329,7 @@ public class DashboardServiceSettingsWidget extends AbstractSettingsWidget imple
             } catch (Exception ex) {
                 LOG.debug("Error fetching service references: {}", ex.toString());
             }
+            serviceReferences.put(config, configReferences);
         }
         return configReferences;
     }

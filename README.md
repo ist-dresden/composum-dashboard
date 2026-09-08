@@ -4,6 +4,12 @@ an Apache Sling based Application Platform
 
 ## Composum Dashboard
 
+> **⚠️ Deprecation Notice:** Composum Dashboard is no longer actively maintained. Its successor,
+> **[Composum Tools](https://github.com/ist-dresden/composum-tools)** covers the same
+> lightweight, tile-based approach — a JCR browser, a Felix Console proxy, and a customizable
+> dashboard — with a smaller footprint and fewer dependencies. We recommend it for new and
+> existing installations.
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 - [Releases](https://github.com/ist-dresden/composum-dashboard/releases)
